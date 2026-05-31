@@ -1,0 +1,37 @@
+{
+  "_comment": "Minimal Slidey example — title -> narrative -> stat -> cta, with narration. Render: node index.js examples/hello.json hello.mp4",
+  "meta": {
+    "title": "Hello, Slidey",
+    "resolution": { "width": 1920, "height": 1080 },
+    "narration": { "voice": "en-AU-NatashaNeural", "rate": "+0%" }
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "title": "Slidey",
+      "subtitle": "Declarative videos from a JSON spec",
+      "eyebrow": "Demo"
+    },
+    {
+      "type": "narrative",
+      "eyebrow": "The idea",
+      "body": "A video is just an ordered list of scenes.",
+      "lede": "Describe it once as data; render it the same way every time.",
+      "hold": 150,
+      "narration": "A video is just an ordered list of scenes."
+    },
+    {
+      "type": "stat",
+      "value": "1 spec",
+      "label": "in, one MP4 out",
+      "detail": "(same input always produces the same frames)",
+      "narration": "One spec in, one video out."
+    },
+    {
+      "type": "cta",
+      "wordmark": "Slidey",
+      "tagline": "Declarative videos from a JSON spec.",
+      "url": "github.com/you/slidey"
+    }
+  ]
+}

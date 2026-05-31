@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Render artifacts
+*.mp4
+.artifacts/
+frames/
+*-frames/
+audio/
+*.mp3
+*.png
+
+# OS / editor cruft
+.DS_Store
+*.swp
+*~

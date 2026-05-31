@@ -1,0 +1,20 @@
+{
+  "name": "slidey",
+  "version": "1.0.0",
+  "description": "Deterministic, spec-driven declarative video generator — renders a JSON scene spec into a narrated MP4 (Puppeteer + edge-tts + ffmpeg)",
+  "main": "src/index.js",
+  "bin": {
+    "slidey": "src/index.js"
+  },
+  "scripts": {
+    "estimate": "node src/index.js examples/hello.json --estimate",
+    "hello": "node src/index.js examples/hello.json hello.mp4"
+  },
+  "dependencies": {
+    "jsonpath-plus": "^10.4.0",
+    "puppeteer": "^21.11.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
