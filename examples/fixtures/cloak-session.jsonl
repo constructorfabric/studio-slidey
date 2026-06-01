@@ -1,0 +1,24 @@
+{"kind":"session.header","schema_version":1,"written_at":"2026-05-30T10:00:00.000000000Z"}
+{"turn":1,"seq":0,"ts":"2026-05-30T10:00:01.000000000Z","kind":"turn.start","state_path":"foyer","payload":{"input":"go south","turn":1}}
+{"turn":1,"seq":1,"ts":"2026-05-30T10:00:01.000000000Z","kind":"turn.input","state_path":"foyer","payload":{"input":"go south","intent":""}}
+{"turn":1,"seq":2,"ts":"2026-05-30T10:00:01.100000000Z","kind":"oracle.call.start","state_path":"foyer","call_id":"call-a","payload":{"verb":"decide","model":"claude-sonnet-4-6"}}
+{"turn":1,"seq":3,"ts":"2026-05-30T10:00:02.300000000Z","kind":"oracle.call.complete","state_path":"foyer","call_id":"call-a","payload":{"verb":"decide","model":"claude-sonnet-4-6","duration_ms":1200,"response":{"intent":"go"},"meta":{"usage":{"input_tokens":400,"output_tokens":50},"cost_usd":0.0033}}}
+{"turn":1,"seq":4,"ts":"2026-05-30T10:00:02.310000000Z","kind":"machine.intent_accepted","state_path":"foyer","payload":{"intent":"go","slots":{"direction":"south"}}}
+{"turn":1,"seq":5,"ts":"2026-05-30T10:00:02.320000000Z","kind":"machine.transition","state_path":"foyer","payload":{"from":"foyer","to":"bar","intent":"go","slots":{"direction":"south"}}}
+{"turn":1,"seq":6,"ts":"2026-05-30T10:00:02.330000000Z","kind":"machine.state_exited","state_path":"foyer","payload":{"state":"foyer"}}
+{"turn":1,"seq":7,"ts":"2026-05-30T10:00:02.340000000Z","kind":"machine.state_entered","state_path":"bar","payload":{"state":"bar"}}
+{"turn":1,"seq":8,"ts":"2026-05-30T10:00:02.350000000Z","kind":"world.update","state_path":"bar","payload":{"set":{"location":"bar"}}}
+{"turn":1,"seq":9,"ts":"2026-05-30T10:00:02.360000000Z","kind":"world.update","state_path":"bar","payload":{"increment":{"moves":1}}}
+{"turn":1,"seq":10,"ts":"2026-05-30T10:00:02.370000000Z","kind":"harness.called","state_path":"bar","payload":{"namespace":"host.notify","args":{"message":"It is pitch dark."}}}
+{"turn":1,"seq":11,"ts":"2026-05-30T10:00:02.371000000Z","kind":"harness.dispatched","state_path":"bar","payload":{"namespace":"host.notify","args":{"message":"It is pitch dark."},"rerender_fell_back":false}}
+{"turn":1,"seq":12,"ts":"2026-05-30T10:00:02.380000000Z","kind":"harness.returned","state_path":"bar","payload":{"namespace":"host.notify","data":{"ok":true},"duration_ms":5}}
+{"turn":1,"seq":13,"ts":"2026-05-30T10:00:02.390000000Z","kind":"machine.say","state_path":"bar","payload":{"text":"You enter the bar. It is pitch dark."}}
+{"turn":1,"seq":14,"ts":"2026-05-30T10:00:02.400000000Z","kind":"turn.end","state_path":"bar","payload":{"outcome":"transitioned","to":"bar"}}
+{"turn":2,"seq":0,"ts":"2026-05-30T10:00:08.000000000Z","kind":"turn.start","state_path":"bar","payload":{"input":"go north","turn":2}}
+{"turn":2,"seq":1,"ts":"2026-05-30T10:00:08.000000000Z","kind":"turn.input","state_path":"bar","payload":{"input":"go north","intent":""}}
+{"turn":2,"seq":2,"ts":"2026-05-30T10:00:08.100000000Z","kind":"oracle.call.start","state_path":"bar","call_id":"call-b","payload":{"verb":"decide","model":"claude-sonnet-4-6"}}
+{"turn":2,"seq":3,"ts":"2026-05-30T10:00:08.900000000Z","kind":"oracle.call.complete","state_path":"bar","call_id":"call-b","payload":{"verb":"decide","model":"claude-sonnet-4-6","duration_ms":800,"response":{"intent":"go"},"meta":{"usage":{"input_tokens":420,"output_tokens":30},"cost_usd":0.0028}}}
+{"turn":2,"seq":4,"ts":"2026-05-30T10:00:08.910000000Z","kind":"machine.guard_rejected","state_path":"bar","payload":{"guards":["has_light"],"reason":"too dark to move"}}
+{"turn":2,"seq":5,"ts":"2026-05-30T10:00:08.920000000Z","kind":"machine.transition","state_path":"bar","payload":{"from":"bar","to":"bar","intent":"wait"}}
+{"turn":2,"seq":6,"ts":"2026-05-30T10:00:08.930000000Z","kind":"world.update","state_path":"bar","payload":{"increment":{"moves":1}}}
+{"turn":2,"seq":7,"ts":"2026-05-30T10:00:08.940000000Z","kind":"turn.end","state_path":"bar","payload":{"outcome":"transitioned","to":"bar"}}

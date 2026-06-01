@@ -209,12 +209,27 @@ async function main() {
     process.exit(1);
   }
 
+  // A .jsonl input is a kitsoki session trace: generate the scene spec from it
+  // (see src/trace.js) instead of parsing it as a slidey spec. Everything
+  // downstream (--list/--estimate, pdf, frames, assembly) runs unchanged.
+  const fromTrace = /\.jsonl$/i.test(absInput);
+
   let spec;
-  try {
-    spec = JSON.parse(fs.readFileSync(absInput, 'utf-8'));
-  } catch (err) {
-    console.error(`[slidey] ERROR: failed to parse JSON: ${err.message}`);
-    process.exit(1);
+  if (fromTrace) {
+    try {
+      spec = require('./trace').buildSpecFromFile(absInput);
+      console.log(`[slidey] Trace  : ${spec.scenes.length} scenes generated from ${path.basename(absInput)}`);
+    } catch (err) {
+      console.error(`[slidey] ERROR: failed to build spec from trace: ${err.message}`);
+      process.exit(1);
+    }
+  } else {
+    try {
+      spec = JSON.parse(fs.readFileSync(absInput, 'utf-8'));
+    } catch (err) {
+      console.error(`[slidey] ERROR: failed to parse JSON: ${err.message}`);
+      process.exit(1);
+    }
   }
 
   if (!spec.scenes || !Array.isArray(spec.scenes) || spec.scenes.length === 0) {
@@ -229,10 +244,53 @@ async function main() {
     console.log(`[slidey] Context overrides: ${JSON.stringify(cliContext)}`);
   }
 
+  // Trace → .json output: dump the generated spec for inspection / hand-tweaking,
+  // then exit. Re-run the .json the normal way to render it. (No-op for non-trace
+  // input — a .json output there would be the input itself.)
+  if (fromTrace && !wantsList && outputPath && /\.json$/i.test(outputPath)) {
+    const absOut = path.resolve(outputPath);
+    fs.mkdirSync(path.dirname(absOut), { recursive: true });
+    fs.writeFileSync(absOut, JSON.stringify(spec, null, 2) + '\n', 'utf-8');
+    console.log(`[slidey] Spec written → ${absOut}  (${spec.scenes.length} scenes)`);
+    process.exit(0);
+  }
+
   // ── --list / --estimate: print scene table and exit, no rendering ──
   if (wantsList) {
     const wantsAudioEstimate = args.includes('--estimate');
     printSceneList(spec, fps, wantsAudioEstimate, { noGaps });
+    process.exit(0);
+  }
+
+  // ── PDF output: a .pdf extension exports slides (one page per reveal step)
+  //    via the shared Vue render bundle. No frames, narration, or ffmpeg. ──
+  if (/\.pdf$/i.test(outputPath)) {
+    const { generatePdf } = require('./pdf');
+    const absOut = path.resolve(outputPath);
+    console.log(`[slidey] Input  : ${absInput}`);
+    console.log(`[slidey] Output : ${absOut}  (PDF — one page per reveal step)`);
+    if (selectedScenes) {
+      const picked = [...selectedScenes].sort((a, b) => a - b).join(',');
+      console.log(`[slidey] Scenes : ${spec.scenes.length} total, exporting [${picked}]`);
+    } else {
+      console.log(`[slidey] Scenes : ${spec.scenes.length}`);
+    }
+    console.log('');
+    try {
+      const { pageCount } = await generatePdf(spec, absOut, {
+        specPath: absInput,
+        selectedScenes,
+        onProgress: (pages, i, type) => {
+          process.stdout.write(`\r[slidey] PDF: scene ${i} (${type})`.padEnd(40) + `${pages} pages`);
+        },
+      });
+      process.stdout.write('\n');
+      const sizeMB = (fs.statSync(absOut).size / 1024 / 1024).toFixed(2);
+      console.log(`[slidey] Done → ${absOut}  (${pageCount} pages, ${sizeMB} MB)`);
+    } catch (err) {
+      console.error(`\n[slidey] ERROR during PDF export: ${err.message}`);
+      process.exit(1);
+    }
     process.exit(0);
   }
 

@@ -71,6 +71,21 @@ const TIMING = {
   trace_caption:       30,
   trace_hold:         180,  // 6.0 s
 
+  // ── Trace-turn scene — one kitsoki session turn ───────────
+  traceturn_title:     18,
+  traceturn_map:       30,
+  traceturn_row_0:     22,  // ~0.7 s per detail row reveal
+  traceturn_row_1:     22,
+  traceturn_row_2:     22,
+  traceturn_row_3:     22,
+  traceturn_row_4:     22,
+  traceturn_row_5:     22,
+  traceturn_row_6:     22,
+  traceturn_row_7:     22,
+  traceturn_row_8:     22,
+  traceturn_detail:    90,  // 3.0 s — expand step: full prompt/response transcript
+  traceturn_hold:     150,  // 5.0 s default dwell
+
   // ── Thread scene — issue-tracker comment threads ───────────
   thread_title:        20,
   thread_panel_0:      40,  // ~1.3 s per panel reveal
@@ -104,6 +119,7 @@ function estimateScene(scene, opts = {}) {
       case 'diagram-svg':  return hold('diagramsvg_hold',  scene.hold);
       case 'terminal-gif': return hold('termgif_hold',     scene.hold);
       case 'trace':        return hold('trace_hold',       scene.hold);
+      case 'trace-turn':   return hold('traceturn_hold',   scene.hold);
       case 'thread':       return hold('thread_hold',      scene.hold);
       case 'stat':         return hold('stat_hold',        scene.hold);
       case 'cta':          return hold('cta_hold',         scene.hold);
@@ -153,6 +169,16 @@ function estimateScene(scene, opts = {}) {
       for (let i = 0; i < turns; i++) f += T[`trace_turn_${i}`] ?? 45;
       if (scene.caption) f += T.trace_caption;
       f += hold('trace_hold', scene.hold);
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'trace-turn': {
+      let f = T.traceturn_title + T.traceturn_map;
+      const rows = (scene.rows || []).length;
+      for (let i = 0; i < rows; i++) f += T[`traceturn_row_${i}`] ?? 22;
+      if (scene.convo && (scene.convo.messages || []).length) f += T.traceturn_detail;
+      f += hold('traceturn_hold', scene.hold);
       f += T.inter_scene;
       return f;
     }
