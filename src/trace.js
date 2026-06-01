@@ -523,13 +523,22 @@ function segmentNarration(raw, max = Infinity) {
  *     transition), kept as the intermediate the cards are folded from.
  *   - `cards`:   the entries regrouped by turn, the structure the scene renders.
  *
+ * Every card LEADS with the user input — a slide is one turn, and a turn is
+ * driven by an intent. Cards with no user input (the bootstrap turn 0, a
+ * background-completion turn) are dropped: it makes no sense to "enter a room"
+ * on screen before the intent that took us there is known, and the view the
+ * user was looking at when they typed lives on the PRECEDING card anyway.
+ *
  * Each card carries:
- *   prompt   — the room's rendered view (operator-facing narration) the user's
- *              input is RESPONDING to: the previous turn's recorded view (the
- *              screen on screen when they typed), so a clarify answer card shows
- *              the questions it answers. Shown above the user bubble.
- *   user     — the player's input bubble for the turn (or null on a bootstrap /
- *              effect-only turn)
+ *   user     — the player's input bubble for the turn; cards without one are
+ *              not emitted, so this is always present.
+ *   roomView — THIS turn's rendered room view (operator-facing narration),
+ *              shown BELOW the input: the room as it re-rendered after the
+ *              intent. The view that PRECEDED this intent is the previous
+ *              turn's view, already shown on the previous card — so it is not
+ *              repeated here (input-then-result, not prompt-then-input). Held
+ *              as `roomViewSegments` ([{llm,text}] for the source-colour paint)
+ *              plus a plain `roomView` string for presence/fallback.
  *   flow     — the conversational items in order: assistant/say prose bubbles
  *              and structured decide/choose rows
  *   effects  — the turn's mechanics BELOW the conversation: host/tool calls,
@@ -537,9 +546,6 @@ function segmentNarration(raw, max = Infinity) {
  *              state transition
  *   effectsMore — host calls beyond CARD_TOOLS_SHOWN, collapsed to a count
  *   progress — the cumulative spend/turn snapshot as of the END of the turn
- *
- * The room view is recorded per turn on turn.end (`view`); a turn's view is the
- * prompt for the NEXT turn's input, so each card shows the prior turn's view.
  *
  * Entry roles (the flat stream): user · assistant · decision · tool · world ·
  * reject · transition.
@@ -571,14 +577,16 @@ function buildTranscript(journey) {
     turnEntries.push(entry);
   };
 
-  // Fold one turn's reading-order entries into a single boxed card.
+  // Fold one turn's reading-order entries into a single boxed card. A card is
+  // emitted only when the turn has a user input — every slide leads with one.
   const foldCard = (turn) => {
     if (!turnEntries.length) return;
+    if (!turnEntries.some((e) => e.role === 'user')) return; // no input → no card
     const card = {
       turn: ordinal,
-      bootstrap: turn.turn === 0,
       room: prettyRoom(turn.room || ''),
-      prompt: '',          // the room view (narration) the user's input responds to
+      roomView: '',          // THIS turn's rendered view (narration), shown below the input
+      roomViewSegments: null,
       user: null,
       flow: [],
       effects: [],
@@ -616,21 +624,21 @@ function buildTranscript(journey) {
       }
       card.progress = e.progress; // last entry wins → end-of-turn cumulative
     }
+    // This turn's own rendered room view (input-then-result): the room as it
+    // re-rendered after the intent. roomViewSegments carries the LLM- vs
+    // template-generated provenance for the source-colour paint; roomView is
+    // the plain (sentinel-free) text for presence checks and fallback render.
+    if (turn.narration) {
+      const segs = segmentNarration(turn.narration, NARRATION_MAX);
+      card.roomViewSegments = segs;
+      card.roomView = segs.map((s) => s.text).join('');
+    }
     cards.push(card);
   };
-
-  // The room view the user is responding to is the PREVIOUS turn's rendered
-  // view (the screen on which they typed this turn's input) — not this turn's
-  // own end-of-turn view, where a just-answered question has already dropped
-  // off the list. So we carry the prior turn's narration forward and stamp it
-  // as the current card's `prompt`, shown above the user's input.
-  let pendingPrompt = '';
 
   for (const turn of journey.turns) {
     if (turn.turn !== 0) ordinal++;            // bootstrap turn 0 stays "turn 0"
     turnEntries = [];
-    const respondingTo = pendingPrompt;        // the view shown before this input
-    if (turn.narration) pendingPrompt = turn.narration; // prompts the NEXT turn
 
     if (turn.input) {
       add({ role: 'user', text: truncate(turn.input, MSG_MAX), direct: !!turn.direct, turn: turn.turn });
@@ -683,15 +691,6 @@ function buildTranscript(journey) {
     }
 
     foldCard(turn);
-    // Stamp the room view this turn's input responded to (prior turn's view).
-    // promptSegments carries the LLM- vs template-generated provenance for the
-    // colour-coded render; prompt is the plain (sentinel-free) text used for
-    // hasNarration and as the non-coloured fallback.
-    if (respondingTo && cards.length) {
-      const segs = segmentNarration(respondingTo, NARRATION_MAX);
-      cards[cards.length - 1].promptSegments = segs;
-      cards[cards.length - 1].prompt = segs.map(s => s.text).join('');
-    }
   }
 
   const totals = {

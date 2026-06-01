@@ -154,7 +154,8 @@ test('transcript cards: one boxed card per turn, conversation up top and mechani
   // One card per turn that produced entries (the two real turns here).
   assert.equal(cards.length, 2);
   assert.deepEqual(cards.map(c => c.turn), [1, 2]);
-  assert.equal(cards.every(c => c.bootstrap === false), true);
+  // Every slide leads with a user input — no bootstrap / view-only card.
+  assert.equal(cards.every(c => !!c.user), true);
 
   // Turn 1: user bubble + a decide row in the flow; the host call, world diff
   // and transition are mechanics in `effects`, BELOW the conversation.
@@ -191,35 +192,48 @@ test('transcript cards: a turn with many host calls keeps the box bounded with a
   assert.equal(c.effectsMore, 3);    // 9 − 6 collapsed
 });
 
-test('transcript: an answer card shows the room view (questions) the user is responding to', () => {
-  // The engine records the rendered room view on turn.end (`view`). A turn's
-  // view is the screen the NEXT turn's input responds to — so a clarify answer
-  // card must show the questions it answers (the PRIOR turn's view), not its
-  // own post-answer view where the answered question has dropped off the list.
-  const enterView = [
-    'CLARIFYING',
-    'Questions for you',
-    '1. Who specifically is the power user?',
-    '2. Where does the app live and who controls the data?',
-  ].join('\n');
+test('transcript: every card leads with a user input — the bootstrap (no-input) turn is dropped', () => {
+  // Turn 0 is the bootstrap: on_enter host calls / world sets, no user input.
+  // It must not become a slide — a slide leads with the intent, and it makes no
+  // sense to "enter a room" on screen before the intent that took us there.
   const events = [
-    // Turn 1 enters clarifying and renders the question list.
+    { turn: 0, kind: 'harness.returned', state_path: 'idle', payload: { namespace: 'host.chat.create', data: { ok: true } } },
+    { turn: 0, kind: 'world.update', state_path: 'idle', payload: { set: { idea: '' } } },
+    { turn: 1, kind: 'turn.input', state_path: 'idle', payload: { input: 'i want a notes app' } },
+    { turn: 1, kind: 'turn.end', state_path: 'idle', payload: { outcome: 'transitioned', to: 'idle', view: 'PRD discovery\nDiscovery in progress.' } },
+  ];
+  const { cards } = t.buildTranscript(t.buildJourney(events));
+  // No turn-0 card; the deck opens on turn 1, which has a user input.
+  assert.deepEqual(cards.map(c => c.turn), [1]);
+  assert.equal(cards.every(c => !!c.user), true);
+  assert.equal(cards.some(c => c.bootstrap), false);
+});
+
+test('transcript: a card shows THIS turn\'s own rendered view (input-then-result), incl. turn 1', () => {
+  // The view that preceded an intent is the PREVIOUS turn's view — shown on the
+  // previous card — so a card shows its own turn's view below the input, not the
+  // prior one. Turn 1 therefore shows turn 1's view (the bug: it showed none).
+  const events = [
     { turn: 1, kind: 'turn.input', state_path: 'idle', payload: { input: 'ready' } },
-    { turn: 1, kind: 'turn.end', state_path: 'clarifying', payload: { outcome: 'transitioned', to: 'clarifying', view: enterView } },
-    // Turn 2 answers question 1; its own end view has q1 removed.
+    { turn: 1, kind: 'turn.end', state_path: 'clarifying',
+      payload: { outcome: 'transitioned', to: 'clarifying', view: 'CLARIFYING\nQuestions for you\n1. Who is the power user?\n2. Who controls the data?' } },
     { turn: 2, kind: 'turn.input', state_path: 'clarifying', payload: { input: '1 - a security analyst' } },
     { turn: 2, kind: 'turn.end', state_path: 'clarifying',
-      payload: { outcome: 'transitioned', to: 'clarifying', view: 'CLARIFYING\nQuestions for you\n2. Where does the app live and who controls the data?' } },
+      payload: { outcome: 'transitioned', to: 'clarifying', view: 'CLARIFYING\nQuestions for you\n2. Who controls the data?\nAnswered: Q1 a security analyst' } },
   ];
   const { cards } = t.buildTranscript(t.buildJourney(events));
 
-  // The answer card (turn 2) shows the questions it is responding to — the
-  // PRIOR turn's view, with q1 still present.
-  const answer = cards.find(c => c.turn === 2);
-  assert.match(answer.user.text, /security analyst/);
-  assert.ok(answer.prompt, 'answer card should carry the room view it responds to');
-  assert.match(answer.prompt, /Who specifically is the power user/);
-  assert.match(answer.prompt, /controls the data/);
+  // Turn 1 shows its OWN view (regression guard: turn 1 was rendering blank).
+  const c1 = cards.find(c => c.turn === 1);
+  assert.ok(c1.roomView, 'turn 1 must show its own rendered view');
+  assert.match(c1.roomView, /Who is the power user/);
+
+  // Turn 2 shows its OWN (post-answer) view — NOT turn 1's view. The question
+  // it answered is visible on the preceding card (c1), not repeated here.
+  const c2 = cards.find(c => c.turn === 2);
+  assert.match(c2.user.text, /security analyst/);
+  assert.match(c2.roomView, /Answered: Q1 a security analyst/);
+  assert.ok(!c2.roomView.includes('Who is the power user'), 'turn 2 must not repeat the prior turn\'s view');
 });
 
 // Source-colour provenance: the recorded room view marks LLM-generated spans
@@ -273,25 +287,23 @@ test('segmentNarration: strips baked-in ANSI styling but keeps the source-colour
   assert.strictEqual(segs.find(s => s.llm).text, 'a notes app');
 });
 
-test('transcript: an answer card carries provenance segments for the room view it responds to', () => {
-  const enterView = 'Idea: ' + OPEN + 'a Vue notes app' + CLOSE + '\n\nQuestions for you\n1. Who is the user?';
+test('transcript: a card carries provenance segments for its own rendered view', () => {
+  const view = 'Idea: ' + OPEN + 'a Vue notes app' + CLOSE + '\n\nQuestions for you\n1. Who is the user?';
   const events = [
     { turn: 1, kind: 'turn.input', state_path: 'idle', payload: { input: 'ready' } },
-    { turn: 1, kind: 'turn.end', state_path: 'clarifying', payload: { outcome: 'transitioned', to: 'clarifying', view: enterView } },
-    { turn: 2, kind: 'turn.input', state_path: 'clarifying', payload: { input: '1 - an analyst' } },
-    { turn: 2, kind: 'turn.end', state_path: 'clarifying', payload: { outcome: 'transitioned', to: 'clarifying', view: 'Questions for you\n(answered)' } },
+    { turn: 1, kind: 'turn.end', state_path: 'clarifying', payload: { outcome: 'transitioned', to: 'clarifying', view } },
   ];
   const { cards } = t.buildTranscript(t.buildJourney(events));
-  const answer = cards.find(c => c.turn === 2);
-  assert.ok(Array.isArray(answer.promptSegments) && answer.promptSegments.length, 'answer card carries promptSegments');
+  const card = cards.find(c => c.turn === 1);
+  assert.ok(Array.isArray(card.roomViewSegments) && card.roomViewSegments.length, 'card carries roomViewSegments');
   // The idea echo is flagged LLM; the question scaffolding is template.
-  const llm = answer.promptSegments.filter(s => s.llm).map(s => s.text).join('');
-  const tpl = answer.promptSegments.filter(s => !s.llm).map(s => s.text).join('');
+  const llm = card.roomViewSegments.filter(s => s.llm).map(s => s.text).join('');
+  const tpl = card.roomViewSegments.filter(s => !s.llm).map(s => s.text).join('');
   assert.match(llm, /a Vue notes app/);
   assert.match(tpl, /Questions for you/);
   assert.ok(!llm.includes('Questions'), 'template scaffolding is not flagged LLM');
-  // The plain prompt stays sentinel-free for hasNarration + fallback rendering.
-  assert.ok(!answer.prompt.includes(OPEN) && !answer.prompt.includes(CLOSE));
+  // The plain roomView stays sentinel-free for hasNarration + fallback rendering.
+  assert.ok(!card.roomView.includes(OPEN) && !card.roomView.includes(CLOSE));
 });
 
 test('progress chrome: every entry carries a cumulative snapshot that ends at the session totals', () => {

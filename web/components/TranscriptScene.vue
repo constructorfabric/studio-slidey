@@ -34,14 +34,14 @@ const card = computed(() => cards.value[idx.value] || {});
 const continues = computed(() => idx.value > 0);                       // not the first card
 const hasNext = computed(() => idx.value < cards.value.length - 1);     // more turns follow
 const hasEffects = computed(() => (card.value.effects || []).length > 0 || card.value.effectsMore > 0);
-// A card showing the room's rendered view (the prompt the user responds to)
-// gives it the room: any assistant prose is clamped harder so it fits one screen.
-const hasNarration = computed(() => !!card.value.prompt);
+// A card carrying a rendered room view clamps any assistant prose harder so
+// the input + the view both fit one screen.
+const hasNarration = computed(() => !!card.value.roomView);
 // Provenance-segmented room view: each span is LLM- or template-generated.
 // Falls back to a single template span when a card has no segment data.
-const promptSegments = computed(() => {
-  if (card.value.promptSegments && card.value.promptSegments.length) return card.value.promptSegments;
-  return card.value.prompt ? [{ llm: false, text: card.value.prompt }] : [];
+const roomViewSegments = computed(() => {
+  if (card.value.roomViewSegments && card.value.roomViewSegments.length) return card.value.roomViewSegments;
+  return card.value.roomView ? [{ llm: false, text: card.value.roomView }] : [];
 });
 
 function fmtTokens(n) {
@@ -95,25 +95,25 @@ const showCost = computed(() => !!(totals.value && totals.value.haveCost));
     <div id="transcript-card" class="tx-card" :class="{ 'tx-card-cont': continues, 'tx-card-q': hasNarration }">
       <div class="tx-card-head">
         <span v-if="continues" class="tx-cont">⋯ continued</span>
-        <span class="tx-card-turn">{{ card.bootstrap ? 'session start' : 'turn ' + card.turn }}</span>
+        <span class="tx-card-turn">turn {{ card.turn }}</span>
         <span v-if="card.room" class="tx-card-room">{{ card.room }}</span>
       </div>
 
       <div class="tx-card-body">
-        <!-- Conversation: the room view the user is responding to, then their
-             input, then the assistant's replies / decisions. -->
+        <!-- Conversation: the user's input FIRST (a slide leads with the intent),
+             then the room as it re-rendered after it, then replies / decisions. -->
         <div class="tx-conv">
-          <!-- The room's rendered view the operator was looking at when they
-               typed this turn's input (the clarify questions, the room prose,
-               …). Recorded by the engine; shown verbatim as the prompt. -->
-          <div v-if="card.prompt" class="tx-narration">
-            <div class="tx-narration-label">room<span class="tx-leg"><i class="tx-leg-tpl"></i>template<i class="tx-leg-llm"></i>generated</span></div>
-            <pre class="tx-narration-body"><span v-for="(s, si) in promptSegments" :key="si" :class="s.llm ? 'tx-seg-llm' : 'tx-seg-tpl'">{{ s.text }}</span></pre>
-          </div>
-
           <div v-if="card.user" class="tx-msg tx-msg-user">
             <div class="tx-who">user</div>
             <div class="tx-bubble"><span v-if="card.user.direct" class="tx-direct">⌁ </span>{{ card.user.text }}</div>
+          </div>
+
+          <!-- THIS turn's rendered room view (operator-facing narration): the
+               room as it re-rendered after the intent. The view that preceded
+               this intent is on the previous card, so it is not repeated. -->
+          <div v-if="card.roomView" class="tx-narration">
+            <div class="tx-narration-label">room<span class="tx-leg"><i class="tx-leg-tpl"></i>template<i class="tx-leg-llm"></i>generated</span></div>
+            <pre class="tx-narration-body"><span v-for="(s, si) in roomViewSegments" :key="si" :class="s.llm ? 'tx-seg-llm' : 'tx-seg-tpl'">{{ s.text }}</span></pre>
           </div>
 
           <template v-for="(f, fi) in card.flow" :key="fi">
