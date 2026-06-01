@@ -14,7 +14,7 @@ import TerminalGifScene from './TerminalGifScene.vue';
 import StatScene from './StatScene.vue';
 import CtaScene from './CtaScene.vue';
 import TraceScene from './TraceScene.vue';
-import TraceTurnScene from './TraceTurnScene.vue';
+import TranscriptScene from './TranscriptScene.vue';
 import ThreadScene from './ThreadScene.vue';
 
 const PITCH_COMPONENTS = {
@@ -25,7 +25,7 @@ const PITCH_COMPONENTS = {
   stat: StatScene,
   cta: CtaScene,
   trace: TraceScene,
-  'trace-turn': TraceTurnScene,
+  transcript: TranscriptScene,
   thread: ThreadScene,
 };
 

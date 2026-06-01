@@ -71,20 +71,9 @@ const TIMING = {
   trace_caption:       30,
   trace_hold:         180,  // 6.0 s
 
-  // ── Trace-turn scene — one kitsoki session turn ───────────
-  traceturn_title:     18,
-  traceturn_map:       30,
-  traceturn_row_0:     22,  // ~0.7 s per detail row reveal
-  traceturn_row_1:     22,
-  traceturn_row_2:     22,
-  traceturn_row_3:     22,
-  traceturn_row_4:     22,
-  traceturn_row_5:     22,
-  traceturn_row_6:     22,
-  traceturn_row_7:     22,
-  traceturn_row_8:     22,
-  traceturn_detail:    90,  // 3.0 s — expand step: full prompt/response transcript
-  traceturn_hold:     150,  // 5.0 s default dwell
+  // ── Transcript scene — session as per-turn boxed cards ───────────
+  transcript_card:     96,  // 3.2 s per turn card — time to read one turn
+  transcript_hold:    150,  // 5.0 s dwell on the final card
 
   // ── Thread scene — issue-tracker comment threads ───────────
   thread_title:        20,
@@ -119,7 +108,11 @@ function estimateScene(scene, opts = {}) {
       case 'diagram-svg':  return hold('diagramsvg_hold',  scene.hold);
       case 'terminal-gif': return hold('termgif_hold',     scene.hold);
       case 'trace':        return hold('trace_hold',       scene.hold);
-      case 'trace-turn':   return hold('traceturn_hold',   scene.hold);
+      case 'transcript': {
+        const cards = (scene.cards || []).length;
+        return Math.max(0, cards - 1) * (scene.cardHold ?? T.transcript_card)
+             + hold('transcript_hold', scene.hold);
+      }
       case 'thread':       return hold('thread_hold',      scene.hold);
       case 'stat':         return hold('stat_hold',        scene.hold);
       case 'cta':          return hold('cta_hold',         scene.hold);
@@ -173,12 +166,11 @@ function estimateScene(scene, opts = {}) {
       return f;
     }
 
-    case 'trace-turn': {
-      let f = T.traceturn_title + T.traceturn_map;
-      const rows = (scene.rows || []).length;
-      for (let i = 0; i < rows; i++) f += T[`traceturn_row_${i}`] ?? 22;
-      if (scene.convo && (scene.convo.messages || []).length) f += T.traceturn_detail;
-      f += hold('traceturn_hold', scene.hold);
+    case 'transcript': {
+      // One dwell per turn card; the last card uses the longer scene hold.
+      const cards = (scene.cards || []).length;
+      let f = Math.max(0, cards - 1) * (scene.cardHold ?? T.transcript_card);
+      f += hold('transcript_hold', scene.hold);
       f += T.inter_scene;
       return f;
     }

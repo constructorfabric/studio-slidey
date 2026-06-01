@@ -36,7 +36,7 @@ const SCENE_MODULES = {
   'diagram-svg':  require('./scenes/diagram-svg'),
   'terminal-gif': require('./scenes/terminal-gif'),
   trace:          require('./scenes/trace'),
-  'trace-turn':   require('./scenes/trace-turn'),
+  transcript:     require('./scenes/transcript'),
   thread:         require('./scenes/thread'),
   stat:           require('./scenes/stat'),
   cta:            require('./scenes/cta'),

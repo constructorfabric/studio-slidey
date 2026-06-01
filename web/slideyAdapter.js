@@ -52,8 +52,8 @@ export function installAdapter() {
     showTrace(scene) { store.showScene('trace', scene); },
     hideTrace() { store.hidePitch(); },
 
-    showTraceTurn(scene) { store.showScene('trace-turn', scene); },
-    hideTraceTurn() { store.hidePitch(); },
+    showTranscript(scene) { store.showScene('transcript', scene); },
+    hideTranscript() { store.hidePitch(); },
 
     showThread(scene) { store.showScene('thread', scene); },
     hideThread() { store.hidePitch(); },

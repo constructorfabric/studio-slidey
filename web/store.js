@@ -39,18 +39,6 @@ export const PITCH_REVEALS = {
   trace_turn_1:        ['trace-turn-1'],
   trace_turn_2:        ['trace-turn-2'],
   trace_caption:       ['trace-caption'],
-  traceturn_title:     ['traceturn-title'],
-  traceturn_map:       ['traceturn-map'],
-  traceturn_row_0:     ['traceturn-row-0'],
-  traceturn_row_1:     ['traceturn-row-1'],
-  traceturn_row_2:     ['traceturn-row-2'],
-  traceturn_row_3:     ['traceturn-row-3'],
-  traceturn_row_4:     ['traceturn-row-4'],
-  traceturn_row_5:     ['traceturn-row-5'],
-  traceturn_row_6:     ['traceturn-row-6'],
-  traceturn_row_7:     ['traceturn-row-7'],
-  traceturn_row_8:     ['traceturn-row-8'],
-  traceturn_detail:    ['traceturn-detail'],
   thread_title:        ['thread-title'],
   thread_panel_0:      ['thread-panel-0'],
   thread_panel_1:      ['thread-panel-1'],
@@ -73,6 +61,9 @@ export const store = reactive({
   scene: null,
   sceneType: null,
   gifDataUri: '',
+  // Transcript: index of the turn card currently on screen (the scene shows one
+  // card at a time; the renderers advance it via the transcript_card_<n> step).
+  transcriptCard: 0,
   // visibility / reveal sets
   visible: new Set(),
   revealed: new Set(),
@@ -212,11 +203,15 @@ export const store = reactive({
     this._resetPitch();
     this.scene = scene;
     this.sceneType = type;
+    this.transcriptCard = 0;     // start a transcript at its first turn card
   },
   hidePitch() { this._resetPitch(); },
 
-  // setState dispatch: pitch step → reveal ids; else → request state machine.
+  // setState dispatch: transcript card step → swap the on-screen turn card;
+  // pitch step → reveal ids; else → request state machine.
   setState(step) {
+    const m = /^transcript_card_(\d+)$/.exec(step);
+    if (m) { this.transcriptCard = parseInt(m[1], 10); return; }
     const ids = PITCH_REVEALS[step];
     if (ids) { ids.forEach(id => this.revealed.add(id)); return; }
     this.applyRequestStep(step);

@@ -83,11 +83,15 @@ node src/index.js ~/.kitsoki/sessions/prd/<id>.jsonl --estimate    # scene/durat
 ```
 
 The generated arc is: a **title** card → a **state-machine overview**
-(`diagram-svg`) of the path actually taken → one **`trace-turn`** beat per turn
-(the room map with the current room lit and traversed edges highlighted, beside
-the turn's detail rows — user input, oracle calls with verb/intent and their
-own duration/tokens/cost shown inline as the call happens, world-state diff,
-host calls, narration, rejections) → a **cta** end card. Generation is pure and
+(`diagram-svg`) of the path actually taken (boxes grow to fit each room name —
+ids are rendered prettified, e.g. `__exit__abandoned` → `exit abandoned` — and
+the opening room is marked secondary while the room the session ended in is
+highlighted primary) → a per-turn boxed **`transcript`** of
+the whole session (one card per turn, each fit to a single screen: the turn's
+user input and the assistant's replies/decisions up top, the turn's mechanics —
+tool/host calls, world-state diffs, rejections and the closing state transition —
+below; cards advance one at a time and carry a "continued" marker so the session
+reads as one ongoing conversation) → a **cta** end card. Generation is pure and
 deterministic: the same trace always yields byte-identical output. The generator
 lives in [`src/trace.js`](src/trace.js); `examples/fixtures/` holds a synthetic
 trace used by `npm test`.
@@ -149,7 +153,7 @@ sampling (≈8/658 on the sample deck — on par with the legacy renderer).
 
 Internally, scene types fall into two families the template toggles between: a
 *slides* family (`title`, `narrative`, `diagram`, `diagram-svg`, `trace`,
-`trace-turn`, `thread`, `stat`, `cta`, `terminal-gif`) and an *api* family
+`transcript`, `thread`, `stat`, `cta`, `terminal-gif`) and an *api* family
 (`request`). The
 spec's optional `meta.mode` selects the default; you rarely set it by hand. (In
 the code this distinction still carries its original `pitch`/`api` names — e.g.
@@ -283,56 +287,70 @@ fixed 680px SVG height, no panel chrome; two = side-by-side, smaller fonts,
 Up to three turns (`trace_turn_0..2`). Each turn shows the input utterance, the
 cascade of layers tried, the resolved result, and an optional shortcut badge.
 
-#### `trace-turn` — one kitsoki session turn (map + detail)
+#### `transcript` — a whole kitsoki session as per-turn boxed cards
+
+The session rendered as a sequence of conversation cards, **one card per turn**,
+each fit to a single screen (à la Claude Code / an online AI chat, but one turn
+at a time). Inside each enclosing box: the turn's user input and the assistant's
+replies/decisions up top, and the turn's mechanics below — tool/host calls, the
+net world diff, guard/validation rejections and the closing state transition.
+The scene shows one card at a time; cards advance through the shared reveal-step
+model (one `transcript_card_<n>` step per turn → one PDF page / video dwell / nav
+advance). Every card after the first carries a "⋯ continued" marker, and every
+card before the last a trailing "⋯", so the run reads as one ongoing conversation
+moving turn by turn. Verbose bubbles line-clamp and the box clips overflow, so a
+long turn still fits one screen (host calls past six collapse to a "+N more").
+
+A single full-width status row across the top is the conversation's HUD: the
+session identity (`app` + short `session`) on the left, then how far through the
+session you are (turn N / M plus a fill bar tied to card position) and the
+cumulative token spend broken out by type — `in` (fresh input), `out`, `cache r`
+(cache reads) and `cache w` (cache creation) — alongside the running dollar
+`cost`. It sits flush at the top of the frame (the transcript scene trims the
+stage padding to run nearly full-bleed). The meters reflect the turn on screen
+(the current card's `progress` snapshot), so they tick up exactly as the cost was
+incurred. The token/cost section is shown only when the trace actually carries
+`meta.usage` / `meta.cost_usd` (it degrades to just identity + turn meter
+otherwise).
 
 ```json
-{ "type": "trace-turn",
-  "title": "turn 3  ·  clarifying",
-  "map": { "viewBox": "0 0 720 200",
-           "nodes": [ { "id": "idle", "label": "idle", "x": 30, "y": 30, "w": 230, "h": 74 },
-                      { "id": "clarifying", "label": "clarifying", "x": 390, "y": 30, "w": 230, "h": 74, "style": "primary" } ],
-           "edges": [ { "from": "idle", "to": "clarifying", "label": "start" } ] },
-  "rows": [
-    { "kind": "user", "text": "refine the title" },
-    { "kind": "oracle", "verb": "decide", "outcome": "intent: refine", "meta": "1.2s · 480 tok · $0.0033" },
-    { "kind": "transition", "from": "idle", "to": "clarifying", "intent": "start" },
-    { "kind": "world", "changes": [ { "key": "title", "before": "∅", "after": "PRD" } ] },
-    { "kind": "host", "name": "host.notify", "ok": true, "duration": "6ms" }
-  ] }
+{ "type": "transcript",
+  "title": "prd", "app": "prd", "session": "86fa0981",
+  "subtitle": "session 86fa0981  ·  5 turns  ·  ended in clarifying",
+  "cards": [
+    { "turn": 1, "bootstrap": false, "room": "idle",
+      "user": { "text": "refine the title", "direct": false },
+      "flow": [
+        { "kind": "assistant", "tag": "converse", "model": "claude-sonnet-4-6", "text": "Here's a tighter title…" },
+        { "kind": "decision", "verb": "decide", "outcome": "intent: refine", "error": false }
+      ],
+      "effects": [
+        { "kind": "tool", "name": "host.notify", "ok": true, "duration": "6ms" },
+        { "kind": "world", "changes": [ { "key": "title", "before": "∅", "after": "PRD" } ], "more": 0 },
+        { "kind": "transition", "from": "idle", "to": "clarifying", "intent": "start", "self": false }
+      ],
+      "effectsMore": 0,
+      "progress": { "turn": 1, "turns": 5, "input": 6, "output": 1850,
+                    "cacheRead": 86695, "cacheWrite": 38281, "tokens": 126832, "cost": 0.197 } }
+  ],
+  "totals": { "turns": 5, "tokens": 554365, "input": 19, "output": 7059,
+              "cacheRead": 453674, "cacheWrite": 93613, "cost": 0.594,
+              "haveTokens": true, "haveCost": true },
+  "hold": 150 }
 ```
 
-The `map` is a `diagram-svg` panel (same node/edge shape) rendered on the left;
-mark the current room `"style": "primary"` and set `"dim": true` on not-yet-taken
-edges. `rows` (capped at 9, then a `more` row) render on the right; row `kind` is
-one of `user`, `oracle`, `transition`, `world`, `host`, `say`, `reject`, `more`.
-Authored by hand rarely — usually emitted by the trace generator above.
-
-An optional final reveal step expands the turn into a **conversation view** via
-a `convo` field — the human back-and-forth fills the main area as a chat thread,
-while the turn's world/state mechanics sit on a left-to-right strip below it:
-
-```json
-{ "type": "trace-turn", "...": "...",
-  "convo": {
-    "messages": [
-      { "role": "user",   "text": "refine the title" },
-      { "role": "oracle", "verb": "converse", "model": "claude-sonnet-4-6",
-        "text": "Here's a tighter title…", "prompt": "you are the narrator…" },
-      { "role": "oracle", "verb": "decide", "outcome": "intent: refine" }
-    ],
-    "events": [
-      { "kind": "world", "key": "title", "before": "∅", "after": "PRD" },
-      { "kind": "transition", "to": "clarifying", "intent": "start", "self": false },
-      { "kind": "host", "name": "host.notify", "ok": true }
-    ]
-  } }
-```
-
-A `message` is `user` / `say` (a bubble of `text`) or `oracle` (a `converse`
-reply renders its `text` as a bubble; a structured `decide`/`choose` shows its
-`outcome` instead). The engineered `prompt` is collapsed to a dim one-line
-preview, not part of the flow. `events` chips are `world` / `transition` /
-`host` / `reject` / `more`.
+Each card carries: `turn` (display number; `bootstrap: true` marks turn 0, shown
+as "session start"), `room`, an optional `user` bubble, a `flow` of conversation
+items (`kind: "assistant"` prose bubbles — `tag` is the verb or `"say"` — and
+`kind: "decision"` structured decide/choose rows), an `effects` list of the
+turn's mechanics (`tool` / `world` / `reject` / `transition`), an `effectsMore`
+count of collapsed host calls, and a cumulative `progress` snapshot (turn number
++ token/cost totals as of the end of that turn) that drives the HUD. The scene
+also carries the grand `totals`. `buildTranscript` also returns the flat
+reading-order `entries` stream the cards are folded from (used by tests).
+`scene.cardHold` overrides the per-card dwell (frames); the last card uses the
+longer `hold`. Authored by hand rarely — usually emitted by the trace generator
+above.
 
 #### `thread` — mocked issue-tracker / review comment threads
 

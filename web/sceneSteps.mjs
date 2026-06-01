@@ -36,9 +36,10 @@ export function stepsForScene(scene) {
     case 'trace':
       return ['trace_title', ...range((s.turns || []).length, 'trace_turn_'),
         ...(s.caption ? ['trace_caption'] : [])];
-    case 'trace-turn':
-      return ['traceturn_title', 'traceturn_map', ...range((s.rows || []).length, 'traceturn_row_'),
-        ...((s.convo && (s.convo.messages || []).length) ? ['traceturn_detail'] : [])];
+    case 'transcript':
+      // One boxed card per turn; each card is its own reveal step → one PDF
+      // page / nav advance. The component shows the card at the latest step.
+      return range((s.cards || []).length, 'transcript_card_');
     case 'thread':
       return ['thread_title', ...range((s.panels || []).length, 'thread_panel_'),
         ...(s.caption ? ['thread_caption'] : [])];
@@ -76,7 +77,7 @@ export function applyShow(scene, opts) {
     case 'stat':         slidey.showStat(scene); break;
     case 'cta':          slidey.showCta(scene); break;
     case 'trace':        slidey.showTrace(scene); break;
-    case 'trace-turn':   slidey.showTraceTurn(scene); break;
+    case 'transcript':   slidey.showTranscript(scene); break;
     case 'thread':       slidey.showThread(scene); break;
   }
 }

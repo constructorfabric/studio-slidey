@@ -486,6 +486,9 @@ body.mode-pitch #main   { display: none; }
   overflow: hidden;
 }
 body.mode-pitch #pitch-stage { display: flex; }
+/* The transcript is a full-bleed chat: trim the stage padding so the status row
+   sits high and the conversation column runs nearly the full frame width. */
+body.mode-pitch #pitch-stage:has(#transcript-region.active) { padding: 40px 64px; }
 
 /* Subtle vignette backdrop common to pitch scenes for that pitch-y feel */
 #pitch-stage::before {
@@ -726,9 +729,10 @@ body.instant .reveal { transition: none !important; }
 #diagramsvg-panels.diagramsvg-panels-single .dsvg-line       { font-size: 26px; }
 #diagramsvg-panels.diagramsvg-panels-single .dsvg-edge-label { font-size: 26px; }
 #diagramsvg-panels.diagramsvg-panels-single .dsvg-edge-gate  { font-size: 26px; }
-#diagramsvg-panels.diagramsvg-panels-single .dsvg-node rect            { stroke-width: 2.5; }
-#diagramsvg-panels.diagramsvg-panels-single .dsvg-node.dsvg-style-primary   rect { stroke-width: 3; }
-#diagramsvg-panels.diagramsvg-panels-single .dsvg-node.dsvg-style-secondary rect { stroke-width: 3; }
+#diagramsvg-panels.diagramsvg-panels-single .dsvg-node rect            { stroke-width: 3; }
+#diagramsvg-panels.diagramsvg-panels-single .dsvg-node.dsvg-style-primary   rect { stroke-width: 4.5; }
+#diagramsvg-panels.diagramsvg-panels-single .dsvg-node.dsvg-style-secondary rect { stroke-width: 4; }
+#diagramsvg-panels.diagramsvg-panels-single .dsvg-edge line { stroke-width: 3.5; }
 .diagramsvg-panel-label {
   font-size: 30px;
   letter-spacing: 0.15em;
@@ -763,18 +767,19 @@ body.instant .reveal { transition: none !important; }
 /* SVG content styles */
 .dsvg-node rect {
   fill: #0d1117;
-  stroke: #30363d;
-  stroke-width: 2;
+  stroke: #4d5762;
+  stroke-width: 2.5;
 }
 .dsvg-node.dsvg-style-primary rect {
-  fill: #0c1d2e;
+  fill: #0c2740;
   stroke: #58a6ff;
-  stroke-width: 2.5;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.45));
 }
 .dsvg-node.dsvg-style-secondary rect {
-  fill: #1a1029;
+  fill: #211633;
   stroke: #bc8cff;
-  stroke-width: 2.5;
+  stroke-width: 3.5;
 }
 .dsvg-label {
   font-family: 'JetBrains Mono', 'Courier New', monospace;
@@ -952,209 +957,201 @@ body.instant .reveal { transition: none !important; }
   margin: 0 auto;
 }
 
-/* ── Trace-turn (one kitsoki session turn) ───────────────────────────────── */
-#traceturn-region { gap: 28px; max-width: 1640px; width: 100%; justify-content: flex-start; padding-top: 8px; }
-#traceturn-title {
-  font-size: 34px;
-  font-weight: bold;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #58a6ff;
-  text-align: center;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-}
-.tt-body {
+/* ── Transcript (whole session as one continuous chat) ───────────────────── */
+#transcript-region {
   display: flex;
-  gap: 56px;
+  flex-direction: column;
   width: 100%;
-  align-items: stretch;
-  flex: 1;
+  height: 100%;
   min-height: 0;
+  gap: 20px;
 }
-.tt-map {
-  flex: 0 0 44%;
+/* Status chrome — a single full-width row: identity · turn progress · cumulative
+   spend. Sits flush at the top of the stage (the transcript scene trims the
+   stage padding, below) and runs wider and larger than a normal scene header. */
+.tx-hud {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: #0c1118;
-  border: 1px solid #1d2530;
-  border-radius: 14px;
-  padding: 24px;
-}
-.tt-svg { width: 100%; height: auto; max-height: 760px; display: block; }
-/* Edges not yet traversed at this turn are dimmed. */
-.dsvg-edge-dim { opacity: 0.22; }
-
-.tt-rows {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  justify-content: center;
-}
-.tt-row {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
+  gap: 30px;
+  padding: 16px 28px;
+  background: #11161d;
+  border: 1px solid #283039;
+  border-radius: 12px;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 24px;
-  color: #e6edf3;
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-left-width: 4px;
-  border-radius: 10px;
-  padding: 14px 22px;
 }
-.tt-tag {
-  flex: 0 0 auto;
-  font-size: 16px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: bold;
-  padding: 3px 10px;
-  border-radius: 5px;
-  background: #1c2128;
-  color: #8b949e;
-}
-.tt-tag-user       { background: #312e81; color: #a5b4fc; }
-.tt-tag-oracle     { background: #7c2d12; color: #fdba74; }
-.tt-tag-transition { background: #14532d; color: #86efac; }
-.tt-tag-world      { background: #134e4a; color: #5eead4; }
-.tt-tag-host       { background: #4a1d96; color: #c4b5fd; }
-.tt-tag-say        { background: #1e3a5f; color: #93c5fd; }
-.tt-tag-reject     { background: #5c1a1a; color: #ff9a9a; }
-.tt-row-user       { border-left-color: #6366f1; }
-.tt-row-oracle     { border-left-color: #f0883e; }
-.tt-row-transition { border-left-color: #3fb950; }
-.tt-row-world      { border-left-color: #2dd4bf; }
-.tt-row-host       { border-left-color: #bc8cff; }
-.tt-row-say        { border-left-color: #58a6ff; }
-.tt-row-reject     { border-left-color: #f85149; }
-.tt-row.tt-error   { border-left-color: #f85149; }
-.tt-text { flex: 1; min-width: 0; color: #e6edf3; overflow-wrap: anywhere; }
-.tt-meta { flex: 0 0 auto; font-size: 18px; color: #6e7681; white-space: nowrap; }
-.tt-arrow { color: #58a6ff; }
-.tt-ok { color: #3fb950; }
-.tt-fail { color: #f85149; }
-.tt-world { display: flex; flex-direction: column; gap: 6px; font-size: 20px; }
-.tt-world-change { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-.tt-world-key { color: #5eead4; }
-.tt-world-before { color: #6e7681; }
-.tt-world-after { color: #e6edf3; }
-.tt-world-more { color: #6e7681; font-size: 17px; }
-.tt-more { color: #6e7681; font-style: italic; font-size: 20px; }
-
-/* Expand step — the turn rendered as a conversation: a chat thread filling the
-   main area, with the world/state mechanics on a left-to-right strip below. */
-.tt-convo {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  background: rgba(13, 17, 23, 0.985);
-  border-radius: 14px;
-  padding: 30px 56px;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-.tt-convo-heading {
-  flex: 0 0 auto;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 24px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #58a6ff;
-  font-weight: bold;
-}
-
-/* Chat thread — user replies right-aligned, assistant/say left-aligned. */
-.tt-convo-thread {
+.tx-hud-id { display: inline-flex; align-items: baseline; gap: 14px; white-space: nowrap; }
+.tx-hud-app { color: #58a6ff; font-size: 30px; font-weight: bold; letter-spacing: 0.03em; }
+.tx-hud-sess { color: #6e7681; font-size: 19px; }
+.tx-hud-turn { font-size: 24px; color: #8b949e; white-space: nowrap; }
+.tx-hud-turn b { color: #e6edf3; font-size: 30px; }
+.tx-hud-of { color: #4d5562; margin-left: 4px; }
+.tx-hud-bar {
   flex: 1 1 auto;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding-right: 8px;
-}
-.tt-msg { display: flex; flex-direction: column; gap: 8px; max-width: 80%; }
-.tt-msg-user { align-self: flex-end; align-items: flex-end; }
-.tt-msg-oracle, .tt-msg-say { align-self: flex-start; align-items: flex-start; }
-.tt-msg-who { display: flex; align-items: baseline; gap: 14px; }
-.tt-msg-tag {
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 17px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-weight: bold;
-  padding: 3px 12px;
-  border-radius: 6px;
-}
-.tt-msg-model {
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 16px;
-  color: #6e7681;
-}
-.tt-msg-bubble {
-  font-size: 26px;
-  line-height: 1.5;
-  color: #e6edf3;
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 14px;
-  padding: 16px 22px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.tt-msg-user .tt-msg-bubble   { background: #1c2333; border-color: #314066; }
-.tt-msg-oracle .tt-msg-bubble { background: #1d160f; border-color: #5c3a1e; }
-.tt-msg-structured {
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 22px;
-}
-.tt-msg-outcome { color: #fdba74; }
-.tt-msg-bubble.tt-error { border-color: #f85149; color: #ff9a9a; }
-.tt-direct { color: #fdba74; }
-.tt-msg-prompt {
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 16px;
-  color: #6e7681;
-  max-width: 100%;
-  white-space: nowrap;
+  min-width: 120px;
+  height: 12px;
+  border-radius: 999px;
+  background: #1f2630;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+.tx-hud-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f81f7, #58a6ff);
+}
+.tx-hud-tokens { display: flex; align-items: center; gap: 22px; white-space: nowrap; }
+.tx-tok { font-size: 24px; color: #e6edf3; display: inline-flex; align-items: baseline; gap: 9px; }
+.tx-tok-label { font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; color: #6e7681; }
+.tx-tok-out .tx-tok-label { color: #3fb950; }
+.tx-tok-cr  .tx-tok-label { color: #39c5cf; }
+.tx-tok-cw  .tx-tok-label { color: #d29922; }
+.tx-hud-cost {
+  font-size: 32px;
+  font-weight: bold;
+  color: #3fb950;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
-/* Bottom strip — world diffs / transition / host / rejection chips, L→R. */
-.tt-convo-events {
+/* One turn, in an enclosing box. The box fills the stage below the HUD; its
+   body is a flex column with the conversation up top and the turn's mechanics
+   pinned to the bottom. Overflow is clipped (bubbles line-clamp) so an oversized
+   turn still fits one screen. */
+.tx-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-width: 1640px;
+  width: 100%;
+  margin: 0 auto;
+  background: #0d1117;
+  border: 1.5px solid #30363d;
+  border-radius: 18px;
+  padding: 26px 38px 30px;
+  overflow: hidden;
+}
+.tx-card-cont { border-color: #283039; }
+.tx-card-head {
   flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  border-top: 1px solid #30363d;
-  padding-top: 18px;
-}
-.tt-evt {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+  display: flex; align-items: baseline; gap: 22px;
+  padding-bottom: 16px; margin-bottom: 20px;
+  border-bottom: 1px solid #21262d;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 19px;
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 999px;
-  padding: 7px 16px;
 }
-.tt-evt-world      { border-color: #134e4a; }
-.tt-evt-transition { border-color: #14532d; }
-.tt-evt-host       { border-color: #4a1d96; }
-.tt-evt-reject     { border-color: #5c1a1a; }
-.tt-evt-key   { color: #5eead4; }
-.tt-evt-from  { color: #6e7681; }
-.tt-evt-to    { color: #e6edf3; }
-.tt-evt-label { color: #8b949e; text-transform: uppercase; font-size: 15px; letter-spacing: 0.1em; }
-.tt-evt-sub   { color: #86efac; }
-.tt-evt-more  { color: #6e7681; font-style: italic; }
+.tx-cont { color: #4d5562; font-size: 18px; letter-spacing: 0.1em; }
+.tx-card-turn { color: #58a6ff; font-size: 25px; font-weight: bold; letter-spacing: 0.06em; text-transform: uppercase; }
+.tx-card-room { color: #8b949e; font-size: 22px; }
+.tx-card-head .tx-card-room::before { content: '· '; color: #3a424d; }
+
+.tx-card-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
+.tx-conv { display: flex; flex-direction: column; gap: 18px; }
+
+/* Mechanics for the turn — below the conversation, separated by a dashed rule.
+   Content flows from the top of the box (chat-like) so sparse turns don't strand
+   the effects at the far bottom. */
+.tx-effects {
+  margin-top: 6px;
+  padding-top: 18px;
+  border-top: 1px dashed #262c34;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.tx-effects-label { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 20px; letter-spacing: 0.16em; text-transform: uppercase; color: #aab3be; font-weight: bold; margin-bottom: 8px; }
+.tx-more { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 20px; color: #8b949e; padding-left: 6px; }
+
+/* Continuation cue: the conversation keeps going onto the next card. */
+.tx-card-next { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; color: #39414c; font-size: 30px; line-height: 1; letter-spacing: 0.3em; }
+
+/* Chat bubbles — user right-aligned, assistant left-aligned. Bubbles clamp to a
+   few lines so a verbose turn still fits inside the box. */
+.tx-msg { display: flex; flex-direction: column; gap: 8px; max-width: 86%; }
+.tx-msg-user { align-self: flex-end; align-items: flex-end; }
+.tx-msg-assistant { align-self: flex-start; align-items: flex-start; }
+.tx-who { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: #6e7681; display: flex; gap: 12px; align-items: baseline; }
+.tx-who-tag { color: #fdba74; font-weight: bold; }
+.tx-who-model { color: #6e7681; text-transform: none; letter-spacing: 0; }
+.tx-bubble {
+  font-size: 26px; line-height: 1.5; color: #e6edf3; border-radius: 16px;
+  padding: 16px 22px; white-space: pre-wrap; word-break: break-word;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 9; overflow: hidden;
+}
+.tx-msg-user .tx-bubble { background: #1c2333; border: 1px solid #314066; -webkit-line-clamp: 5; }
+.tx-msg-assistant .tx-bubble { background: #161b22; border: 1px solid #30363d; }
+.tx-direct { color: #fdba74; }
+
+/* The room's rendered view — the operator-facing narration the engine
+   recorded for the turn (clarify questions, room prose, …). A bordered panel
+   holding the preformatted TUI text verbatim, so whatever the room showed the
+   operator shows here too. */
+.tx-narration {
+  align-self: stretch; max-width: 86%; background: #12161d;
+  border: 1px solid #314066; border-left: 4px solid #6ea8ff; border-radius: 14px;
+  padding: 14px 24px 16px; margin: 2px 0; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.tx-narration-label {
+  display: flex; align-items: center; gap: 14px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 18px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: #9db4e0;
+  font-weight: bold; margin-bottom: 10px;
+}
+/* Legend keying the two-tone source colours, mirroring the TUI dark theme. */
+.tx-leg {
+  display: inline-flex; align-items: center; gap: 8px; margin-left: auto;
+  font-size: 15px; letter-spacing: 0.08em; color: #8ea0bd; font-weight: normal;
+}
+.tx-leg i { width: 22px; height: 14px; border-radius: 3px; display: inline-block; }
+.tx-leg-tpl { background: #2a3550; border: 1px solid #3c4a6b; }
+.tx-leg-llm { background: #5c3e28; border: 1px solid #7a5436; margin-left: 8px; }
+.tx-narration-body {
+  margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 21px; line-height: 1.5; white-space: pre-wrap;
+  word-break: break-word; overflow: hidden;
+  /* TUI dark-mode source colours: the block is the template (cool slate)
+     background; LLM-generated spans paint over it in warm bronze. */
+  color: #e8e8e8; background: #2a3550;
+  padding: 12px 16px; border-radius: 8px;
+  /* Cap height so the room view can't crowd out the user's reply below it. */
+  max-height: 560px;
+}
+/* Template-generated text sits on the slate block; LLM-generated text gets the
+   warm bronze band. box-decoration-break:clone makes a multi-line span paint a
+   solid band per wrapped line, the way the TUI pads its LLM block. */
+.tx-seg-tpl { background: transparent; }
+.tx-seg-llm {
+  background: #5c3e28; border-radius: 3px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+/* On a card carrying a room-view prompt, clamp any assistant prose so the
+   prompt + the user's reply both fit the one screen. */
+.tx-card-q .tx-msg-assistant .tx-bubble { -webkit-line-clamp: 3; }
+
+/* Inline mechanics rows — Claude-Code tool-row aesthetic. */
+.tx-inline { display: flex; align-items: baseline; gap: 12px; max-width: 1500px; width: 100%; margin: 0 auto; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 22px; color: #adb6c0; padding: 3px 0 3px 6px; flex-wrap: wrap; }
+.tx-glyph { color: #8b949e; }
+.tx-inline-verb { color: #e6edf3; }
+.tx-inline-decision .tx-inline-verb { color: #fdba74; }
+.tx-inline-tool .tx-inline-verb { color: #c4b5fd; }
+.tx-inline-text { color: #e6edf3; }
+.tx-inline-meta { color: #8b949e; }
+.tx-inline-prompt { color: #5a626d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 760px; }
+.tx-inline.tx-err, .tx-inline.tx-err .tx-inline-text, .tx-inline.tx-err .tx-inline-verb { color: #ff9a9a; }
+.tx-inline-world .tx-glyph { color: #5eead4; }
+.tx-world-chip { display: inline-flex; align-items: baseline; gap: 8px; }
+.tx-world-key { color: #5eead4; }
+.tx-world-before { color: #6e7681; }
+.tx-world-after { color: #e6edf3; }
+.tx-arrow { color: #6e7681; }
+.tx-ok { color: #3fb950; }
+.tx-fail { color: #f85149; }
+
+/* State transition — the move that closes the turn (an effect row). */
+.tx-inline-trans { color: #86efac; }
+.tx-inline-trans .tx-glyph { color: #86efac; }
+.tx-inline-trans .tx-inline-text, .tx-inline-trans .tx-inline-text b { color: #e6edf3; }
+.tx-inline-trans.tx-inline-stay, .tx-inline-stay .tx-glyph { color: #8b949e; }
 
 /* ── Thread (comment-driven flow) ────────────────────────────────────────── */
 #thread-region { gap: 30px; max-width: 1500px; width: 100%; }
