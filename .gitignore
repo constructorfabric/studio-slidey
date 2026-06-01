@@ -1,8 +1,14 @@
 # Dependencies
 node_modules/
 
+# Build output (Vue render bundle + web app + single-file static viewer)
+dist/
+dist-render/
+dist-web-single/
+
 # Render artifacts
 *.mp4
+*.pdf
 .artifacts/
 frames/
 *-frames/

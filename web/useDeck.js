@@ -1,0 +1,86 @@
+// SLIDEY — interactive deck navigation
+//
+// Flattens a spec into a linear list of reveal positions (one per reveal step,
+// using the shared web/sceneSteps.mjs model) and drives the window.slidey
+// adapter as the user steps forward/back. Re-applies a scene from its start on
+// every position so backward navigation is exact (cumulative reveals replay).
+
+import { reactive } from 'vue';
+import { stepsForScene, applyShow } from './sceneSteps.mjs';
+
+export function createDeck(spec, specBaseUrl = '') {
+  const scenes = spec.scenes || [];
+
+  // Flat positions: one entry per reveal step (title scenes get a single entry).
+  const flat = [];
+  scenes.forEach((sc, si) => {
+    const steps = stepsForScene(sc);
+    const list = steps.length ? steps : [null];
+    list.forEach((stepName, sti) => {
+      flat.push({ sceneIndex: si, stepIndex: sti, stepName, stepsInScene: list.length });
+    });
+  });
+
+  const state = reactive({
+    pos: 0,
+    total: flat.length,
+    sceneIndex: 0,
+    stepIndex: 0,
+    stepsInScene: flat.length ? flat[0].stepsInScene : 0,
+    sceneCount: scenes.length,
+  });
+
+  const gifCache = {};
+  async function ensureGif(sc) {
+    if (!sc.gif) return '';
+    if (gifCache[sc.gif]) return gifCache[sc.gif];
+    try {
+      const url = new URL(sc.gif, specBaseUrl || window.location.href).href;
+      const blob = await (await fetch(url)).blob();
+      const dataUri = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(blob);
+      });
+      gifCache[sc.gif] = dataUri;
+      return dataUri;
+    } catch (_) {
+      return ''; // gif unresolvable (e.g. spec loaded via file picker) — skip
+    }
+  }
+
+  async function render() {
+    const cur = flat[state.pos];
+    if (!cur) return;
+    const sc = scenes[cur.sceneIndex];
+    const opts = {};
+    if (sc.type === 'terminal-gif') opts.gifDataUri = await ensureGif(sc);
+
+    applyShow(sc, opts); // resets reveal state + injects scene content
+    const steps = stepsForScene(sc);
+    for (let i = 0; i <= cur.stepIndex && i < steps.length; i++) {
+      window.slidey.setState(steps[i]);
+    }
+
+    state.sceneIndex = cur.sceneIndex;
+    state.stepIndex = cur.stepIndex;
+    state.stepsInScene = cur.stepsInScene;
+  }
+
+  function go(pos) {
+    state.pos = Math.max(0, Math.min(state.total - 1, pos));
+    return render();
+  }
+  const next = () => go(state.pos + 1);
+  const prev = () => go(state.pos - 1);
+  const first = () => go(0);
+  const last = () => go(state.total - 1);
+  // Jump to the first position of a given scene.
+  const gotoScene = si => {
+    const idx = flat.findIndex(f => f.sceneIndex === si);
+    if (idx >= 0) return go(idx);
+  };
+
+  return { state, render, go, next, prev, first, last, gotoScene };
+}

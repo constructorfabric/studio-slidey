@@ -1,0 +1,23 @@
+/* Web-app-only chrome (NOT loaded by the render harness, which needs a raw
+   1920×1080 stage for Puppeteer). Scales the fixed-size #root deck to fit the
+   browser viewport while preserving its internal 1920×1080 layout. */
+html, body {
+  width: 100vw;
+  height: 100vh;
+  background: #0d1117;
+  overflow: hidden;
+}
+#app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0d1117;
+}
+#root {
+  flex: none;
+  transform: scale(var(--slidey-scale, 1));
+  transform-origin: center center;
+}

@@ -1,0 +1,80 @@
+// SLIDEY — window.slidey adapter
+//
+// Re-creates the exact `window.slidey.*` surface that src/renderer.js and
+// src/scenes/*.js drive, but backed by the Vue reactive store instead of direct
+// DOM mutation. Installing this lets the existing render pipeline run unchanged
+// against the Vue bundle.
+//
+// Also installs the determinism primitives the renderer waits on:
+//   window.__slideyReady  — set true once Vue has mounted + first paint settled
+//   window.__slideySettle — resolves after Vue flushes the DOM (nextTick),
+//                           fonts are ready, and any pending <img> has decoded.
+// renderer.js awaits __slideySettle() before every frame/page capture so a
+// screenshot never races an un-flushed reactive update.
+
+import { nextTick } from 'vue';
+import { store } from './store.js';
+
+export function installAdapter() {
+  window.slidey = {
+    setMeta(meta) { store.setMeta(meta); },
+    setMode(mode) { store.setMode(mode); },
+
+    showTitleCard(scene) { store.showTitleCard(scene); },
+    hideTitleCard() { store.hideTitleCard(); },
+
+    loadScene(scene, opts) { store.loadScene(scene, opts); },
+    setState(step) { store.setState(step); },
+    setProgress(pct) { store.setProgress(pct); },
+    setSendingText(text) { store.setSendingText(text); },
+
+    showNarrative(scene) { store.showScene('narrative', scene); },
+    hideNarrative() { store.hidePitch(); },
+
+    showDiagram(scene) { store.showScene('diagram', scene); },
+    hideDiagram() { store.hidePitch(); },
+
+    showDiagramSvg(scene) { store.showScene('diagram-svg', scene); },
+    hideDiagramSvg() { store.hidePitch(); },
+
+    showTerminalGif(scene, dataUri) {
+      store.showScene('terminal-gif', scene);
+      store.gifDataUri = dataUri || '';
+    },
+    hideTerminalGif() { store.hidePitch(); store.gifDataUri = ''; },
+
+    showStat(scene) { store.showScene('stat', scene); },
+    hideStat() { store.hidePitch(); },
+
+    showCta(scene) { store.showScene('cta', scene); },
+    hideCta() { store.hidePitch(); },
+
+    showTrace(scene) { store.showScene('trace', scene); },
+    hideTrace() { store.hidePitch(); },
+
+    showTraceTurn(scene) { store.showScene('trace-turn', scene); },
+    hideTraceTurn() { store.hidePitch(); },
+
+    showThread(scene) { store.showScene('thread', scene); },
+    hideThread() { store.hidePitch(); },
+  };
+
+  // Settle barrier: flush Vue's async DOM patch before the renderer captures, so
+  // a screenshot never races an un-applied reveal. Kept minimal and free of
+  // variable-latency awaits (the deck uses only system monospace fonts, so no
+  // document.fonts wait is needed) — extra awaits between the reveal mutation
+  // and capture jitter the in-flight 320ms CSS transition and cost run-to-run
+  // determinism. Only awaits image decode when a scene actually has a pending
+  // image (terminal-gif), so its first frame isn't blank.
+  window.__slideySettle = async () => {
+    await nextTick();
+    const pending = Array.from(document.images || []).filter(img => img.src && !img.complete);
+    if (pending.length) {
+      await Promise.all(pending.map(img => (img.decode ? img.decode() : Promise.resolve()).catch(() => {})));
+    }
+  };
+}
+
+export function markReady() {
+  window.__slideyReady = true;
+}

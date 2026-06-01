@@ -7,14 +7,26 @@
     "slidey": "src/index.js"
   },
   "scripts": {
+    "test": "node --test",
     "estimate": "node src/index.js examples/hello.json --estimate",
-    "hello": "node src/index.js examples/hello.json hello.mp4"
+    "hello": "node src/index.js examples/hello.json hello.mp4",
+    "build:render": "SLIDEY_TARGET=render vite build && node web/inline-render.mjs",
+    "build:web": "SLIDEY_TARGET=web vite build",
+    "build:single": "node web/build-single.mjs",
+    "build": "npm run build:render && npm run build:web",
+    "dev": "SLIDEY_TARGET=web vite"
   },
   "dependencies": {
     "jsonpath-plus": "^10.4.0",
+    "pdf-lib": "^1.17.1",
     "puppeteer": "^21.11.0"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "vite": "^5.4.21",
+    "vue": "^3.5.30"
   }
 }

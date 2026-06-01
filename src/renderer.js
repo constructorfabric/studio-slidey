@@ -11,7 +11,8 @@
  * first, then the response is rendered. Mock and playback modes skip the
  * HTTP call. See scenes/request.js.
  *
- * Visual look:   template.html (CSS-only).
+ * Visual look:   the Vue render bundle (dist/render.html), shared with the
+ *   interactive web app and the PDF exporter. Build it with `npm run build:render`.
  * Animation pacing: timing.js (frames per state name).
  */
 
@@ -22,7 +23,10 @@ const path      = require('path');
 const fs        = require('fs');
 const TIMING    = require('./timing');
 
-const TEMPLATE_PATH = path.resolve(__dirname, 'template.html');
+// Self-contained Vue render harness (built by `npm run build:render` →
+// web/inline-render.mjs). Loaded via file://; exposes the same window.slidey.*
+// surface the scene modules drive, plus window.__slideyReady / __slideySettle.
+const RENDER_BUNDLE = path.resolve(__dirname, '..', 'dist-render', 'render.html');
 
 const SCENE_MODULES = {
   title:          require('./scenes/title'),
@@ -32,6 +36,7 @@ const SCENE_MODULES = {
   'diagram-svg':  require('./scenes/diagram-svg'),
   'terminal-gif': require('./scenes/terminal-gif'),
   trace:          require('./scenes/trace'),
+  'trace-turn':   require('./scenes/trace-turn'),
   thread:         require('./scenes/thread'),
   stat:           require('./scenes/stat'),
   cta:            require('./scenes/cta'),
@@ -60,6 +65,13 @@ async function generateFrames(spec, framesDir, fps = 30, onProgress = null, capt
   // Shared HTTP context (mutated by request-scene captures across scenes)
   const requestContext = Object.assign({}, (spec.meta && spec.meta.context) || {});
 
+  if (!fs.existsSync(RENDER_BUNDLE)) {
+    throw new Error(
+      `[slidey] render bundle missing: ${RENDER_BUNDLE}\n` +
+      `Build it first:  npm run build:render`
+    );
+  }
+
   const browser = await puppeteer.launch({
     headless: 'new',
     args: [
@@ -77,7 +89,9 @@ async function generateFrames(spec, framesDir, fps = 30, onProgress = null, capt
   try {
     const page = await browser.newPage();
     await page.setViewport({ width, height, deviceScaleFactor: 1 });
-    await page.goto(`file://${TEMPLATE_PATH}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`file://${RENDER_BUNDLE}`, { waitUntil: 'load' });
+    // Wait for Vue to mount + install window.slidey before driving it.
+    await page.waitForFunction('window.__slideyReady === true', { timeout: 15000 });
 
     // Apply global metadata + mode (chrome bar visibility, brand, etc.)
     await page.evaluate((meta, m) => {
@@ -92,6 +106,11 @@ async function generateFrames(spec, framesDir, fps = 30, onProgress = null, capt
     const framePath = n => path.join(framesDir, `frame-${String(n).padStart(6, '0')}.png`);
 
     const hold = async (n, label = '') => {
+      // Settle barrier: Vue patches the DOM asynchronously, so flush its pending
+      // render (nextTick + fonts + image decode) before capturing — otherwise a
+      // screenshot races an un-applied reveal. All frame capture funnels through
+      // hold(), so this single await covers every scene module unchanged.
+      await page.evaluate('window.__slideySettle && window.__slideySettle()');
       for (let i = 0; i < n; i++) {
         await page.screenshot({ path: framePath(frameIndex) });
         if (onProgress) onProgress(frameIndex, null, label);
