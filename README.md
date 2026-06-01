@@ -1,17 +1,27 @@
 # Slidey
 
-Deterministic, spec-driven declarative video generator. A JSON spec describes a
-video as an ordered list of scenes; slidey drives a headless Chrome via Puppeteer
-to screenshot each frame, synthesises narration with `edge-tts`, and muxes
-everything into an MP4 with ffmpeg.
+Deterministic, spec-driven declarative scene engine. A JSON spec describes an
+ordered list of scenes; from that **one spec** slidey produces three outputs that
+all share a single set of Vue 3 scene components (so they never drift):
 
-Same spec + same template → byte-identical frames. No LLM in the rendering loop.
+- **Video** (`out.mp4`) — headless Chrome screenshots each frame, `edge-tts`
+  synthesises narration, ffmpeg muxes to MP4.
+- **PDF** (`out.pdf`) — one vector page per reveal step (a diagram that builds
+  across N panels becomes N pages). Text and SVG stay selectable, not rasterised.
+- **Interactive web app** — the same components, navigated by keyboard/click.
+
+Same bundle + same spec → byte-identical frames. No LLM in the rendering loop.
 
 ```
-spec.json ──► renderer.js (Puppeteer ➜ PNGs) ──┐
-                                               ├──► assembler.js (ffmpeg) ──► out.mp4
-              narration.js (edge-tts ➜ MP3s) ──┘
+                          ┌─ renderer.js (Puppeteer ➜ PNGs) + edge-tts ─► ffmpeg ─► out.mp4
+spec.json ─► Vue scene ───┼─ pdf.js     (Puppeteer ➜ page.pdf per step) ─────────► out.pdf
+            components     └─ web app    (Vite dev/build, manual click-through)
 ```
+
+The Vue components are built into a self-contained `dist-render/render.html`
+(loaded via `file://` by the video + PDF pipelines) and into the `dist/` web app.
+`web/store.js` + `web/slideyAdapter.js` re-expose the exact `window.slidey.*` API
+the scene modules drive, so `src/renderer.js` runs against the bundle unchanged.
 
 For the iteration workflow (when to use `--estimate`, `--scenes`,
 `--skip-render`, narration budgeting, common gotchas), see
@@ -20,29 +30,76 @@ This document is the **reference**: pipeline architecture and JSON schema.
 
 ## Requirements
 
-- **Node** ≥ 18 — `npm install` pulls `puppeteer` (which downloads a pinned
-  Chromium) and `jsonpath-plus`.
-- **ffmpeg** on `PATH` — muxes frames + audio into the MP4.
+- **Node** ≥ 18 — `npm install` pulls `puppeteer` (pinned Chromium),
+  `jsonpath-plus`, `pdf-lib`, and the Vue/Vite build toolchain.
+- **ffmpeg** on `PATH` — muxes frames + audio into the MP4 (video output only).
 - **edge-tts** on `PATH` — synthesises narration. Only invoked when at least one
   scene carries a `narration` string; a spec with no narration renders silently
-  without it.
+  without it. (PDF output skips narration entirely.)
 
 ## Quick start
 
 ```sh
 npm install
-node src/index.js examples/hello.json --estimate     # scene/duration table, no render (~50ms)
-node src/index.js examples/hello.json hello.mp4       # full render
+npm run build:render                                  # build the Vue render bundle (required before video/PDF)
+
+node src/index.js examples/kitsoki-pitch.json --estimate   # scene/duration table, no render (~50ms)
+node src/index.js examples/kitsoki-pitch.json out.mp4      # video
+node src/index.js examples/kitsoki-pitch.json out.pdf      # slides — one page per reveal step
+
+npm run dev                                           # interactive web app (Vite); open ?spec=<url> or drop a spec
+
+npm run build:single -- examples/kitsoki-pitch.json kitsoki.html   # one self-contained .html — open it straight off disk
 ```
+
+The video and PDF pipelines load the built `dist-render/render.html`; rebuild it
+with `npm run build:render` whenever you change anything under `web/`. `npm run
+build` builds both the render bundle and the web app.
+
+`npm run build:single -- <spec.json> [out.html]` produces a **single
+self-contained HTML file** of the interactive viewer with the spec (and any gif
+assets) embedded inline — no server, no fetches, no sidecar files. Open it
+directly (`file://`) or email/host it anywhere; arrow keys / click step through
+the deck. Output defaults to `dist-web-single/<spec>.html`. (The orchestrator is
+[`web/build-single.mjs`](web/build-single.mjs), built via the `webfile` Vite
+target; it folds the app's JS + CSS inline the same way the render harness does
+and injects the spec as `window.__SLIDEY_SPEC__`.)
 
 `examples/kitsoki-pitch.json` is a real-world sample that exercises every scene
 type; it's safe to delete.
 
+## Visualizing a kitsoki session trace
+
+A **`.jsonl` input is treated as a [kitsoki](https://github.com/) session trace**
+(the canonical append-only event log `kitsoki run` writes under
+`~/.kitsoki/sessions/<app>/`) rather than a hand-authored spec. Slidey reads the
+raw trace (the `kind`/`payload` event shape) and generates a full scene spec
+automatically — the video analogue of kitsoki's `tools/runstatus` SPA:
+
+```sh
+node src/index.js ~/.kitsoki/sessions/prd/<id>.jsonl session.mp4   # render the session as a video
+node src/index.js ~/.kitsoki/sessions/prd/<id>.jsonl spec.json     # dump the generated spec to inspect/hand-tweak
+node src/index.js ~/.kitsoki/sessions/prd/<id>.jsonl --estimate    # scene/duration table, no render
+```
+
+The generated arc is: a **title** card → a **state-machine overview**
+(`diagram-svg`) of the path actually taken → one **`trace-turn`** beat per turn
+(the room map with the current room lit and traversed edges highlighted, beside
+the turn's detail rows — user input, oracle calls with verb/intent and their
+own duration/tokens/cost shown inline as the call happens, world-state diff,
+host calls, narration, rejections) → a **cta** end card. Generation is pure and
+deterministic: the same trace always yields byte-identical output. The generator
+lives in [`src/trace.js`](src/trace.js); `examples/fixtures/` holds a synthetic
+trace used by `npm test`.
+
 ## CLI
 
 ```
-node src/index.js <input.json> <output.mp4> [options]
+node src/index.js <input.json> <output> [options]
 ```
+
+The output **extension selects the format**: `.pdf` → slide deck (one page per
+reveal step; no frames, narration, or ffmpeg); anything else → MP4 video.
 
 | Flag | Effect |
 |---|---|
@@ -59,26 +116,41 @@ node src/index.js <input.json> <output.mp4> [options]
 
 ## Pipeline
 
-All source lives under `src/`:
+Render pipeline (`src/`):
 
 | File | Role |
 |---|---|
-| `src/index.js` | CLI; argv parsing; orchestration |
-| `src/renderer.js` | Per-scene dispatch; tracks scene start frames; drives Puppeteer |
-| `src/template.html` | The single HTML page Puppeteer drives — all CSS + the `window.slidey.*` JS API every scene module calls |
+| `src/index.js` | CLI; argv parsing; orchestration; dispatches `.pdf` → `src/pdf.js`, else video |
+| `src/renderer.js` | Per-scene dispatch; tracks scene start frames; drives Puppeteer against the Vue bundle |
+| `src/pdf.js` | PDF exporter — drives the bundle, `page.pdf()` per reveal step, merges with `pdf-lib` |
 | `src/scenes/<type>.js` | Per-scene-type render module: `{ render(page, scene, ctx) }` |
 | `src/timing.js` | Frame counts per reveal state name; `estimateScene` / `estimateBoundaries` |
 | `src/narration.js` | Calls `edge-tts` per scene; bundles audio segments aligned to scene start frames |
 | `src/assembler.js` | ffmpeg invocation; muxes audio segments if supplied |
 | `src/runner.js` | Live-HTTP runner for `request` scenes (template substitution + JSONPath capture) |
+| `src/template.html` | **Legacy reference** — the original single-page renderer the Vue components were ported from. No longer driven by the pipeline; kept as the visual source of truth `web/styles/template.css` was extracted from. |
+
+Shared Vue render core (`web/`, built by `npm run build:*`):
+
+| File | Role |
+|---|---|
+| `web/components/*.vue` | One component per scene type + `DeckHost.vue`; keep the original ids/classes so `template.css` applies verbatim |
+| `web/store.js` | Reactive store: a faithful port of the `window.slidey` state machine (`visible`/`revealed` sets) |
+| `web/slideyAdapter.js` | Installs `window.slidey.*` (over the store) + `__slideyReady` / `__slideySettle` |
+| `web/sceneSteps.mjs` | Shared reveal-step model — one step = one PDF page / one nav advance |
+| `web/useDeck.js` + `NavController.vue` | Web-app navigation (keyboard/click, progress) |
+| `web/inline-render.mjs` | Post-build: folds JS+CSS into a self-contained `dist-render/render.html` for `file://` |
 
 Determinism comes from: viewport pinned at 1920×1080, timing measured in frame
-counts not seconds, and the spec being pure data — no LLM is consulted during
-rendering.
+counts not seconds, the spec being pure data (no LLM during rendering), and a
+settle barrier (`__slideySettle`) that flushes Vue's async DOM patch before each
+capture. Run-to-run frame variance is limited to sub-pixel CSS-transition
+sampling (≈8/658 on the sample deck — on par with the legacy renderer).
 
 Internally, scene types fall into two families the template toggles between: a
 *slides* family (`title`, `narrative`, `diagram`, `diagram-svg`, `trace`,
-`thread`, `stat`, `cta`, `terminal-gif`) and an *api* family (`request`). The
+`trace-turn`, `thread`, `stat`, `cta`, `terminal-gif`) and an *api* family
+(`request`). The
 spec's optional `meta.mode` selects the default; you rarely set it by hand. (In
 the code this distinction still carries its original `pitch`/`api` names — e.g.
 `mode-pitch`, `_PITCH_REVEALS` — they're internal labels, not project identity.)
@@ -210,6 +282,57 @@ fixed 680px SVG height, no panel chrome; two = side-by-side, smaller fonts,
 
 Up to three turns (`trace_turn_0..2`). Each turn shows the input utterance, the
 cascade of layers tried, the resolved result, and an optional shortcut badge.
+
+#### `trace-turn` — one kitsoki session turn (map + detail)
+
+```json
+{ "type": "trace-turn",
+  "title": "turn 3  ·  clarifying",
+  "map": { "viewBox": "0 0 720 200",
+           "nodes": [ { "id": "idle", "label": "idle", "x": 30, "y": 30, "w": 230, "h": 74 },
+                      { "id": "clarifying", "label": "clarifying", "x": 390, "y": 30, "w": 230, "h": 74, "style": "primary" } ],
+           "edges": [ { "from": "idle", "to": "clarifying", "label": "start" } ] },
+  "rows": [
+    { "kind": "user", "text": "refine the title" },
+    { "kind": "oracle", "verb": "decide", "outcome": "intent: refine", "meta": "1.2s · 480 tok · $0.0033" },
+    { "kind": "transition", "from": "idle", "to": "clarifying", "intent": "start" },
+    { "kind": "world", "changes": [ { "key": "title", "before": "∅", "after": "PRD" } ] },
+    { "kind": "host", "name": "host.notify", "ok": true, "duration": "6ms" }
+  ] }
+```
+
+The `map` is a `diagram-svg` panel (same node/edge shape) rendered on the left;
+mark the current room `"style": "primary"` and set `"dim": true` on not-yet-taken
+edges. `rows` (capped at 9, then a `more` row) render on the right; row `kind` is
+one of `user`, `oracle`, `transition`, `world`, `host`, `say`, `reject`, `more`.
+Authored by hand rarely — usually emitted by the trace generator above.
+
+An optional final reveal step expands the turn into a **conversation view** via
+a `convo` field — the human back-and-forth fills the main area as a chat thread,
+while the turn's world/state mechanics sit on a left-to-right strip below it:
+
+```json
+{ "type": "trace-turn", "...": "...",
+  "convo": {
+    "messages": [
+      { "role": "user",   "text": "refine the title" },
+      { "role": "oracle", "verb": "converse", "model": "claude-sonnet-4-6",
+        "text": "Here's a tighter title…", "prompt": "you are the narrator…" },
+      { "role": "oracle", "verb": "decide", "outcome": "intent: refine" }
+    ],
+    "events": [
+      { "kind": "world", "key": "title", "before": "∅", "after": "PRD" },
+      { "kind": "transition", "to": "clarifying", "intent": "start", "self": false },
+      { "kind": "host", "name": "host.notify", "ok": true }
+    ]
+  } }
+```
+
+A `message` is `user` / `say` (a bubble of `text`) or `oracle` (a `converse`
+reply renders its `text` as a bubble; a structured `decide`/`choose` shows its
+`outcome` instead). The engineered `prompt` is collapsed to a dim one-line
+preview, not part of the flow. `events` chips are `world` / `transition` /
+`host` / `reject` / `more`.
 
 #### `thread` — mocked issue-tracker / review comment threads
 

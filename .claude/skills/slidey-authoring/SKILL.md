@@ -31,9 +31,18 @@ Then follow the iteration loop below. Name the output MP4 alongside the spec (`e
 
 A full render takes **7–12 minutes** (4,400+ Puppeteer screenshots for a long video). Don't trigger one until you've gone through `--estimate` first. Run commands from the repo root.
 
+**Build the render bundle first.** The visuals are Vue components compiled to `dist-render/render.html`; the video and PDF pipelines load that file. After any change under `web/` (or on a fresh checkout), run `npm run build:render` — otherwise rendering errors with *"render bundle missing"*. `--estimate`/`--list` don't need it.
+
+**Three outputs, one spec.** The output extension picks the format: `.mp4` → video, `.pdf` → slides (one vector page per reveal step — ideal for sharing the step-by-step diagram build-up). The interactive web app is `npm run dev`. Don't run two Puppeteer renders (or render while another browser-driving test runs) at once — concurrent headless Chrome instances can crash each other's screenshot capture.
+
 ```sh
-# 1. Sanity-check the spec — no render, ~50ms
+npm run build:render                                 # (re)build the Vue bundle after editing web/
+
+# 1. Sanity-check the spec — no render, ~50ms (no bundle needed)
 node src/index.js examples/my-video.json --estimate
+
+# 1b. Slide deck — one page per reveal step, vector/selectable, ~3s
+node src/index.js examples/my-video.json .artifacts/deck.pdf
 
 # 2. Iterate on a single scene — ~30s
 node src/index.js examples/my-video.json .artifacts/scene.mp4 --scenes 5
