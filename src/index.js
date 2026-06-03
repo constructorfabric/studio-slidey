@@ -39,10 +39,11 @@ const args = process.argv.slice(2);
 
 // --list and --estimate only need the input spec (not an output path).
 const wantsList     = args.includes('--list') || args.includes('--estimate');
+const wantsCheck    = args.includes('--check');
 const skipRender    = args.includes('--skip-render');
 const noGaps        = args.includes('--no-gaps');
 
-if (((args.length < 2 && !wantsList) || args.length < 1) || args.includes('--help') || args.includes('-h')) {
+if (((args.length < 2 && !wantsList && !wantsCheck) || args.length < 1) || args.includes('--help') || args.includes('-h')) {
   console.log([
     '',
     '  SLIDEY — Deterministic, spec-driven declarative video generator',
@@ -70,6 +71,9 @@ if (((args.length < 2 && !wantsList) || args.length < 1) || args.includes('--hel
     '    --no-gaps                  Suppress the 0.8s blank inter-scene gap. Use with',
     '                               --scenes N-M to review a multi-scene sequence as a',
     '                               seamless clip (e.g. a progressive graph build-up).',
+    '    --check                    Validate diagram-svg scenes without rendering.',
+    '                               Checks node width/height and overlap. Exits 1 if',
+    '                               any violations found (usable in CI).',
     '',
     '  Examples:',
     '    node index.js examples/hello.json out.mp4',
@@ -260,6 +264,13 @@ async function main() {
     const wantsAudioEstimate = args.includes('--estimate');
     printSceneList(spec, fps, wantsAudioEstimate, { noGaps });
     process.exit(0);
+  }
+
+  // ── --check: validate diagram-svg specs, exit 1 if violations found ──
+  if (wantsCheck) {
+    const { runCheck } = require('./check');
+    const violations = runCheck(spec);
+    process.exit(violations > 0 ? 1 : 0);
   }
 
   // ── PDF output: a .pdf extension exports slides (one page per reveal step)

@@ -16,6 +16,7 @@ Create a JSON file in `examples/` (or anywhere) with this shape:
 ```json
 {
   "meta": {
+    "mode": "pitch",
     "narration": { "voice": "en-AU-NatashaNeural" }
   },
   "scenes": [
@@ -29,45 +30,54 @@ Then follow the iteration loop below. Name the output MP4 alongside the spec (`e
 
 ## The iteration loop
 
-A full render takes **7–12 minutes** (4,400+ Puppeteer screenshots for a long video). Don't trigger one until you've gone through `--estimate` first. Run commands from the repo root.
+A full MP4 render takes **7–12 minutes**. Never trigger one to spot-check a single scene. Use PNG or PDF for all visual iteration — they share the same render bundle and run in seconds.
 
-**Build the render bundle first.** The visuals are Vue components compiled to `dist-render/render.html`; the video and PDF pipelines load that file. After any change under `web/` (or on a fresh checkout), run `npm run build:render` — otherwise rendering errors with *"render bundle missing"*. `--estimate`/`--list` don't need it.
+**Build the render bundle first.** The visuals are Vue components compiled to `dist-render/render.html`; all pipelines (MP4/PDF/PNG) load that file. After any change under `web/` (or on a fresh checkout), run `npm run build:render` — otherwise rendering errors with *"render bundle missing"*. `--estimate`/`--list` don't need it.
 
-**Three outputs, one spec.** The output extension picks the format: `.mp4` → video, `.pdf` → slides (one vector page per reveal step — ideal for sharing the step-by-step diagram build-up). The interactive web app is `npm run dev`. Don't run two Puppeteer renders (or render while another browser-driving test runs) at once — concurrent headless Chrome instances can crash each other's screenshot capture.
+**Four outputs, one spec.** The output path picks the format:
+
+| Output path | Format | Speed | Use for |
+|---|---|---|---|
+| `path/to/dir` (no extension) | PNG directory | ~1–3s/scene | Visual spot-check; LLM can `Read` files directly |
+| `.pdf` | PDF (vector, one page per reveal step) | ~3s total | Full deck review, sharing |
+| `.mp4` | Video with narration | 7–12 min | Final deliverable only |
+| `--estimate` / `--list` | Console table | ~50ms | Narration budget check |
+| `--check` | Console validation | ~instant | Diagram-svg sizing/overlap guard (CI-usable) |
+
+Don't run two Puppeteer renders at once — concurrent headless Chrome instances can crash each other's screenshot capture.
 
 ```sh
 npm run build:render                                 # (re)build the Vue bundle after editing web/
 
-# 1. Sanity-check the spec — no render, ~50ms (no bundle needed)
-node src/index.js examples/my-video.json --estimate
+# 1. Sanity-check — no render, ~50ms (no bundle needed)
+slidey examples/my-video.json --estimate
 
-# 1b. Slide deck — one page per reveal step, vector/selectable, ~3s
-node src/index.js examples/my-video.json .artifacts/deck.pdf
+# 1b. Validate diagram-svg sizing/overlap — console only, ~instant, no Chrome (no bundle needed)
+slidey examples/my-video.json out.mp4 --check     # or: node src/index.js my-video.json out.mp4 --check
+# Checks every diagram-svg node's w/h against its text and flags node overlaps.
+# Exits non-zero on violations — safe to run anytime, and usable as a CI gate.
 
-# 2. Iterate on a single scene — ~30s
-node src/index.js examples/my-video.json .artifacts/scene.mp4 --scenes 5
+# 2. PNG spot-check one scene — ~1-3s, LLM-readable
+slidey examples/my-video.json .artifacts/check --scenes 5
+# Produces: .artifacts/check/05-01.png, 05-02.png, 05-03.png (one per reveal step)
+# Then: Read .artifacts/check/05-02.png  ← vision model checks layout directly
 
-# 3. Render a section for review — one merged MP4, ~30s per scene in the range
-#    --scenes accepts comma-separated indices and/or N-M ranges; all selected
-#    scenes are concatenated into one output file.
-#    Add --no-gaps to suppress the 0.8s blank between scenes — useful for
-#    progressive sequences that should feel like one continuous diagram.
-node src/index.js examples/my-video.json .artifacts/section.mp4 --scenes 7-10 --no-gaps
-node src/index.js examples/my-video.json .artifacts/section.mp4 --scenes 0,3-5,7
+# 3. Full deck as PDF — ~3s, good for a complete pass before MP4 render
+slidey examples/my-video.json .artifacts/deck.pdf
 
-# 4. Iterate on narration text only — ~10s (reuses cached frames)
-node src/index.js examples/my-video.json .artifacts/out.mp4 \
+# 4. Iterate on narration text only — ~10s (reuses cached MP4 frames)
+slidey examples/my-video.json .artifacts/out.mp4 \
   --frames-dir .artifacts/frames \
   --keep-frames \
   --skip-render
 
-# 5. Final full render — 7–12 min
-node src/index.js examples/my-video.json examples/my-video.mp4
+# 5. Final full render — 7–12 min, only when layout and narration are confirmed
+slidey examples/my-video.json examples/my-video.mp4
 ```
 
 **Always run `--estimate` first.** It catches narration overruns (the #1 cause of wasted full renders) and prints scene start times so you don't have to count.
 
-**Use `--scenes N-M` for section review.** When iterating on a multi-scene sequence (e.g. a progressive graph build-up), render the whole range into one merged MP4 rather than separate files. The reviewer can watch the sequence in one clip without clicking between videos.
+**Use PNG for all visual iteration.** The LLM can `Read` PNG files directly (multimodal) — this makes layout review a first-class part of the authoring loop without waiting 30s for an MP4 render per scene.
 
 ## Scene types
 
@@ -88,18 +98,51 @@ All are declared in JSON; render handlers live in `src/scenes/`:
 
 ### `diagram-svg` — the workhorse for proper diagrams
 
-The most-used type. Each panel has a viewBox and an array of `nodes` and `edges`.
+The most-used type. Each panel has an array of `nodes` and `edges`. **`auto_layout: true` is the default — let dagre compute all x/y positions and the renderer auto-size boxes to fit text.** Hand-authored x/y/w/h is a deliberate EXCEPTION, only for layouts dagre can't express (e.g. uniform full-width list rows, or two-panel comparisons with specific spatial semantics). When you DO hand-author coordinates you MUST run `--check` and verify with a PNG render: the auto-size loop can only grow a box in place — it can't reposition neighbors — so an undersized hand-authored box overlaps the boxes and arrows around it.
 
-- **Nodes** support `label` (big), `sub` (medium), and `lines: []` (smaller multi-line content stacked below). Use `style: "primary"` (blue accent) or `"secondary"` (purple) to highlight the focal box.
-- **Edges** auto-anchor to the sides of the connected nodes facing each other. The renderer picks horizontal vs vertical anchoring based on which axis dominates the delta. `side: "left"|"right"` offsets the edge perpendicular to its direction — used for parallel bidirectional arrows.
-- **Gates** are a special edge property. Setting `gate: "check fails"` on an edge replaces the arrow with a dashed orange checkpoint bar and uppercase label. Format the spec text as `"gate · check fails"` so the rendered uppercase reads "GATE · CHECK FAILS".
+#### Nodes
+
+- `label` (big text), `sub` (medium), `lines: []` (smaller lines stacked below)
+- `style: "primary"` (blue accent) or `"secondary"` (purple) to highlight the focal node
+- No coordinates needed — `auto_layout` places them; auto-size expands boxes to fit text
+
+#### Panels
+
+```json
+{
+  "auto_layout": true,
+  "rankdir": "TB",
+  "nodes": [...],
+  "edges": [...]
+}
+```
+
+- `auto_layout: true` — dagre computes all x/y positions; viewBox is auto-computed
+- `rankdir: "TB"` (default) — top-to-bottom flow; use `"LR"` for hub-and-spoke diagrams where one node fans out to many children
+- Terminal nodes (no outgoing edges, multiple predecessors) are automatically ranked last
+
+#### Edges
+
+- `label` — text beside the arrow
+- `gate: "gate · label text"` — replaces the arrow with a dashed orange checkpoint bar
+- `elbow: true` — orthogonal Z-bend routing instead of straight diagonal. **When multiple edges share the same source, bus routing kicks in automatically** — all branches share a common trunk line extending from the source, producing a clean tree appearance. No extra flag needed.
+- `side: "left"|"right"` — offset for parallel bidirectional arrows
+
+#### Layouts by topology
+
+| Topology | `rankdir` | Edge style | Example |
+|---|---|---|---|
+| Pipeline (A→B→C) | `TB` | straight | Bugfix rooms |
+| Hub-and-spoke (A→many) | `LR` | `elbow: true` | Story anatomy |
+| Comparison | two panels | straight | Judge polymorphism |
+| Decision tree | `TB` | straight | Room lifecycle |
 
 ### Single-panel vs two-panel diagrams
 
 Slidey's CSS treats `diagram-svg` panels differently based on count:
 
-- **Two panels** (side-by-side comparison): smaller boxes, smaller fonts (label 30 / sub 19 / line 18 in viewBox units), aspect-ratio 1/0.7 so panels are wide-and-short. Good for comparisons.
-- **Single panel** (hero diagram): bigger boxes, bigger fonts (label 44 / sub 28 / line 26), SVG height 680px, no panel chrome (transparent border). Good for standalone diagrams.
+- **Two panels** (side-by-side comparison): smaller boxes, smaller fonts. Good for comparisons.
+- **Single panel** (hero diagram): bigger boxes, bigger fonts, SVG height 680px. Good for standalone diagrams.
 
 If you need both panels visually consistent, use TWO single-panel scenes back-to-back with a `title` scene transition between them.
 
@@ -144,6 +187,10 @@ For monospace at viewBox-unit font-size `F`, character width is approximately `0
 
 So a 12-character label in single-panel mode needs box width ≥ `12 × 26 + 60` = **372 viewBox units**.
 
+The `sub` and `lines[]` fonts are SMALLER than the label, so the label usually dominates box width — but a long `sub`/`line` can still overflow: single-panel is `sub` 28 / `line` 26, two-panel is `sub` 19 / `line` 18. Note `sub` renders as a SINGLE line (it is NOT auto-wrapped on `" · "`); for stacked multi-line content use the `lines: []` array, one entry per line.
+
+**Run `--check` to catch sizing/overlap automatically instead of eyeballing this.**
+
 ### Title/caption clipping
 
 If a scene's content overflows the available stage height (1080px − 192px padding = 888px on screen), `overflow: hidden` clips top and bottom equally, pushing the title against the top edge and clipping the caption.
@@ -152,12 +199,22 @@ For two-panel diagrams: the SVG aspect-ratio is `1/0.7`, so each panel SVG is ~7
 
 For single-panel diagrams: SVG is hard-capped at 680px height. Title (40px) + caption (32–36px wrapped to 2 lines) + gaps eats ~200px, leaving ~680px for the SVG itself. If content needs more, you've overpacked the scene.
 
+### `"mode": "pitch"` is required in meta
+
+Without `"mode": "pitch"`, the template keeps `#pitch-stage` hidden (`display: none`) — every page of every PDF and every video frame renders as a blank background. Always include it:
+
+```json
+{ "meta": { "mode": "pitch", "narration": { "voice": "en-AU-NatashaNeural" } } }
+```
+
 ### The `--scenes` flag rewrites the output file
 
-`--scenes 4` overwrites the output MP4 with **only** scene 4 (and its narration). When iterating on a single scene, always send output to `.artifacts/`:
+`--scenes 4` scopes any output format to only scene 4. Works for PNG, PDF, and MP4. When spot-checking, prefer PNG (not MP4):
 
 ```sh
-node src/index.js spec.json .artifacts/test.mp4 --scenes 4
+slidey spec.json .artifacts/check --scenes 4     # PNG, ~2s, LLM-readable
+slidey spec.json .artifacts/check.pdf --scenes 4 # PDF, ~2s, viewer-friendly
+# MP4 is ~30s and produces audio you don't need during layout iteration
 ```
 
 ### Edge label overflow on diagrams
@@ -217,11 +274,13 @@ Determinism comes from: (1) viewport size fixed at 1920×1080, (2) timing in fra
 
 ## Iteration workflow
 
-1. `node src/index.js examples/my-video.json --list` — see what scenes exist.
-2. Make your edit to the spec.
-3. `node src/index.js examples/my-video.json --estimate` — verify the change doesn't blow a budget.
-4. `node src/index.js examples/my-video.json .artifacts/test.mp4 --scenes N` — visual check on a single scene (~30s).
-5. `node src/index.js examples/my-video.json .artifacts/section.mp4 --scenes N-M --no-gaps` — seamless section review; `--no-gaps` removes the 0.8s blank between scenes so progressive sequences feel like one diagram.
-6. Once happy, run the full render.
+1. `slidey examples/my-video.json --list` — see what scenes exist and page counts.
+2. Edit the spec JSON.
+3. `slidey examples/my-video.json --estimate` — verify no narration overrun.
+4. `slidey examples/my-video.json out.mp4 --check` — validate diagram-svg sizing/overlap (~instant, no render; exits non-zero on violations, so it doubles as a CI gate).
+5. `slidey examples/my-video.json .artifacts/check --scenes N` — PNG spot-check (~1-3s). Read the output files directly to review layout with vision.
+6. Repeat 2–5 until the scene looks right.
+7. `slidey examples/my-video.json .artifacts/deck.pdf` — full pass as PDF (~3s) to review the whole deck in sequence.
+8. `slidey examples/my-video.json examples/my-video.mp4` — final MP4 render only when layout and narration are confirmed.
 
-Don't full-render to "see if it works."
+**Never render MP4 to "see if it works."** PNG or PDF first.
