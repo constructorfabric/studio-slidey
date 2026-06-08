@@ -7,7 +7,7 @@ description: Author and iterate on declarative videos using the slidey pipeline 
 
 **Slidey** is a deterministic spec-driven Puppeteer + ffmpeg pipeline at the repo root. You describe a video as a JSON array of scenes; slidey renders each scene to PNG frames via headless Chrome, generates narration via edge-tts, and muxes everything into an MP4. Output is reproducible: same JSON spec + same template = byte-identical frames.
 
-Specs live in `examples/` alongside their output MP4s. The minimal starting point is `examples/hello.json`; `examples/kitsoki-pitch.json` is a full real-world sample that exercises every scene type.
+Specs live in `examples/` alongside their output MP4s. The minimal starting point is `examples/hello.json`; `examples/kitsoki-pitch.json` is a full real-world sample of the legacy scene types, and `examples/layout-gallery.json` exercises every variant of the `cards`/`code`/`table`/`chart` content primitives (copy variants straight from it).
 
 ## Starting a new video
 
@@ -95,6 +95,46 @@ All are declared in JSON; render handlers live in `src/scenes/`:
 | `cta` | Wordmark + tagline + URL end card | `wordmark`, `tagline`, `url` | 8s |
 | `terminal-gif` | Embed a recorded gif in a fake-terminal chrome | `gif`, `title`, `caption` | 8–12s |
 | `request` | API request/response card (live/mock/playback) | see `src/scenes/request.js` | varies |
+| `transcript` | Full agent/chat session as per-turn cards | `turns: [...]` | varies |
+| `cards` | Peer items OR side-by-side contrast | `variant`, `cards[]` \| `left`/`right` \| `question`/`answer` | 8–14s |
+| `code` | Real text artifacts (source, diff, function I/O, tree, config, log) | `variant`, `lang`, `code`, `highlight[]`, `annotations[]` | 8–12s |
+| `table` | Data / comparison / scorecard tables | `variant`, `columns[]`, `rows: [{cells[], highlight}]`, `winner` | 8–12s |
+| `chart` | Hand-built SVG charts (bar/line/area/pie/scatter/quadrant) | `variant`, `series: [{name, color, points[]}]`, `axes`, `unit` | 8–12s |
+
+### Choosing a layout — semantic taxonomy
+
+The full catalogue (45 layouts across 9 communicative families) and the design rationale live in `docs/layout-taxonomy.md` in the repo. **Pick a scene by what you're communicating, not by how it looks** — that's the whole point of the taxonomy. The four `variant`-driven primitives below are closed semantic menus: choose the variant whose *intent* matches, and the renderer handles the pixels.
+
+| If you want to… | Use | `variant` |
+|---|---|---|
+| list N peer items (no flow) | `cards` | `grid` · `list` · `numbered` · `icon-row` · `agenda` |
+| weigh X against Y / before↔after / claim↔rebuttal | `cards` | `before-after` · `versus` · `point-counterpoint` · `pros-cons` |
+| stage a question + its answer | `cards` | `qa` |
+| show the literal text of an artifact | `code` | `source` · `diff` · `function-io` · `tree` · `config` · `log` |
+| compare named options across criteria / show exact values | `table` | `comparison` · `scorecard` · `data` |
+| show what the numbers say | `chart` | `bar` (compare) · `line`/`area` (trend) · `pie` (composition) · `scatter`/`quadrant` (relate) |
+| show A→B→C flow, hierarchy, or how things connect | `diagram-svg` | (vary `rankdir` + edge style — see below) |
+
+Disambiguation: **list vs flow** — if removing the arrows loses nothing, it's `cards`, not `diagram-svg`. **compare vs quantify** — comparing options on *qualities* → `cards`/`table`; comparing *measured values* → `chart`. **diagram vs code** — a *conceptual* relationship is `diagram-svg`; the *literal text* of a file is `code`.
+
+#### `cards` — peer items & contrast
+
+- **Set variants** (`grid`/`list`/`numbered`/`icon-row`/`agenda`): `cards: [{label, sub, lines:[], style}]`, optional `columns:N`. One reveal step per card.
+- **Two-column variants** (`before-after`/`versus`/`point-counterpoint`/`pros-cons`): `left: {label, lines:[]}` and `right: {label, lines:[]}` — contrasting accents, centre divider. `pros-cons` auto-glyphs ✓/✗.
+- **`qa`**: `question: "…"`, `answer: ["…","…"]` (string or array of lines).
+- Common: `title`, `caption`. Supersedes the legacy ASCII `diagram` comparison.
+
+#### `code` — text artifacts
+
+`variant`, `title` (renders as a filename chrome bar), `lang`, `code` (string with `\n`). Plus: `highlight: [lineNos]`, `annotations: [{line, text}]`; `function-io` uses `call`/`returns`; `diff` colours `+`/`-` lines; `config` tuned for JSON/YAML; `log`/`tree` for console + directory listings.
+
+#### `table` — tabular data
+
+`variant`, `columns: ["…"]`, `rows: [{cells: ["…"], highlight: colIndex?}]`, optional `winner: colIndex` (scorecard crowns it). `comparison`/`scorecard` render ✓/✗ glyphs and a highlighted column. Caps: ~6 columns × ~8 rows (excess is clipped to keep reveal-step count in sync). One reveal step per body row.
+
+#### `chart` — hand-built SVG charts (no chart lib, deterministic)
+
+`variant`, `title`, `caption`, `unit`, `axes: {x, y}`, `series: [{name, color, points: [{x, y}]}]`. `color` is a token name (`primary`/`secondary`/`green`/`orange`/`teal`/`red`). One reveal step per series. Pie uses a single series (≤6 slices); quadrant places points by x/y for a 2×2. Guidance: bar for category comparison, line for time trend, pie only for simple composition.
 
 ### `diagram-svg` — the workhorse for proper diagrams
 
@@ -251,12 +291,23 @@ slidey/
 │       ├── thread.js
 │       ├── stat.js
 │       ├── cta.js
-│       └── request.js          # API request/response card
+│       ├── request.js          # API request/response card
+│       ├── transcript.js
+│       ├── cards.js            # peer items / contrast (see web/components/CardsScene.vue)
+│       ├── code.js             # text artifacts (see web/components/CodeScene.vue)
+│       ├── table.js            # tabular data (see web/components/TableScene.vue)
+│       └── chart.js            # SVG charts (see web/components/ChartScene.vue)
 └── examples/
     ├── hello.json            # Minimal starting spec
-    ├── kitsoki-pitch.json    # Full real-world sample (every scene type; safe to delete)
+    ├── kitsoki-pitch.json    # Full real-world sample (every legacy scene type; safe to delete)
+    ├── layout-gallery.json   # Exercises every cards/code/table/chart variant — copy from here
     └── <name>.json           # Additional specs live here
 ```
+
+> The reveal-driven visuals are Vue components in `web/components/<Name>Scene.vue`,
+> compiled to `dist-render/render.html` by `npm run build:render`. The `src/scenes/<type>.js`
+> module is the thin Puppeteer driver. See `docs/layout-taxonomy.md` for the full
+> layout catalogue and the primitive-vs-preset architecture.
 
 To add a new scene type:
 1. Add a render module in `src/scenes/<name>.js` (`{ render(page, scene, ctx) }`)

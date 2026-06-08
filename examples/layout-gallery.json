@@ -1,0 +1,772 @@
+{
+  "meta": {
+    "mode": "pitch",
+    "narration": {
+      "voice": "en-AU-NatashaNeural"
+    }
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "title": "Cards layouts"
+    },
+    {
+      "type": "cards",
+      "variant": "grid",
+      "title": "What ships in v1",
+      "columns": 3,
+      "cards": [
+        {
+          "label": "Deterministic routing",
+          "sub": "no LLM on the hot path",
+          "lines": [
+            "intent table",
+            "78% of turns"
+          ],
+          "style": "primary"
+        },
+        {
+          "label": "Flow fixtures",
+          "sub": "replayable",
+          "lines": [
+            "record once",
+            "diff on change"
+          ]
+        },
+        {
+          "label": "Typed views",
+          "sub": "render anywhere",
+          "lines": [
+            "TUI",
+            "web",
+            "comment thread"
+          ]
+        },
+        {
+          "label": "Story YAML",
+          "sub": "the state machine",
+          "lines": [
+            "rooms + intents",
+            "effects + host calls"
+          ]
+        },
+        {
+          "label": "Tracing",
+          "sub": "every turn",
+          "lines": [
+            "layer-by-layer",
+            "ms + tokens"
+          ]
+        },
+        {
+          "label": "PDF / MP4",
+          "sub": "one spec",
+          "lines": [
+            "narrated cut",
+            "per-step pages"
+          ],
+          "style": "secondary"
+        }
+      ],
+      "caption": "One spec, three outputs."
+    },
+    {
+      "type": "cards",
+      "variant": "agenda",
+      "title": "Where we are going",
+      "cards": [
+        {
+          "label": "The problem",
+          "sub": "two extremes dominate, neither is enough"
+        },
+        {
+          "label": "The shape",
+          "sub": "a workflow that runs where the work lives"
+        },
+        {
+          "label": "The mechanism",
+          "sub": "deterministic flow with an LLM fallback"
+        },
+        {
+          "label": "The proof",
+          "sub": "recorded turns, replayed and traced"
+        }
+      ]
+    },
+    {
+      "type": "cards",
+      "variant": "numbered",
+      "title": "How a turn resolves",
+      "cards": [
+        {
+          "label": "Match the intent",
+          "sub": "against the room's deterministic table"
+        },
+        {
+          "label": "Fall back to the LLM",
+          "sub": "only when no rule fires"
+        },
+        {
+          "label": "Apply effects",
+          "sub": "set world vars, call hosts, transition"
+        },
+        {
+          "label": "Render the view",
+          "sub": "the same typed view, every surface"
+        }
+      ]
+    },
+    {
+      "type": "cards",
+      "variant": "list",
+      "title": "Non-goals",
+      "cards": [
+        {
+          "label": "Not a chatbot",
+          "sub": "the flow is the product, not the chat"
+        },
+        {
+          "label": "Not a prompt chain",
+          "sub": "rooms and transitions, not a DAG of prompts"
+        },
+        {
+          "label": "Not a no-code toy",
+          "sub": "YAML you can read, diff, and review"
+        }
+      ]
+    },
+    {
+      "type": "cards",
+      "variant": "icon-row",
+      "title": "Runs where work lives",
+      "columns": 4,
+      "cards": [
+        {
+          "icon": "▸",
+          "label": "GitHub",
+          "sub": "issue comments"
+        },
+        {
+          "icon": "▸",
+          "label": "Jira",
+          "sub": "ticket fields"
+        },
+        {
+          "icon": "▸",
+          "label": "Slack",
+          "sub": "a thread"
+        },
+        {
+          "icon": "▸",
+          "label": "CRM",
+          "sub": "a record"
+        }
+      ]
+    },
+    {
+      "type": "cards",
+      "variant": "before-after",
+      "title": "The shift",
+      "left": {
+        "label": "Before",
+        "lines": [
+          "Prompt chains you cannot replay",
+          "Behaviour drifts every release",
+          "No record of why a turn went one way",
+          "Logic buried in a mega-prompt"
+        ]
+      },
+      "right": {
+        "label": "After",
+        "lines": [
+          "A state machine you can diff",
+          "Deterministic routing, LLM as fallback",
+          "Every turn recorded and replayable",
+          "Logic in reviewable YAML"
+        ]
+      },
+      "caption": "Same surface area. Auditable behaviour."
+    },
+    {
+      "type": "cards",
+      "variant": "versus",
+      "title": "Two extremes",
+      "left": {
+        "label": "Rigid forms",
+        "lines": [
+          "Predictable",
+          "Cannot handle the unsaid",
+          "Users bounce off the rails"
+        ]
+      },
+      "right": {
+        "label": "Open chat",
+        "lines": [
+          "Flexible",
+          "Unbounded, unauditable",
+          "Drifts turn to turn"
+        ]
+      },
+      "caption": "Kitsoki sits between: a flow that bends without breaking."
+    },
+    {
+      "type": "cards",
+      "variant": "point-counterpoint",
+      "title": "Does determinism kill flexibility?",
+      "left": {
+        "label": "The worry",
+        "lines": [
+          "If routing is a table, the bot feels scripted",
+          "Edge cases will fall through the rules"
+        ]
+      },
+      "right": {
+        "label": "The answer",
+        "lines": [
+          "The table covers the 78% that repeat",
+          "The LLM catches the rest as a fallback",
+          "Both paths are recorded and traceable"
+        ]
+      }
+    },
+    {
+      "type": "cards",
+      "variant": "pros-cons",
+      "title": "Recording every turn",
+      "left": {
+        "label": "Pros",
+        "lines": [
+          "Replay any session deterministically",
+          "Diff behaviour across releases",
+          "Trace why a turn routed as it did"
+        ]
+      },
+      "right": {
+        "label": "Cons",
+        "lines": [
+          "Fixtures need refreshing when flows change",
+          "Storage grows with session volume"
+        ]
+      },
+      "caption": "The audit trail is worth the upkeep."
+    },
+    {
+      "type": "cards",
+      "variant": "qa",
+      "title": "Frequently asked",
+      "question": "Does it call an LLM on every turn?",
+      "answer": [
+        "No. Routing is a deterministic intent table.",
+        "The LLM is a fallback for the turns no rule matches —",
+        "roughly one in five, all recorded and replayable."
+      ],
+      "caption": "Cheap, fast, and auditable by default."
+    },
+    {
+      "type": "title",
+      "title": "Code layouts"
+    },
+    {
+      "type": "code",
+      "variant": "source",
+      "title": "router.js",
+      "lang": "javascript",
+      "code": "export function route(turn) {\n  for (const layer of LAYERS) {\n    const hit = layer.match(turn);\n    if (hit) return hit.intent;\n  }\n  return callLLM(turn);\n}",
+      "highlight": [
+        4
+      ],
+      "annotations": [
+        {
+          "line": 4,
+          "text": "the deterministic layers return early — the LLM is the fallback, not the default"
+        }
+      ],
+      "caption": "Most turns never reach callLLM().",
+      "hold": 200
+    },
+    {
+      "type": "code",
+      "variant": "diff",
+      "title": "store.js",
+      "lang": "diff",
+      "code": " export const store = reactive({\n   scene: null,\n-  revealed: [],\n+  revealed: new Set(),\n   isRevealed(id) {\n-    return this.revealed.includes(id);\n+    return this.revealed.has(id);\n   },\n });",
+      "caption": "Switch the reveal set to a real Set for O(1) lookups.",
+      "hold": 190
+    },
+    {
+      "type": "code",
+      "variant": "function-io",
+      "title": "route()",
+      "call": "route('kick off the next bug')",
+      "code": "// synonym MISS · slot MISS · LLM HIT (240ms)",
+      "returns": "{ intent: 'pickup_bug', source: 'llm' }",
+      "caption": "One turn, three layers, a single deterministic result.",
+      "hold": 180
+    },
+    {
+      "type": "code",
+      "variant": "tree",
+      "title": "src/scenes/",
+      "tree": "src/\n├─ scenes/\n│  ├─ code.js\n│  ├─ narrative.js\n│  └─ stat.js\n├─ renderer.js\n└─ timing.js",
+      "hold": 170
+    },
+    {
+      "type": "code",
+      "variant": "config",
+      "title": "slidey.config.json",
+      "lang": "json",
+      "code": "{\n  \"mode\": \"pitch\",\n  \"fps\": 30,\n  \"noGaps\": true,\n  \"scenes\": 14\n}",
+      "hold": 170
+    },
+    {
+      "type": "code",
+      "variant": "log",
+      "title": "render.log",
+      "code": "[12:04:01] INFO  build start — 14 scenes\n[12:04:02] INFO  scene 7/14 rendered\n[12:04:03] WARN  font JetBrains Mono not found, falling back\n[12:04:04] ERROR  frame capture raced un-flushed reveal",
+      "hold": 175
+    },
+    {
+      "type": "title",
+      "title": "Table layouts"
+    },
+    {
+      "type": "table",
+      "variant": "data",
+      "title": "Routing latency by layer",
+      "columns": [
+        "Layer",
+        "Hit rate",
+        "p50",
+        "p99"
+      ],
+      "rows": [
+        {
+          "cells": [
+            "synonym",
+            "41%",
+            "2 ms",
+            "5 ms"
+          ]
+        },
+        {
+          "cells": [
+            "slot",
+            "23%",
+            "4 ms",
+            "9 ms"
+          ]
+        },
+        {
+          "cells": [
+            "template",
+            "14%",
+            "6 ms",
+            "12 ms"
+          ]
+        },
+        {
+          "cells": [
+            "LLM",
+            "22%",
+            "640 ms",
+            "1,900 ms"
+          ],
+          "highlight": 3
+        }
+      ],
+      "caption": "Deterministic layers resolve 78% of turns before the model is asked.",
+      "hold": 210
+    },
+    {
+      "type": "table",
+      "variant": "comparison",
+      "title": "Workflow engine vs. bare agent",
+      "columns": [
+        "Capability",
+        "Bare agent",
+        "Kitsoki"
+      ],
+      "winner": 2,
+      "rows": [
+        {
+          "cells": [
+            "Deterministic flow",
+            "✗",
+            "✓"
+          ]
+        },
+        {
+          "cells": [
+            "Replayable transcripts",
+            "✗",
+            "✓"
+          ]
+        },
+        {
+          "cells": [
+            "Runs inside existing tools",
+            "partial",
+            "✓"
+          ]
+        },
+        {
+          "cells": [
+            "Free-form reasoning",
+            "✓",
+            "✓"
+          ]
+        }
+      ],
+      "caption": "Same surface area, plus a state machine you can audit.",
+      "hold": 210
+    },
+    {
+      "type": "table",
+      "variant": "scorecard",
+      "title": "Vendor scorecard",
+      "columns": [
+        "Criterion",
+        "Vendor A",
+        "Vendor B",
+        "Kitsoki"
+      ],
+      "winner": 3,
+      "rows": [
+        {
+          "cells": [
+            "Setup time",
+            "2 weeks",
+            "5 days",
+            "1 day"
+          ]
+        },
+        {
+          "cells": [
+            "Deterministic routing",
+            "✗",
+            "✗",
+            "✓"
+          ]
+        },
+        {
+          "cells": [
+            "Self-hosted",
+            "✗",
+            "✓",
+            "✓"
+          ]
+        },
+        {
+          "cells": [
+            "Audit trail",
+            "partial",
+            "✓",
+            "✓"
+          ]
+        },
+        {
+          "cells": [
+            "Price",
+            "$$$",
+            "$$",
+            "$"
+          ]
+        }
+      ],
+      "caption": "Crowned column is the recommended pick.",
+      "hold": 220
+    },
+    {
+      "type": "title",
+      "title": "Chart layouts"
+    },
+    {
+      "type": "chart",
+      "variant": "bar",
+      "title": "Tokens per phase",
+      "unit": "",
+      "axes": {
+        "x": "phase",
+        "y": "tokens"
+      },
+      "series": [
+        {
+          "name": "before",
+          "color": "secondary",
+          "points": [
+            {
+              "x": "plan",
+              "y": 1200
+            },
+            {
+              "x": "route",
+              "y": 900
+            },
+            {
+              "x": "execute",
+              "y": 1500
+            },
+            {
+              "x": "verify",
+              "y": 700
+            }
+          ]
+        },
+        {
+          "name": "after",
+          "color": "green",
+          "points": [
+            {
+              "x": "plan",
+              "y": 1200
+            },
+            {
+              "x": "route",
+              "y": 120
+            },
+            {
+              "x": "execute",
+              "y": 1500
+            },
+            {
+              "x": "verify",
+              "y": 200
+            }
+          ]
+        }
+      ],
+      "caption": "Deterministic routing collapses the route and verify phases.",
+      "hold": 210
+    },
+    {
+      "type": "chart",
+      "variant": "line",
+      "title": "Determinism over time",
+      "unit": "%",
+      "axes": {
+        "x": "week",
+        "y": "deterministic"
+      },
+      "series": [
+        {
+          "name": "cloak",
+          "color": "primary",
+          "points": [
+            {
+              "x": 1,
+              "y": 41
+            },
+            {
+              "x": 2,
+              "y": 53
+            },
+            {
+              "x": 3,
+              "y": 64
+            },
+            {
+              "x": 4,
+              "y": 71
+            },
+            {
+              "x": 5,
+              "y": 78
+            }
+          ]
+        },
+        {
+          "name": "dev-story",
+          "color": "teal",
+          "points": [
+            {
+              "x": 1,
+              "y": 22
+            },
+            {
+              "x": 2,
+              "y": 35
+            },
+            {
+              "x": 3,
+              "y": 49
+            },
+            {
+              "x": 4,
+              "y": 58
+            },
+            {
+              "x": 5,
+              "y": 66
+            }
+          ]
+        }
+      ],
+      "caption": "Routing determinism climbs as templates absorb recorded turns.",
+      "hold": 210
+    },
+    {
+      "type": "chart",
+      "variant": "area",
+      "title": "Recorded turns",
+      "unit": "",
+      "axes": {
+        "x": "month",
+        "y": "turns"
+      },
+      "series": [
+        {
+          "name": "turns",
+          "color": "primary",
+          "points": [
+            {
+              "x": "Jan",
+              "y": 120
+            },
+            {
+              "x": "Feb",
+              "y": 340
+            },
+            {
+              "x": "Mar",
+              "y": 510
+            },
+            {
+              "x": "Apr",
+              "y": 880
+            },
+            {
+              "x": "May",
+              "y": 1240
+            }
+          ]
+        }
+      ],
+      "caption": "The transcript corpus compounds month over month.",
+      "hold": 200
+    },
+    {
+      "type": "chart",
+      "variant": "pie",
+      "title": "Where turns route",
+      "unit": "",
+      "series": [
+        {
+          "name": "routing",
+          "points": [
+            {
+              "x": "template",
+              "y": 62
+            },
+            {
+              "x": "LLM plan",
+              "y": 24
+            },
+            {
+              "x": "fallback",
+              "y": 14
+            }
+          ]
+        }
+      ],
+      "caption": "Most turns never reach the model.",
+      "hold": 200
+    },
+    {
+      "type": "chart",
+      "variant": "scatter",
+      "title": "Latency vs cost",
+      "unit": "ms",
+      "axes": {
+        "x": "cost (cents)",
+        "y": "latency"
+      },
+      "series": [
+        {
+          "name": "template",
+          "color": "green",
+          "points": [
+            {
+              "x": 0.1,
+              "y": 40
+            },
+            {
+              "x": 0.2,
+              "y": 55
+            },
+            {
+              "x": 0.15,
+              "y": 48
+            },
+            {
+              "x": 0.3,
+              "y": 70
+            }
+          ]
+        },
+        {
+          "name": "LLM",
+          "color": "orange",
+          "points": [
+            {
+              "x": 1.8,
+              "y": 900
+            },
+            {
+              "x": 2.4,
+              "y": 1200
+            },
+            {
+              "x": 2.1,
+              "y": 1050
+            },
+            {
+              "x": 3,
+              "y": 1500
+            }
+          ]
+        }
+      ],
+      "caption": "Template turns cluster cheap and fast; LLM turns scatter expensive.",
+      "hold": 200
+    },
+    {
+      "type": "chart",
+      "variant": "quadrant",
+      "title": "Effort vs impact",
+      "axes": {
+        "x": "effort",
+        "y": "impact"
+      },
+      "series": [
+        {
+          "name": "items",
+          "color": "primary",
+          "points": [
+            {
+              "x": 0.2,
+              "y": 0.8,
+              "label": "deterministic routing"
+            },
+            {
+              "x": 0.7,
+              "y": 0.85,
+              "label": "visual QA agent"
+            },
+            {
+              "x": 0.25,
+              "y": 0.3,
+              "label": "doc polish"
+            },
+            {
+              "x": 0.8,
+              "y": 0.2,
+              "label": "custom theming"
+            }
+          ]
+        }
+      ],
+      "caption": "Top-left wins first: high impact, low effort.",
+      "hold": 220
+    }
+  ]
+}

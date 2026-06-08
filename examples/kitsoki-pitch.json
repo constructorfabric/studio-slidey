@@ -1,5 +1,5 @@
 {
-  "_comment": "Kitsoki concept pitch — silent ~80s cut. Sells the workflow-inside-existing-systems framing.",
+  "_comment": "Kitsoki concept pitch \u2014 silent ~80s cut. Sells the workflow-inside-existing-systems framing.",
   "meta": {
     "mode": "pitch",
     "title": "Kitsoki",
@@ -103,7 +103,7 @@
           ]
         }
       ],
-      "caption": "One YAML state machine drives every surface — the same flow runs in a terminal and in a real ticket thread.",
+      "caption": "One YAML state machine drives every surface \u2014 the same flow runs in a terminal and in a real ticket thread.",
       "hold": 210,
       "narration": "One YAML state machine drives every surface. GitHub, Jira, Slack, or your terminal."
     },
@@ -126,7 +126,7 @@
             {
               "id": "llm",
               "label": "LLM",
-              "sub": "plan · reason · decide",
+              "sub": "plan \u00b7 reason \u00b7 decide",
               "x": 70,
               "y": 50,
               "w": 260,
@@ -194,7 +194,7 @@
           "caption": "Runtime holds the plan; LLM is called as a sub-task."
         }
       ],
-      "caption": "The arrow that matters is the LLM's return arrow — a typed intent, not a free-form action.",
+      "caption": "The arrow that matters is the LLM's return arrow \u2014 a typed intent, not a free-form action.",
       "hold": 210,
       "narration": "Kitsoki flips control. The runtime is in charge. The LLM is called only when interpretation is needed."
     },
@@ -252,7 +252,7 @@
       "title": "vs."
     },
     {
-      "_comment": "Scene 7–13: full graph shown throughout; one item highlighted per slide.",
+      "_comment": "Scene 7\u201313: full graph shown throughout; one item highlighted per slide.",
       "type": "diagram-svg",
       "title": "Phases, not prompts",
       "panels": [
@@ -265,8 +265,8 @@
               "label": "reproduce",
               "sub": "haiku",
               "lines": [
-                "read-only · ticket + repo",
-                "→ failing test fixture"
+                "read-only \u00b7 ticket + repo",
+                "\u2192 failing test fixture"
               ],
               "x": 80,
               "y": 10,
@@ -279,7 +279,7 @@
               "label": "plan",
               "sub": "opus",
               "lines": [
-                "→ fix plan (operator approval)"
+                "\u2192 fix plan (operator approval)"
               ],
               "x": 80,
               "y": 230,
@@ -292,7 +292,7 @@
               "sub": "sonnet",
               "lines": [
                 "worktree write only",
-                "→ commit"
+                "\u2192 commit"
               ],
               "x": 80,
               "y": 420,
@@ -304,7 +304,7 @@
               "label": "review",
               "sub": "opus",
               "lines": [
-                "read-only · approve or refine"
+                "read-only \u00b7 approve or refine"
               ],
               "x": 80,
               "y": 640,
@@ -316,24 +316,24 @@
             {
               "from": "reproduce",
               "to": "plan",
-              "gate": "gate · test fails"
+              "gate": "gate \u00b7 test fails"
             },
             {
               "from": "plan",
               "to": "implement",
-              "gate": "gate · approved"
+              "gate": "gate \u00b7 approved"
             },
             {
               "from": "implement",
               "to": "review",
-              "gate": "gate · tests pass"
+              "gate": "gate \u00b7 tests pass"
             }
           ]
         }
       ],
-      "caption": "Phase 1: read-only — confirm the bug exists before any code changes.",
+      "caption": "Phase 1: read-only \u2014 confirm the bug exists before any code changes.",
       "hold": 120,
-      "narration": "Four phases, three gates — starting with reproduce.",
+      "narration": "Four phases, three gates \u2014 starting with reproduce.",
       "seamless": true
     },
     {
@@ -349,8 +349,8 @@
               "label": "reproduce",
               "sub": "haiku",
               "lines": [
-                "read-only · ticket + repo",
-                "→ failing test fixture"
+                "read-only \u00b7 ticket + repo",
+                "\u2192 failing test fixture"
               ],
               "x": 80,
               "y": 10,
@@ -362,7 +362,7 @@
               "label": "plan",
               "sub": "opus",
               "lines": [
-                "→ fix plan (operator approval)"
+                "\u2192 fix plan (operator approval)"
               ],
               "x": 80,
               "y": 230,
@@ -375,7 +375,7 @@
               "sub": "sonnet",
               "lines": [
                 "worktree write only",
-                "→ commit"
+                "\u2192 commit"
               ],
               "x": 80,
               "y": 420,
@@ -387,7 +387,7 @@
               "label": "review",
               "sub": "opus",
               "lines": [
-                "read-only · approve or refine"
+                "read-only \u00b7 approve or refine"
               ],
               "x": 80,
               "y": 640,
@@ -399,26 +399,27 @@
             {
               "from": "reproduce",
               "to": "plan",
-              "gate": "gate · test fails",
+              "gate": "gate \u00b7 test fails",
               "highlighted": true
             },
             {
               "from": "plan",
               "to": "implement",
-              "gate": "gate · approved"
+              "gate": "gate \u00b7 approved"
             },
             {
               "from": "implement",
               "to": "review",
-              "gate": "gate · tests pass"
+              "gate": "gate \u00b7 tests pass"
             }
           ]
         }
       ],
-      "caption": "Gate: test must fail — no planning until the bug is proven reproducible.",
+      "caption": "Gate: test must fail \u2014 no planning until the bug is proven reproducible.",
       "hold": 90,
       "narration": "The first gate: test must fail before planning begins.",
-      "seamless": true
+      "seamless": true,
+      "skipTitle": true
     },
     {
       "type": "diagram-svg",
@@ -433,8 +434,8 @@
               "label": "reproduce",
               "sub": "haiku",
               "lines": [
-                "read-only · ticket + repo",
-                "→ failing test fixture"
+                "read-only \u00b7 ticket + repo",
+                "\u2192 failing test fixture"
               ],
               "x": 80,
               "y": 10,
@@ -446,7 +447,7 @@
               "label": "plan",
               "sub": "opus",
               "lines": [
-                "→ fix plan (operator approval)"
+                "\u2192 fix plan (operator approval)"
               ],
               "x": 80,
               "y": 230,
@@ -460,7 +461,7 @@
               "sub": "sonnet",
               "lines": [
                 "worktree write only",
-                "→ commit"
+                "\u2192 commit"
               ],
               "x": 80,
               "y": 420,
@@ -472,7 +473,7 @@
               "label": "review",
               "sub": "opus",
               "lines": [
-                "read-only · approve or refine"
+                "read-only \u00b7 approve or refine"
               ],
               "x": 80,
               "y": 640,
@@ -484,25 +485,26 @@
             {
               "from": "reproduce",
               "to": "plan",
-              "gate": "gate · test fails"
+              "gate": "gate \u00b7 test fails"
             },
             {
               "from": "plan",
               "to": "implement",
-              "gate": "gate · approved"
+              "gate": "gate \u00b7 approved"
             },
             {
               "from": "implement",
               "to": "review",
-              "gate": "gate · tests pass"
+              "gate": "gate \u00b7 tests pass"
             }
           ]
         }
       ],
-      "caption": "Phase 2: propose the fix approach — requires operator sign-off before proceeding.",
+      "caption": "Phase 2: propose the fix approach \u2014 requires operator sign-off before proceeding.",
       "hold": 120,
-      "narration": "Plan proposes the fix — awaiting operator sign-off.",
-      "seamless": true
+      "narration": "Plan proposes the fix \u2014 awaiting operator sign-off.",
+      "seamless": true,
+      "skipTitle": true
     },
     {
       "type": "diagram-svg",
@@ -517,8 +519,8 @@
               "label": "reproduce",
               "sub": "haiku",
               "lines": [
-                "read-only · ticket + repo",
-                "→ failing test fixture"
+                "read-only \u00b7 ticket + repo",
+                "\u2192 failing test fixture"
               ],
               "x": 80,
               "y": 10,
@@ -530,7 +532,7 @@
               "label": "plan",
               "sub": "opus",
               "lines": [
-                "→ fix plan (operator approval)"
+                "\u2192 fix plan (operator approval)"
               ],
               "x": 80,
               "y": 230,
@@ -543,7 +545,7 @@
               "sub": "sonnet",
               "lines": [
                 "worktree write only",
-                "→ commit"
+                "\u2192 commit"
               ],
               "x": 80,
               "y": 420,
@@ -555,7 +557,7 @@
               "label": "review",
               "sub": "opus",
               "lines": [
-                "read-only · approve or refine"
+                "read-only \u00b7 approve or refine"
               ],
               "x": 80,
               "y": 640,
@@ -567,18 +569,18 @@
             {
               "from": "reproduce",
               "to": "plan",
-              "gate": "gate · test fails"
+              "gate": "gate \u00b7 test fails"
             },
             {
               "from": "plan",
               "to": "implement",
-              "gate": "gate · approved",
+              "gate": "gate \u00b7 approved",
               "highlighted": true
             },
             {
               "from": "implement",
               "to": "review",
-              "gate": "gate · tests pass"
+              "gate": "gate \u00b7 tests pass"
             }
           ]
         }
@@ -586,7 +588,8 @@
       "caption": "Gate: no code written until the plan is approved.",
       "hold": 90,
       "narration": "Gate: no code changes until the plan is signed off.",
-      "seamless": true
+      "seamless": true,
+      "skipTitle": true
     },
     {
       "type": "diagram-svg",
@@ -601,8 +604,8 @@
               "label": "reproduce",
               "sub": "haiku",
               "lines": [
-                "read-only · ticket + repo",
-                "→ failing test fixture"
+                "read-only \u00b7 ticket + repo",
+                "\u2192 failing test fixture"
               ],
               "x": 80,
               "y": 10,
@@ -614,7 +617,7 @@
               "label": "plan",
               "sub": "opus",
               "lines": [
-                "→ fix plan (operator approval)"
+                "\u2192 fix plan (operator approval)"
               ],
               "x": 80,
               "y": 230,
@@ -627,7 +630,7 @@
               "sub": "sonnet",
               "lines": [
                 "worktree write only",
-                "→ commit"
+                "\u2192 commit"
               ],
               "x": 80,
               "y": 420,
@@ -640,7 +643,7 @@
               "label": "review",
               "sub": "opus",
               "lines": [
-                "read-only · approve or refine"
+                "read-only \u00b7 approve or refine"
               ],
               "x": 80,
               "y": 640,
@@ -652,25 +655,26 @@
             {
               "from": "reproduce",
               "to": "plan",
-              "gate": "gate · test fails"
+              "gate": "gate \u00b7 test fails"
             },
             {
               "from": "plan",
               "to": "implement",
-              "gate": "gate · approved"
+              "gate": "gate \u00b7 approved"
             },
             {
               "from": "implement",
               "to": "review",
-              "gate": "gate · tests pass"
+              "gate": "gate \u00b7 tests pass"
             }
           ]
         }
       ],
-      "caption": "Phase 3: writes to an isolated worktree — scoped to code changes only.",
+      "caption": "Phase 3: writes to an isolated worktree \u2014 scoped to code changes only.",
       "hold": 120,
-      "narration": "Implement writes to a scoped worktree — isolated from main.",
-      "seamless": true
+      "narration": "Implement writes to a scoped worktree \u2014 isolated from main.",
+      "seamless": true,
+      "skipTitle": true
     },
     {
       "type": "diagram-svg",
@@ -685,8 +689,8 @@
               "label": "reproduce",
               "sub": "haiku",
               "lines": [
-                "read-only · ticket + repo",
-                "→ failing test fixture"
+                "read-only \u00b7 ticket + repo",
+                "\u2192 failing test fixture"
               ],
               "x": 80,
               "y": 10,
@@ -698,7 +702,7 @@
               "label": "plan",
               "sub": "opus",
               "lines": [
-                "→ fix plan (operator approval)"
+                "\u2192 fix plan (operator approval)"
               ],
               "x": 80,
               "y": 230,
@@ -711,7 +715,7 @@
               "sub": "sonnet",
               "lines": [
                 "worktree write only",
-                "→ commit"
+                "\u2192 commit"
               ],
               "x": 80,
               "y": 420,
@@ -723,7 +727,7 @@
               "label": "review",
               "sub": "opus",
               "lines": [
-                "read-only · approve or refine"
+                "read-only \u00b7 approve or refine"
               ],
               "x": 80,
               "y": 640,
@@ -735,26 +739,27 @@
             {
               "from": "reproduce",
               "to": "plan",
-              "gate": "gate · test fails"
+              "gate": "gate \u00b7 test fails"
             },
             {
               "from": "plan",
               "to": "implement",
-              "gate": "gate · approved"
+              "gate": "gate \u00b7 approved"
             },
             {
               "from": "implement",
               "to": "review",
-              "gate": "gate · tests pass",
+              "gate": "gate \u00b7 tests pass",
               "highlighted": true
             }
           ]
         }
       ],
-      "caption": "Gate: tests must pass — review only sees working code.",
+      "caption": "Gate: tests must pass \u2014 review only sees working code.",
       "hold": 90,
       "narration": "Gate: tests must pass before sending to human review.",
-      "seamless": true
+      "seamless": true,
+      "skipTitle": true
     },
     {
       "type": "diagram-svg",
@@ -769,8 +774,8 @@
               "label": "reproduce",
               "sub": "haiku",
               "lines": [
-                "read-only · ticket + repo",
-                "→ failing test fixture"
+                "read-only \u00b7 ticket + repo",
+                "\u2192 failing test fixture"
               ],
               "x": 80,
               "y": 10,
@@ -782,7 +787,7 @@
               "label": "plan",
               "sub": "opus",
               "lines": [
-                "→ fix plan (operator approval)"
+                "\u2192 fix plan (operator approval)"
               ],
               "x": 80,
               "y": 230,
@@ -795,7 +800,7 @@
               "sub": "sonnet",
               "lines": [
                 "worktree write only",
-                "→ commit"
+                "\u2192 commit"
               ],
               "x": 80,
               "y": 420,
@@ -807,7 +812,7 @@
               "label": "review",
               "sub": "opus",
               "lines": [
-                "read-only · approve or refine"
+                "read-only \u00b7 approve or refine"
               ],
               "x": 80,
               "y": 640,
@@ -820,30 +825,31 @@
             {
               "from": "reproduce",
               "to": "plan",
-              "gate": "gate · test fails"
+              "gate": "gate \u00b7 test fails"
             },
             {
               "from": "plan",
               "to": "implement",
-              "gate": "gate · approved"
+              "gate": "gate \u00b7 approved"
             },
             {
               "from": "implement",
               "to": "review",
-              "gate": "gate · tests pass"
+              "gate": "gate \u00b7 tests pass"
             }
           ]
         }
       ],
       "caption": "Deterministic gates between phases ensure preconditions are met before continuing.",
       "hold": 210,
-      "narration": "Review approves — or sends it back. Deterministic gates ensure preconditions are met."
+      "narration": "Review approves \u2014 or sends it back. Deterministic gates ensure preconditions are met.",
+      "skipTitle": true
     },
     {
       "type": "narrative",
       "eyebrow": "Semantic routing",
       "body": "Three layers route most turns without the LLM.",
-      "lede": "Synonyms catch verbatim aliases. Slot templates catch common shapes. The LLM is called only when both layers miss — and 78% of turns don't reach it.",
+      "lede": "Synonyms catch verbatim aliases. Slot templates catch common shapes. The LLM is called only when both layers miss \u2014 and 78% of turns don't reach it.",
       "hold": 195,
       "narration": "Three semantic layers route most turns. Synonyms first, slot templates next, the LLM only as fallback."
     },
@@ -884,7 +890,7 @@
       ],
       "caption": "Synonyms and slot templates handle the common cases. The LLM is only called when they miss.",
       "hold": 210,
-      "narration": "The first turn misses both deterministic layers, so kitsoki calls the LLM. The second turn hits a synonym — no LLM needed."
+      "narration": "The first turn misses both deterministic layers, so kitsoki calls the LLM. The second turn hits a synonym \u2014 no LLM needed."
     },
     {
       "type": "narrative",
@@ -911,7 +917,7 @@
             {
               "author": "kitsoki",
               "role": "bot",
-              "body": "Plan updated:\n• added negative test for service-account JWT\n• tightened middleware match"
+              "body": "Plan updated:\n\u2022 added negative test for service-account JWT\n\u2022 tightened middleware match"
             }
           ]
         },
@@ -928,7 +934,7 @@
             {
               "author": "kitsoki",
               "role": "bot",
-              "body": "Acknowledged. Pushing fix…\n\n✓ pushed  a3f8d2c · refactor(auth): use ternary in service-account check"
+              "body": "Acknowledged. Pushing fix\u2026\n\n\u2713 pushed  a3f8d2c \u00b7 refactor(auth): use ternary in service-account check"
             }
           ]
         }
@@ -940,7 +946,7 @@
     {
       "type": "stat",
       "value": "78%",
-      "label": "of turns route deterministically — without calling the LLM.",
+      "label": "of turns route deterministically \u2014 without calling the LLM.",
       "detail": "Measured across the cloak, oregon-trail and dev-story stories.",
       "hold": 150,
       "narration": "Across our stories, seventy-eight percent of turns route without an LLM call."
@@ -957,7 +963,7 @@
             {
               "author": "kitsoki",
               "role": "bot",
-              "body": "Test-review converted from LLM call → deterministic script.\n\nTrace showed 47 identical calls; replaced with a 12-line script."
+              "body": "Test-review converted from LLM call \u2192 deterministic script.\n\nTrace showed 47 identical calls; replaced with a 12-line script."
             }
           ]
         },
@@ -969,7 +975,7 @@
             {
               "author": "alice",
               "role": "dev",
-              "body": "feedback for kitsoki — you're being way too verbose in the comments"
+              "body": "feedback for kitsoki \u2014 you're being way too verbose in the comments"
             },
             {
               "author": "kitsoki",
@@ -986,12 +992,12 @@
             {
               "author": "kitsoki",
               "role": "bot",
-              "body": "Indexed your team's internal tooling and docs:\n• runbook RUN-042 → embedded in the auth-fix prompt\n• stand-validate command → wrapped as a host call"
+              "body": "Indexed your team's internal tooling and docs:\n\u2022 runbook RUN-042 \u2192 embedded in the auth-fix prompt\n\u2022 stand-validate command \u2192 wrapped as a host call"
             }
           ]
         }
       ],
-      "caption": "The trace tells the author where the LLM keeps being asked the same question. Each conversion is one diff against the YAML — and the system absorbs your existing tools as it goes.",
+      "caption": "The trace tells the author where the LLM keeps being asked the same question. Each conversion is one diff against the YAML \u2014 and the system absorbs your existing tools as it goes.",
       "hold": 300,
       "narration": "Kitsoki improves with use. It converts repeated LLM calls into scripts. It accepts your feedback. And it indexes your team's existing tools."
     },
@@ -1001,7 +1007,7 @@
       "tagline": "Determinism drives predictable results",
       "url": "github.com/cyberfabric/Kitsoki",
       "hold": 180,
-      "narration": "Kitsoki — determinism drives predictable results."
+      "narration": "Kitsoki \u2014 determinism drives predictable results."
     }
   ]
 }

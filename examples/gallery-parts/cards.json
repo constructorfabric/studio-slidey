@@ -1,0 +1,152 @@
+[
+  {
+    "type": "cards",
+    "variant": "grid",
+    "title": "What ships in v1",
+    "columns": 3,
+    "cards": [
+      { "label": "Deterministic routing", "sub": "no LLM on the hot path", "lines": ["intent table", "78% of turns"], "style": "primary" },
+      { "label": "Flow fixtures", "sub": "replayable", "lines": ["record once", "diff on change"] },
+      { "label": "Typed views", "sub": "render anywhere", "lines": ["TUI", "web", "comment thread"] },
+      { "label": "Story YAML", "sub": "the state machine", "lines": ["rooms + intents", "effects + host calls"] },
+      { "label": "Tracing", "sub": "every turn", "lines": ["layer-by-layer", "ms + tokens"] },
+      { "label": "PDF / MP4", "sub": "one spec", "lines": ["narrated cut", "per-step pages"], "style": "secondary" }
+    ],
+    "caption": "One spec, three outputs."
+  },
+  {
+    "type": "cards",
+    "variant": "agenda",
+    "title": "Where we are going",
+    "cards": [
+      { "label": "The problem", "sub": "two extremes dominate, neither is enough" },
+      { "label": "The shape", "sub": "a workflow that runs where the work lives" },
+      { "label": "The mechanism", "sub": "deterministic flow with an LLM fallback" },
+      { "label": "The proof", "sub": "recorded turns, replayed and traced" }
+    ]
+  },
+  {
+    "type": "cards",
+    "variant": "numbered",
+    "title": "How a turn resolves",
+    "cards": [
+      { "label": "Match the intent", "sub": "against the room's deterministic table" },
+      { "label": "Fall back to the LLM", "sub": "only when no rule fires" },
+      { "label": "Apply effects", "sub": "set world vars, call hosts, transition" },
+      { "label": "Render the view", "sub": "the same typed view, every surface" }
+    ]
+  },
+  {
+    "type": "cards",
+    "variant": "list",
+    "title": "Non-goals",
+    "cards": [
+      { "label": "Not a chatbot", "sub": "the flow is the product, not the chat" },
+      { "label": "Not a prompt chain", "sub": "rooms and transitions, not a DAG of prompts" },
+      { "label": "Not a no-code toy", "sub": "YAML you can read, diff, and review" }
+    ]
+  },
+  {
+    "type": "cards",
+    "variant": "icon-row",
+    "title": "Runs where work lives",
+    "columns": 4,
+    "cards": [
+      { "icon": "▸", "label": "GitHub", "sub": "issue comments" },
+      { "icon": "▸", "label": "Jira", "sub": "ticket fields" },
+      { "icon": "▸", "label": "Slack", "sub": "a thread" },
+      { "icon": "▸", "label": "CRM", "sub": "a record" }
+    ]
+  },
+  {
+    "type": "cards",
+    "variant": "before-after",
+    "title": "The shift",
+    "left": {
+      "label": "Before",
+      "lines": [
+        "Prompt chains you cannot replay",
+        "Behaviour drifts every release",
+        "No record of why a turn went one way",
+        "Logic buried in a mega-prompt"
+      ]
+    },
+    "right": {
+      "label": "After",
+      "lines": [
+        "A state machine you can diff",
+        "Deterministic routing, LLM as fallback",
+        "Every turn recorded and replayable",
+        "Logic in reviewable YAML"
+      ]
+    },
+    "caption": "Same surface area. Auditable behaviour."
+  },
+  {
+    "type": "cards",
+    "variant": "versus",
+    "title": "Two extremes",
+    "left": {
+      "label": "Rigid forms",
+      "lines": ["Predictable", "Cannot handle the unsaid", "Users bounce off the rails"]
+    },
+    "right": {
+      "label": "Open chat",
+      "lines": ["Flexible", "Unbounded, unauditable", "Drifts turn to turn"]
+    },
+    "caption": "Kitsoki sits between: a flow that bends without breaking."
+  },
+  {
+    "type": "cards",
+    "variant": "point-counterpoint",
+    "title": "Does determinism kill flexibility?",
+    "left": {
+      "label": "The worry",
+      "lines": [
+        "If routing is a table, the bot feels scripted",
+        "Edge cases will fall through the rules"
+      ]
+    },
+    "right": {
+      "label": "The answer",
+      "lines": [
+        "The table covers the 78% that repeat",
+        "The LLM catches the rest as a fallback",
+        "Both paths are recorded and traceable"
+      ]
+    }
+  },
+  {
+    "type": "cards",
+    "variant": "pros-cons",
+    "title": "Recording every turn",
+    "left": {
+      "label": "Pros",
+      "lines": [
+        "Replay any session deterministically",
+        "Diff behaviour across releases",
+        "Trace why a turn routed as it did"
+      ]
+    },
+    "right": {
+      "label": "Cons",
+      "lines": [
+        "Fixtures need refreshing when flows change",
+        "Storage grows with session volume"
+      ]
+    },
+    "caption": "The audit trail is worth the upkeep."
+  },
+  {
+    "type": "cards",
+    "variant": "qa",
+    "title": "Frequently asked",
+    "question": "Does it call an LLM on every turn?",
+    "answer": [
+      "No. Routing is a deterministic intent table.",
+      "The LLM is a fallback for the turns no rule matches —",
+      "roughly one in five, all recorded and replayable."
+    ],
+    "caption": "Cheap, fast, and auditable by default."
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "type": "table",
+    "variant": "data",
+    "title": "Routing latency by layer",
+    "columns": ["Layer", "Hit rate", "p50", "p99"],
+    "rows": [
+      { "cells": ["synonym", "41%", "2 ms", "5 ms"] },
+      { "cells": ["slot", "23%", "4 ms", "9 ms"] },
+      { "cells": ["template", "14%", "6 ms", "12 ms"] },
+      { "cells": ["LLM", "22%", "640 ms", "1,900 ms"], "highlight": 3 }
+    ],
+    "caption": "Deterministic layers resolve 78% of turns before the model is asked.",
+    "hold": 210
+  },
+  {
+    "type": "table",
+    "variant": "comparison",
+    "title": "Workflow engine vs. bare agent",
+    "columns": ["Capability", "Bare agent", "Kitsoki"],
+    "winner": 2,
+    "rows": [
+      { "cells": ["Deterministic flow", "✗", "✓"] },
+      { "cells": ["Replayable transcripts", "✗", "✓"] },
+      { "cells": ["Runs inside existing tools", "partial", "✓"] },
+      { "cells": ["Free-form reasoning", "✓", "✓"] }
+    ],
+    "caption": "Same surface area, plus a state machine you can audit.",
+    "hold": 210
+  },
+  {
+    "type": "table",
+    "variant": "scorecard",
+    "title": "Vendor scorecard",
+    "columns": ["Criterion", "Vendor A", "Vendor B", "Kitsoki"],
+    "winner": 3,
+    "rows": [
+      { "cells": ["Setup time", "2 weeks", "5 days", "1 day"] },
+      { "cells": ["Deterministic routing", "✗", "✗", "✓"] },
+      { "cells": ["Self-hosted", "✗", "✓", "✓"] },
+      { "cells": ["Audit trail", "partial", "✓", "✓"] },
+      { "cells": ["Price", "$$$", "$$", "$"] }
+    ],
+    "caption": "Crowned column is the recommended pick.",
+    "hold": 220
+  }
+]

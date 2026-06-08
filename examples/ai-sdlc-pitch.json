@@ -1,0 +1,1090 @@
+{
+  "_comment": "AI SDLC pitch \u2014 kitsoki as a coherent platform for the full AI-driven development lifecycle.",
+  "meta": {
+    "mode": "pitch",
+    "title": "AI SDLC",
+    "narration": {
+      "voice": "en-AU-NatashaNeural",
+      "rate": "+0%"
+    }
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "title": "AI SDLC",
+      "subtitle": "A coherent platform for AI-driven development"
+    },
+    {
+      "_comment": "Slide 1: The Status Quo \u2014 4-corners + center, w=420 so labels fit",
+      "type": "diagram-svg",
+      "title": "The status quo",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1200 590",
+          "nodes": [
+            {
+              "id": "term",
+              "label": "Terminal",
+              "sub": "script.py",
+              "x": 20,
+              "y": 50,
+              "w": 420,
+              "h": 140
+            },
+            {
+              "id": "claude",
+              "label": "Claude Chat",
+              "sub": "one-off session",
+              "x": 780,
+              "y": 20,
+              "w": 420,
+              "h": 140
+            },
+            {
+              "id": "jira",
+              "label": "Jira ticket",
+              "sub": "manual entry",
+              "x": 80,
+              "y": 330,
+              "w": 420,
+              "h": 140
+            },
+            {
+              "id": "pr",
+              "label": "Pull Request",
+              "sub": "no context",
+              "x": 730,
+              "y": 360,
+              "w": 420,
+              "h": 140
+            },
+            {
+              "id": "glue",
+              "label": "Shell scripts",
+              "sub": "ad hoc glue",
+              "x": 400,
+              "y": 430,
+              "w": 420,
+              "h": 140
+            }
+          ],
+          "edges": []
+        }
+      ],
+      "caption": "Disconnected islands. Each team wires their own tools. Nothing is shared, observable, or reusable.",
+      "hold": 300,
+      "narration": "Every team is bolting AI onto their workflow \u2014 scripts, one-off sessions, ad hoc glue. It works unpredictably."
+    },
+    {
+      "_comment": "Slide 2: The Hidden Cost",
+      "type": "narrative",
+      "eyebrow": "The hidden cost",
+      "body": "The real cost isn't the LLM bill.",
+      "lede": "Nothing is observable. Nothing is testable. Nothing improves on its own. Every team reinvents the same plumbing.",
+      "hold": 225,
+      "narration": "The real cost isn't the LLM bill. Nothing is observable, testable, or self-improving."
+    },
+    {
+      "_comment": "Slide 3: A Different Idea",
+      "type": "narrative",
+      "eyebrow": "A different idea",
+      "body": "Every AI-driven task \u2014 from writing a PRD to fixing a bug \u2014 on one coherent platform.",
+      "lede": "Same observability. Same testing model. Same cost controls. Same transport layer. One workflow engine.",
+      "hold": 195,
+      "narration": "Every AI task \u2014 from PRD to bug fix \u2014 on one coherent platform."
+    },
+    {
+      "_comment": "Slide 4: The Full SDLC Saga (racetrack). Sub text trimmed to single words so it fits. Improvement renamed.",
+      "type": "diagram-svg",
+      "title": "The full SDLC saga",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1400 520",
+          "nodes": [
+            {
+              "id": "prd",
+              "label": "PRD",
+              "sub": "intent",
+              "x": 10,
+              "y": 20,
+              "w": 240,
+              "h": 150
+            },
+            {
+              "id": "design",
+              "label": "Design",
+              "sub": "system",
+              "x": 270,
+              "y": 20,
+              "w": 240,
+              "h": 150
+            },
+            {
+              "id": "epics",
+              "label": "Epics",
+              "sub": "teams",
+              "x": 530,
+              "y": 20,
+              "w": 230,
+              "h": 150,
+              "style": "primary"
+            },
+            {
+              "id": "impl",
+              "label": "Implement",
+              "sub": "scoped",
+              "x": 780,
+              "y": 20,
+              "w": 260,
+              "h": 150
+            },
+            {
+              "id": "review",
+              "label": "Review",
+              "sub": "gated",
+              "x": 1060,
+              "y": 20,
+              "w": 260,
+              "h": 150
+            },
+            {
+              "id": "chores",
+              "label": "Chores",
+              "sub": "scheduled",
+              "x": 1060,
+              "y": 350,
+              "w": 260,
+              "h": 150
+            },
+            {
+              "id": "bugfix",
+              "label": "Bug Fix",
+              "sub": "triage",
+              "x": 800,
+              "y": 350,
+              "w": 260,
+              "h": 150
+            },
+            {
+              "id": "support",
+              "label": "Support",
+              "sub": "chat",
+              "x": 540,
+              "y": 350,
+              "w": 260,
+              "h": 150
+            },
+            {
+              "id": "improve",
+              "label": "Improvement",
+              "sub": "feeds back",
+              "x": 10,
+              "y": 350,
+              "w": 490,
+              "h": 150,
+              "style": "secondary"
+            }
+          ],
+          "edges": [
+            {
+              "from": "prd",
+              "to": "design"
+            },
+            {
+              "from": "design",
+              "to": "epics"
+            },
+            {
+              "from": "epics",
+              "to": "impl"
+            },
+            {
+              "from": "impl",
+              "to": "review"
+            },
+            {
+              "from": "review",
+              "to": "chores"
+            },
+            {
+              "from": "chores",
+              "to": "bugfix"
+            },
+            {
+              "from": "bugfix",
+              "to": "support"
+            },
+            {
+              "from": "support",
+              "to": "improve"
+            },
+            {
+              "from": "support",
+              "to": "bugfix",
+              "arch": 185
+            },
+            {
+              "from": "improve",
+              "to": "prd",
+              "label": "feeds back",
+              "elbow": true
+            }
+          ]
+        }
+      ],
+      "caption": "The full lifecycle \u2014 not just implementation. Improvement feeds back into PRD, closing the loop.",
+      "hold": 240,
+      "narration": "The full lifecycle \u2014 PRD, design, epics, implement, review, chores, bug fixes, support, and improvement feeding back in."
+    },
+    {
+      "_comment": "Slide 5: From Intent to PRD \u2014 wider viewBox + w=430 so lines fit",
+      "type": "diagram-svg",
+      "title": "From intent to PRD",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1440 460",
+          "nodes": [
+            {
+              "id": "chat",
+              "label": "Conversation",
+              "sub": "raw product intent",
+              "lines": [
+                "no forms, no templates"
+              ],
+              "x": 30,
+              "y": 140,
+              "w": 430,
+              "h": 180
+            },
+            {
+              "id": "refine",
+              "label": "Refine loop",
+              "sub": "operator reviews",
+              "lines": [
+                "flags gaps, re-runs"
+              ],
+              "x": 510,
+              "y": 140,
+              "w": 430,
+              "h": 180,
+              "style": "primary"
+            },
+            {
+              "id": "prd",
+              "label": "PRD v1.0",
+              "sub": "structured artifact",
+              "lines": [
+                "links to Design",
+                "links to Epics"
+              ],
+              "x": 990,
+              "y": 140,
+              "w": 430,
+              "h": 180
+            }
+          ],
+          "edges": [
+            {
+              "from": "chat",
+              "to": "refine"
+            },
+            {
+              "from": "refine",
+              "to": "prd",
+              "label": "stable"
+            }
+          ]
+        }
+      ],
+      "caption": "Start with a conversation. Iterate until stable. The PRD artifact links directly to downstream design and epics.",
+      "hold": 270,
+      "narration": "Start with a conversation, not a form. Kitsoki captures raw intent and refines it iteratively until the PRD is stable."
+    },
+    {
+      "_comment": "Slide 6: Design and Decomposition \u2014 System Design w=500, epics w=380",
+      "type": "diagram-svg",
+      "title": "Design and decomposition",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1300 620",
+          "nodes": [
+            {
+              "id": "prd",
+              "label": "PRD",
+              "sub": "product intent",
+              "x": 470,
+              "y": 10,
+              "w": 360,
+              "h": 130
+            },
+            {
+              "id": "design",
+              "label": "System Design",
+              "sub": "components + contracts",
+              "x": 400,
+              "y": 210,
+              "w": 500,
+              "h": 140,
+              "style": "primary"
+            },
+            {
+              "id": "ea",
+              "label": "Epic: Auth",
+              "sub": "team A",
+              "lines": [
+                "API contracts",
+                "threat surface"
+              ],
+              "x": 20,
+              "y": 440,
+              "w": 380,
+              "h": 170
+            },
+            {
+              "id": "eb",
+              "label": "Epic: Data",
+              "sub": "team B",
+              "lines": [
+                "data models",
+                "migration plan"
+              ],
+              "x": 460,
+              "y": 440,
+              "w": 380,
+              "h": 170
+            },
+            {
+              "id": "ec",
+              "label": "Epic: API",
+              "sub": "team C",
+              "lines": [
+                "endpoints",
+                "auth + rate limits"
+              ],
+              "x": 900,
+              "y": 440,
+              "w": 380,
+              "h": 170
+            }
+          ],
+          "edges": [
+            {
+              "from": "prd",
+              "to": "design"
+            },
+            {
+              "from": "design",
+              "to": "ea",
+              "elbow": "V"
+            },
+            {
+              "from": "design",
+              "to": "eb"
+            },
+            {
+              "from": "design",
+              "to": "ec",
+              "elbow": "V"
+            }
+          ]
+        }
+      ],
+      "caption": "Each epic carries its own context slice \u2014 a scoped brief with contracts and edge cases, not a flat ticket.",
+      "hold": 270,
+      "narration": "The PRD becomes a design. The design decomposes into team-scoped epics \u2014 each a scoped brief, not a flat ticket."
+    },
+    {
+      "_comment": "Slide 7: Pre-impl review \u2014 w=390 inspectors, gate w=620",
+      "type": "diagram-svg",
+      "title": "Pre-implementation review",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1270 590",
+          "nodes": [
+            {
+              "id": "design",
+              "label": "Design",
+              "sub": "before any code is written",
+              "x": 445,
+              "y": 10,
+              "w": 380,
+              "h": 130
+            },
+            {
+              "id": "sec",
+              "label": "Security",
+              "sub": "threat surface",
+              "lines": [
+                "auth boundaries",
+                "data sensitivity"
+              ],
+              "x": 15,
+              "y": 240,
+              "w": 390,
+              "h": 200
+            },
+            {
+              "id": "perf",
+              "label": "Performance",
+              "sub": "critical paths",
+              "lines": [
+                "bottlenecks",
+                "SLO alignment"
+              ],
+              "x": 440,
+              "y": 240,
+              "w": 390,
+              "h": 200,
+              "style": "primary"
+            },
+            {
+              "id": "devops",
+              "label": "DevOps",
+              "sub": "deploy topology",
+              "lines": [
+                "rollout risk",
+                "observability hooks"
+              ],
+              "x": 865,
+              "y": 240,
+              "w": 390,
+              "h": 200
+            },
+            {
+              "id": "gate",
+              "label": "Implementation gate",
+              "sub": "",
+              "x": 325,
+              "y": 510,
+              "w": 620,
+              "h": 65
+            }
+          ],
+          "edges": [
+            {
+              "from": "design",
+              "to": "sec",
+              "elbow": "V"
+            },
+            {
+              "from": "design",
+              "to": "perf"
+            },
+            {
+              "from": "design",
+              "to": "devops",
+              "elbow": "V"
+            },
+            {
+              "from": "sec",
+              "to": "gate",
+              "elbow": "V"
+            },
+            {
+              "from": "perf",
+              "to": "gate"
+            },
+            {
+              "from": "devops",
+              "to": "gate",
+              "elbow": "V"
+            }
+          ]
+        }
+      ],
+      "caption": "Three specialized passes over the design before any code is written. Findings block or gate implementation planning.",
+      "hold": 255,
+      "narration": "Three specialized passes \u2014 security, performance, devops \u2014 review the design before any code is written. Findings gate the next phase."
+    },
+    {
+      "_comment": "Slide 8: Implementation pipeline \u2014 w=330 tasks, w=200 gates, viewBox 1500",
+      "type": "diagram-svg",
+      "title": "Implementation: scoped, gated, reversible",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1500 290",
+          "nodes": [
+            {
+              "id": "t1",
+              "label": "Task 1",
+              "sub": "bounded context",
+              "x": 10,
+              "y": 60,
+              "w": 330,
+              "h": 160
+            },
+            {
+              "id": "g1",
+              "label": "Gate",
+              "sub": "validate",
+              "x": 360,
+              "y": 95,
+              "w": 200,
+              "h": 90
+            },
+            {
+              "id": "t2",
+              "label": "Task 2",
+              "sub": "bounded context",
+              "x": 580,
+              "y": 60,
+              "w": 330,
+              "h": 160,
+              "style": "primary"
+            },
+            {
+              "id": "g2",
+              "label": "Gate",
+              "sub": "validate",
+              "x": 930,
+              "y": 95,
+              "w": 200,
+              "h": 90
+            },
+            {
+              "id": "t3",
+              "label": "Task 3",
+              "sub": "bounded context",
+              "x": 1150,
+              "y": 60,
+              "w": 330,
+              "h": 160
+            }
+          ],
+          "edges": [
+            {
+              "from": "t1",
+              "to": "g1"
+            },
+            {
+              "from": "g1",
+              "to": "t2"
+            },
+            {
+              "from": "t2",
+              "to": "g2"
+            },
+            {
+              "from": "g2",
+              "to": "t3"
+            }
+          ]
+        }
+      ],
+      "caption": "Each task runs in a short, scoped conversation. A gate validates output before the next task begins. A failed task does not corrupt the epic.",
+      "hold": 255,
+      "narration": "Each task runs in a short, bounded conversation. A gate validates before the next task begins. No silent failures."
+    },
+    {
+      "_comment": "Slide 9: Jira driver \u2014 shortened lines, wider nodes (ticket w=450, session w=500)",
+      "type": "diagram-svg",
+      "title": "Jira as a first-class driver",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1250 430",
+          "nodes": [
+            {
+              "id": "ticket",
+              "label": "Jira ticket",
+              "sub": "PLTFRM-891",
+              "lines": [
+                "status \u2192 trigger",
+                "comment \u2192 input",
+                "metadata \u2192 context"
+              ],
+              "x": 30,
+              "y": 130,
+              "w": 450,
+              "h": 240
+            },
+            {
+              "id": "session",
+              "label": "Kitsoki session",
+              "sub": "state machine",
+              "lines": [
+                "transport is a plugin"
+              ],
+              "x": 720,
+              "y": 155,
+              "w": 500,
+              "h": 190,
+              "style": "primary"
+            },
+            {
+              "id": "out",
+              "label": "Output",
+              "sub": "back to Jira",
+              "lines": [
+                "status updated",
+                "result \u2192 comment"
+              ],
+              "x": 30,
+              "y": 15,
+              "w": 450,
+              "h": 110
+            }
+          ],
+          "edges": [
+            {
+              "from": "ticket",
+              "to": "session",
+              "label": "drives"
+            },
+            {
+              "from": "session",
+              "to": "out",
+              "label": "writes back",
+              "elbow": true
+            },
+            {
+              "from": "out",
+              "to": "ticket"
+            }
+          ]
+        }
+      ],
+      "caption": "A Jira ticket is a transport, not a trigger. Transitions, comments, and field values drive the state machine \u2014 results post back.",
+      "hold": 255,
+      "narration": "A Jira ticket is a transport. Transitions, comments, and field updates all drive the state machine."
+    },
+    {
+      "_comment": "Slide 10: PR Review \u2014 thread (unchanged)",
+      "type": "thread",
+      "title": "PR review: feedback as directive",
+      "panels": [
+        {
+          "system": "bitbucket",
+          "ref": "PR-1042",
+          "stage": "review",
+          "messages": [
+            {
+              "author": "alice",
+              "role": "dev",
+              "body": "This touches the auth path \u2014 flag for security review before merge."
+            },
+            {
+              "author": "kitsoki",
+              "role": "bot",
+              "body": "Flagged. Running security review pass now.\n\n\u2022 auth boundary check: in progress\n\u2022 token handling: queued"
+            }
+          ]
+        },
+        {
+          "system": "bitbucket",
+          "ref": "PR-1042",
+          "stage": "refine",
+          "messages": [
+            {
+              "author": "bob",
+              "role": "dev",
+              "body": "rebase against main and fix the merge conflicts before we can merge this"
+            },
+            {
+              "author": "kitsoki",
+              "role": "bot",
+              "body": "Acknowledged. Rebasing against main and resolving conflicts now.\n\n\u2713 rebased  3 commits onto main\n\u2713 conflict resolved  middleware/auth.go  (kept both token validators)\n\u2713 pushed  f91c3a7 \u00b7 chore: rebase against main, resolve auth middleware conflict"
+            }
+          ]
+        }
+      ],
+      "caption": "Review comments drive a structured refine arc. Feedback is a binding directive \u2014 tracked, applied, and verified across iterations.",
+      "hold": 240,
+      "narration": "Review comments don't disappear into a thread. They drive a structured refine arc \u2014 tracked, applied, and verified."
+    },
+    {
+      "_comment": "Slide 11: Chores \u2014 w=400 chore nodes, viewBox 2080. Platform centered.",
+      "type": "diagram-svg",
+      "title": "Chores, automated",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 2080 490",
+          "nodes": [
+            {
+              "id": "docs",
+              "label": "Doc Review",
+              "sub": "coverage + staleness",
+              "x": 10,
+              "y": 20,
+              "w": 400,
+              "h": 160
+            },
+            {
+              "id": "tests",
+              "label": "Test Audit",
+              "sub": "gaps + slow tests",
+              "x": 425,
+              "y": 20,
+              "w": 400,
+              "h": 160
+            },
+            {
+              "id": "sec",
+              "label": "Sec Scan",
+              "sub": "vulns + policy",
+              "x": 840,
+              "y": 20,
+              "w": 400,
+              "h": 160,
+              "style": "primary"
+            },
+            {
+              "id": "deps",
+              "label": "Dep Upgrade",
+              "sub": "risk-tiered batches",
+              "x": 1255,
+              "y": 20,
+              "w": 400,
+              "h": 160
+            },
+            {
+              "id": "i18n",
+              "label": "Translation",
+              "sub": "with refinement loop",
+              "x": 1670,
+              "y": 20,
+              "w": 400,
+              "h": 160
+            },
+            {
+              "id": "platform",
+              "label": "Kitsoki platform",
+              "sub": "on demand or scheduled",
+              "x": 590,
+              "y": 330,
+              "w": 900,
+              "h": 130,
+              "style": "primary"
+            }
+          ],
+          "edges": [
+            {
+              "from": "platform",
+              "to": "docs",
+              "elbow": "V"
+            },
+            {
+              "from": "platform",
+              "to": "tests",
+              "elbow": "V"
+            },
+            {
+              "from": "platform",
+              "to": "sec"
+            },
+            {
+              "from": "platform",
+              "to": "deps",
+              "elbow": "V"
+            },
+            {
+              "from": "platform",
+              "to": "i18n",
+              "elbow": "V"
+            }
+          ]
+        }
+      ],
+      "caption": "Five chore types. One platform. All version-controlled, schedulable, and auditable.",
+      "hold": 270,
+      "narration": "Docs, tests, security scans, dependency upgrades, translations \u2014 all on the same platform, on schedule or on demand."
+    },
+    {
+      "_comment": "Slide 12: Every Transport \u2014 cardinal layout so edges are pure H/V. Same x-center for Web+Jira, same y-center for TUI+BB+Session.",
+      "type": "diagram-svg",
+      "title": "Every transport, one session",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1300 680",
+          "nodes": [
+            {
+              "id": "tui",
+              "label": "Local TUI",
+              "sub": "kitsoki run",
+              "x": 20,
+              "y": 265,
+              "w": 360,
+              "h": 160
+            },
+            {
+              "id": "web",
+              "label": "Web UI",
+              "sub": "browser",
+              "x": 500,
+              "y": 50,
+              "w": 300,
+              "h": 130
+            },
+            {
+              "id": "jira",
+              "label": "Jira",
+              "sub": "ticket event",
+              "x": 500,
+              "y": 500,
+              "w": 300,
+              "h": 130
+            },
+            {
+              "id": "bb",
+              "label": "Bitbucket PR",
+              "sub": "PR event",
+              "x": 910,
+              "y": 265,
+              "w": 380,
+              "h": 160
+            },
+            {
+              "id": "session",
+              "label": "Session",
+              "sub": "state machine constant",
+              "lines": [
+                "transport is a plugin"
+              ],
+              "x": 440,
+              "y": 265,
+              "w": 420,
+              "h": 160,
+              "style": "primary"
+            }
+          ],
+          "edges": [
+            {
+              "from": "tui",
+              "to": "session"
+            },
+            {
+              "from": "web",
+              "to": "session"
+            },
+            {
+              "from": "jira",
+              "to": "session"
+            },
+            {
+              "from": "bb",
+              "to": "session"
+            }
+          ]
+        }
+      ],
+      "caption": "Start in the TUI, hand off via Jira, land in a PR \u2014 all as one continuous session. The transport is a plugin.",
+      "hold": 255,
+      "narration": "Start in the TUI, hand off through Jira, land in a PR \u2014 one continuous session."
+    },
+    {
+      "_comment": "Slide 13: Observable, Testable, Replayable (trace \u2014 unchanged)",
+      "type": "trace",
+      "title": "Observable, testable, replayable",
+      "turns": [
+        {
+          "user": "analyse the auth regression",
+          "layers": [
+            {
+              "name": "synonym",
+              "result": "MISS"
+            },
+            {
+              "name": "slot",
+              "result": "MISS"
+            },
+            {
+              "name": "LLM",
+              "result": "HIT",
+              "ms": 210
+            }
+          ],
+          "intent": "analyse_regression"
+        },
+        {
+          "user": "fix",
+          "layers": [
+            {
+              "name": "synonym",
+              "result": "HIT"
+            }
+          ],
+          "intent": "apply_fix",
+          "no_llm": true
+        }
+      ],
+      "caption": "Every run produces a structured trace. Any run replays without re-running the LLM \u2014 fast and fully deterministic. Flow tests are zero-LLM.",
+      "hold": 210,
+      "narration": "Every run produces a structured trace. Replay any run without calling the LLM \u2014 fast and deterministic. Flow tests are zero-LLM."
+    },
+    {
+      "_comment": "Slide 14: Cost control \u2014 3-layer funnel. Accurate: routing tier uses synonym+slot+local LLM for decisions only, not general inference.",
+      "type": "diagram-svg",
+      "title": "Cost control built in",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1000 760",
+          "nodes": [
+            {
+              "id": "all",
+              "label": "All session turns",
+              "sub": "",
+              "x": 0,
+              "y": 10,
+              "w": 1000,
+              "h": 90
+            },
+            {
+              "id": "router",
+              "label": "Routing tier",
+              "sub": "synonym \u00b7 slot \u00b7 local LLM",
+              "lines": [
+                "routing + decider decisions",
+                "not general inference"
+              ],
+              "x": 100,
+              "y": 175,
+              "w": 800,
+              "h": 180,
+              "style": "secondary"
+            },
+            {
+              "id": "cache",
+              "label": "Prompt cache",
+              "sub": "semantic similarity",
+              "lines": [
+                "repeated patterns free"
+              ],
+              "x": 200,
+              "y": 435,
+              "w": 600,
+              "h": 140
+            },
+            {
+              "id": "frontier",
+              "label": "Frontier oracle",
+              "sub": "generation + reasoning",
+              "lines": [
+                "oracle-bound per story"
+              ],
+              "x": 250,
+              "y": 650,
+              "w": 500,
+              "h": 100
+            }
+          ],
+          "edges": [
+            {
+              "from": "all",
+              "to": "router"
+            },
+            {
+              "from": "router",
+              "to": "cache"
+            },
+            {
+              "from": "cache",
+              "to": "frontier"
+            }
+          ]
+        }
+      ],
+      "caption": "Each oracle declares its own model. The routing tier handles decisions cheaply \u2014 frontier oracles are reserved for generation.",
+      "hold": 255,
+      "narration": "Local LLMs route. Frontier LLMs generate. Cache-aware batching and short conversations cut cost at every layer."
+    },
+    {
+      "_comment": "Slide 15: The True Cost of a Change",
+      "type": "narrative",
+      "eyebrow": "The true cost of a change",
+      "body": "Because every decision is instrumented, kitsoki can tell you exactly what a PRD-to-PR cycle costs.",
+      "lede": "Tokens. LLM calls. Operator minutes. Structured traces make the next cycle cheaper \u2014 costs decrease as patterns stabilize.",
+      "hold": 225,
+      "narration": "Kitsoki tells you exactly what a PRD-to-PR cycle costs \u2014 and predicts the next one as patterns stabilize."
+    },
+    {
+      "_comment": "Slide 16: Self-improving flywheel \u2014 2\u00d72 racetrack so edges are pure H/V, w=380 nodes",
+      "type": "diagram-svg",
+      "title": "Self-improving by design",
+      "panels": [
+        {
+          "label": "",
+          "viewBox": "0 0 1100 620",
+          "nodes": [
+            {
+              "id": "run",
+              "label": "Run",
+              "sub": "stories execute",
+              "x": 50,
+              "y": 30,
+              "w": 380,
+              "h": 150
+            },
+            {
+              "id": "trace",
+              "label": "Trace",
+              "sub": "every decision",
+              "x": 670,
+              "y": 30,
+              "w": 380,
+              "h": 150
+            },
+            {
+              "id": "mine",
+              "label": "Mine",
+              "sub": "pattern analysis",
+              "x": 670,
+              "y": 440,
+              "w": 380,
+              "h": 150
+            },
+            {
+              "id": "improve",
+              "label": "Improve",
+              "sub": "story candidates",
+              "x": 50,
+              "y": 440,
+              "w": 380,
+              "h": 150,
+              "style": "primary"
+            }
+          ],
+          "edges": [
+            {
+              "from": "run",
+              "to": "trace"
+            },
+            {
+              "from": "trace",
+              "to": "mine"
+            },
+            {
+              "from": "mine",
+              "to": "improve"
+            },
+            {
+              "from": "improve",
+              "to": "run",
+              "label": "better stories"
+            }
+          ]
+        }
+      ],
+      "caption": "Every run makes the next run cheaper. Traces are labeled datapoints that feed directly back into story improvement.",
+      "hold": 300,
+      "narration": "Traces are labeled datapoints. The improvement saga mines session logs, ranks patterns by cost, and surfaces them as story candidates."
+    },
+    {
+      "_comment": "Slide 17: The Moat \u2014 CTA",
+      "type": "cta",
+      "wordmark": "Kitsoki",
+      "tagline": "The whole lifecycle \u2014 coherent, observable, testable, self-improving",
+      "url": "github.com/cyberfabric/kitsoki",
+      "hold": 240,
+      "narration": "Ad hoc handles tasks. Kitsoki handles the whole lifecycle \u2014 coherent, observable, testable, self-improving."
+    }
+  ]
+}

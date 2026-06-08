@@ -1,0 +1,157 @@
+[
+  {
+    "type": "chart",
+    "variant": "bar",
+    "title": "Tokens per phase",
+    "unit": "",
+    "axes": { "x": "phase", "y": "tokens" },
+    "series": [
+      {
+        "name": "before",
+        "color": "secondary",
+        "points": [
+          { "x": "plan", "y": 1200 },
+          { "x": "route", "y": 900 },
+          { "x": "execute", "y": 1500 },
+          { "x": "verify", "y": 700 }
+        ]
+      },
+      {
+        "name": "after",
+        "color": "green",
+        "points": [
+          { "x": "plan", "y": 1200 },
+          { "x": "route", "y": 120 },
+          { "x": "execute", "y": 1500 },
+          { "x": "verify", "y": 200 }
+        ]
+      }
+    ],
+    "caption": "Deterministic routing collapses the route and verify phases.",
+    "hold": 210
+  },
+  {
+    "type": "chart",
+    "variant": "line",
+    "title": "Determinism over time",
+    "unit": "%",
+    "axes": { "x": "week", "y": "deterministic" },
+    "series": [
+      {
+        "name": "cloak",
+        "color": "primary",
+        "points": [
+          { "x": 1, "y": 41 },
+          { "x": 2, "y": 53 },
+          { "x": 3, "y": 64 },
+          { "x": 4, "y": 71 },
+          { "x": 5, "y": 78 }
+        ]
+      },
+      {
+        "name": "dev-story",
+        "color": "teal",
+        "points": [
+          { "x": 1, "y": 22 },
+          { "x": 2, "y": 35 },
+          { "x": 3, "y": 49 },
+          { "x": 4, "y": 58 },
+          { "x": 5, "y": 66 }
+        ]
+      }
+    ],
+    "caption": "Routing determinism climbs as templates absorb recorded turns.",
+    "hold": 210
+  },
+  {
+    "type": "chart",
+    "variant": "area",
+    "title": "Recorded turns",
+    "unit": "",
+    "axes": { "x": "month", "y": "turns" },
+    "series": [
+      {
+        "name": "turns",
+        "color": "primary",
+        "points": [
+          { "x": "Jan", "y": 120 },
+          { "x": "Feb", "y": 340 },
+          { "x": "Mar", "y": 510 },
+          { "x": "Apr", "y": 880 },
+          { "x": "May", "y": 1240 }
+        ]
+      }
+    ],
+    "caption": "The transcript corpus compounds month over month.",
+    "hold": 200
+  },
+  {
+    "type": "chart",
+    "variant": "pie",
+    "title": "Where turns route",
+    "unit": "",
+    "series": [
+      {
+        "name": "routing",
+        "points": [
+          { "x": "template", "y": 62 },
+          { "x": "LLM plan", "y": 24 },
+          { "x": "fallback", "y": 14 }
+        ]
+      }
+    ],
+    "caption": "Most turns never reach the model.",
+    "hold": 200
+  },
+  {
+    "type": "chart",
+    "variant": "scatter",
+    "title": "Latency vs cost",
+    "unit": "ms",
+    "axes": { "x": "cost (cents)", "y": "latency" },
+    "series": [
+      {
+        "name": "template",
+        "color": "green",
+        "points": [
+          { "x": 0.1, "y": 40 },
+          { "x": 0.2, "y": 55 },
+          { "x": 0.15, "y": 48 },
+          { "x": 0.3, "y": 70 }
+        ]
+      },
+      {
+        "name": "LLM",
+        "color": "orange",
+        "points": [
+          { "x": 1.8, "y": 900 },
+          { "x": 2.4, "y": 1200 },
+          { "x": 2.1, "y": 1050 },
+          { "x": 3.0, "y": 1500 }
+        ]
+      }
+    ],
+    "caption": "Template turns cluster cheap and fast; LLM turns scatter expensive.",
+    "hold": 200
+  },
+  {
+    "type": "chart",
+    "variant": "quadrant",
+    "title": "Effort vs impact",
+    "axes": { "x": "effort", "y": "impact" },
+    "series": [
+      {
+        "name": "items",
+        "color": "primary",
+        "points": [
+          { "x": 0.2, "y": 0.8, "label": "deterministic routing" },
+          { "x": 0.7, "y": 0.85, "label": "visual QA agent" },
+          { "x": 0.25, "y": 0.3, "label": "doc polish" },
+          { "x": 0.8, "y": 0.2, "label": "custom theming" }
+        ]
+      }
+    ],
+    "caption": "Top-left wins first: high impact, low effort.",
+    "hold": 220
+  }
+]

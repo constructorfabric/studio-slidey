@@ -1,0 +1,56 @@
+[
+  {
+    "type": "code",
+    "variant": "source",
+    "title": "router.js",
+    "lang": "javascript",
+    "code": "export function route(turn) {\n  for (const layer of LAYERS) {\n    const hit = layer.match(turn);\n    if (hit) return hit.intent;\n  }\n  return callLLM(turn);\n}",
+    "highlight": [4],
+    "annotations": [
+      { "line": 4, "text": "the deterministic layers return early — the LLM is the fallback, not the default" }
+    ],
+    "caption": "Most turns never reach callLLM().",
+    "hold": 200
+  },
+  {
+    "type": "code",
+    "variant": "diff",
+    "title": "store.js",
+    "lang": "diff",
+    "code": " export const store = reactive({\n   scene: null,\n-  revealed: [],\n+  revealed: new Set(),\n   isRevealed(id) {\n-    return this.revealed.includes(id);\n+    return this.revealed.has(id);\n   },\n });",
+    "caption": "Switch the reveal set to a real Set for O(1) lookups.",
+    "hold": 190
+  },
+  {
+    "type": "code",
+    "variant": "function-io",
+    "title": "route()",
+    "call": "route('kick off the next bug')",
+    "code": "// synonym MISS · slot MISS · LLM HIT (240ms)",
+    "returns": "{ intent: 'pickup_bug', source: 'llm' }",
+    "caption": "One turn, three layers, a single deterministic result.",
+    "hold": 180
+  },
+  {
+    "type": "code",
+    "variant": "tree",
+    "title": "src/scenes/",
+    "tree": "src/\n├─ scenes/\n│  ├─ code.js\n│  ├─ narrative.js\n│  └─ stat.js\n├─ renderer.js\n└─ timing.js",
+    "hold": 170
+  },
+  {
+    "type": "code",
+    "variant": "config",
+    "title": "slidey.config.json",
+    "lang": "json",
+    "code": "{\n  \"mode\": \"pitch\",\n  \"fps\": 30,\n  \"noGaps\": true,\n  \"scenes\": 14\n}",
+    "hold": 170
+  },
+  {
+    "type": "code",
+    "variant": "log",
+    "title": "render.log",
+    "code": "[12:04:01] INFO  build start — 14 scenes\n[12:04:02] INFO  scene 7/14 rendered\n[12:04:03] WARN  font JetBrains Mono not found, falling back\n[12:04:04] ERROR  frame capture raced un-flushed reveal",
+    "hold": 175
+  }
+]
