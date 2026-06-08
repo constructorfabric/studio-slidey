@@ -44,6 +44,41 @@ export const PITCH_REVEALS = {
   thread_panel_1:      ['thread-panel-1'],
   thread_panel_2:      ['thread-panel-2'],
   thread_caption:      ['thread-caption'],
+  // ── Cards ──
+  cards_title:    ['cards-title'],
+  cards_item_0:   ['cards-item-0'],
+  cards_item_1:   ['cards-item-1'],
+  cards_item_2:   ['cards-item-2'],
+  cards_item_3:   ['cards-item-3'],
+  cards_item_4:   ['cards-item-4'],
+  cards_item_5:   ['cards-item-5'],
+  cards_caption:  ['cards-caption'],
+  // ── Code ──
+  code_header: ['code-header'],
+  code_body:   ['code-body'],
+  code_notes:  ['code-notes'],
+  // ── Table ──
+  table_title:   ['table-title'],
+  table_header:  ['table-header'],
+  table_row_0:   ['table-row-0'],
+  table_row_1:   ['table-row-1'],
+  table_row_2:   ['table-row-2'],
+  table_row_3:   ['table-row-3'],
+  table_row_4:   ['table-row-4'],
+  table_row_5:   ['table-row-5'],
+  table_row_6:   ['table-row-6'],
+  table_row_7:   ['table-row-7'],
+  table_caption: ['table-caption'],
+  // ── Chart ──
+  chart_title:     ['chart-title'],
+  chart_frame:     ['chart-frame'],
+  chart_series_0:  ['chart-series-0'],
+  chart_series_1:  ['chart-series-1'],
+  chart_series_2:  ['chart-series-2'],
+  chart_series_3:  ['chart-series-3'],
+  chart_series_4:  ['chart-series-4'],
+  chart_series_5:  ['chart-series-5'],
+  chart_caption:   ['chart-caption'],
 };
 
 // API/request-mode ids cleared on a scene reset (verbatim from _resetScene).

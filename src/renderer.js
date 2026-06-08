@@ -40,6 +40,10 @@ const SCENE_MODULES = {
   thread:         require('./scenes/thread'),
   stat:           require('./scenes/stat'),
   cta:            require('./scenes/cta'),
+  cards:          require('./scenes/cards'),
+  code:           require('./scenes/code'),
+  table:          require('./scenes/table'),
+  chart:          require('./scenes/chart'),
 };
 
 /**

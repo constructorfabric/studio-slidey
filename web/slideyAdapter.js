@@ -57,6 +57,18 @@ export function installAdapter() {
 
     showThread(scene) { store.showScene('thread', scene); },
     hideThread() { store.hidePitch(); },
+
+    showCards(scene) { store.showScene('cards', scene); },
+    hideCards() { store.hidePitch(); },
+
+    showCode(scene) { store.showScene('code', scene); },
+    hideCode() { store.hidePitch(); },
+
+    showTable(scene) { store.showScene('table', scene); },
+    hideTable() { store.hidePitch(); },
+
+    showChart(scene) { store.showScene('chart', scene); },
+    hideChart() { store.hidePitch(); },
   };
 
   // Settle barrier: flush Vue's async DOM patch before the renderer captures, so
@@ -67,7 +79,10 @@ export function installAdapter() {
   // determinism. Only awaits image decode when a scene actually has a pending
   // image (terminal-gif), so its first frame isn't blank.
   window.__slideySettle = async () => {
-    await nextTick();
+    // Six ticks: the diagram-svg two-pass auto-size loop (getBBox → dagre
+    // re-layout) needs ~4 ticks per pass. All ticks are microtasks so this
+    // doesn't jitter the 320ms CSS reveal transitions in any observable way.
+    for (let i = 0; i < 6; i++) await nextTick();
     const pending = Array.from(document.images || []).filter(img => img.src && !img.complete);
     if (pending.length) {
       await Promise.all(pending.map(img => (img.decode ? img.decode() : Promise.resolve()).catch(() => {})));

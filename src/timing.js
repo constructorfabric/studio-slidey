@@ -82,6 +82,49 @@ const TIMING = {
   thread_panel_2:      40,
   thread_caption:      30,
   thread_hold:        300,  // 10 s — generous read time for two threads
+
+  // ── Cards scene ─────────────────────────────────────────────────
+  cards_title:         20,
+  cards_item_0:        30,
+  cards_item_1:        30,
+  cards_item_2:        30,
+  cards_item_3:        30,
+  cards_item_4:        30,
+  cards_item_5:        30,
+  cards_caption:       30,
+  cards_hold:         220,  // ~7.3 s
+
+  // ── Code scene ──────────────────────────────────────────────────
+  code_header:         20,
+  code_body:           40,
+  code_notes:          30,
+  code_hold:          180,  // 6.0 s
+
+  // ── Table scene ─────────────────────────────────────────────────
+  table_title:         20,
+  table_header:        25,
+  table_row_0:         20,
+  table_row_1:         20,
+  table_row_2:         20,
+  table_row_3:         20,
+  table_row_4:         20,
+  table_row_5:         20,
+  table_row_6:         20,
+  table_row_7:         20,
+  table_caption:       30,
+  table_hold:         210,  // 7.0 s
+
+  // ── Chart scene ─────────────────────────────────────────────────
+  chart_title:         20,
+  chart_frame:         30,
+  chart_series_0:      30,
+  chart_series_1:      30,
+  chart_series_2:      30,
+  chart_series_3:      30,
+  chart_series_4:      30,
+  chart_series_5:      30,
+  chart_caption:       30,
+  chart_hold:         210,  // 7.0 s
 };
 
 /**
@@ -114,6 +157,10 @@ function estimateScene(scene, opts = {}) {
              + hold('transcript_hold', scene.hold);
       }
       case 'thread':       return hold('thread_hold',      scene.hold);
+      case 'cards':        return scene.hold ?? T.cards_hold ?? T.thread_hold;
+      case 'code':         return scene.hold ?? T.code_hold ?? T.narrative_hold;
+      case 'table':        return scene.hold ?? T.table_hold ?? T.trace_hold;
+      case 'chart':        return scene.hold ?? T.chart_hold ?? T.diagramsvg_hold;
       case 'stat':         return hold('stat_hold',        scene.hold);
       case 'cta':          return hold('cta_hold',         scene.hold);
       default:             return 100;
@@ -181,6 +228,51 @@ function estimateScene(scene, opts = {}) {
       for (let i = 0; i < panels; i++) f += T[`thread_panel_${i}`] ?? 40;
       if (scene.caption) f += T.thread_caption;
       f += hold('thread_hold', scene.hold);
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'cards': {
+      const v = scene.variant || 'grid';
+      const twoCol = ['before-after', 'versus', 'point-counterpoint', 'pros-cons'].includes(v);
+      const n = (v === 'qa' || twoCol) ? 2 : (scene.cards || []).length;
+      let f = 0;
+      if (scene.title) f += T.cards_title;
+      for (let i = 0; i < n; i++) f += T[`cards_item_${i}`] ?? 30;
+      if (scene.caption) f += T.cards_caption;
+      f += scene.hold ?? T.cards_hold ?? T.thread_hold;
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'code': {
+      let f = T.code_header + T.code_body;
+      if (Array.isArray(scene.annotations) && scene.annotations.length) f += T.code_notes;
+      f += scene.hold ?? T.code_hold ?? T.narrative_hold;
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'table': {
+      const MAX_ROWS = 8;
+      const rows = (scene.rows || []).slice(0, MAX_ROWS);
+      let f = T.table_title + T.table_header;
+      for (let i = 0; i < rows.length; i++) f += T[`table_row_${i}`] ?? 20;
+      if (scene.caption) f += T.table_caption;
+      f += scene.hold ?? T.table_hold ?? T.trace_hold;
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'chart': {
+      const v = scene.variant || 'bar';
+      const n = (v === 'pie' || v === 'quadrant')
+        ? 1
+        : Math.max(1, (scene.series || []).length);
+      let f = T.chart_title + T.chart_frame;
+      for (let i = 0; i < n; i++) f += T[`chart_series_${i}`] ?? 30;
+      if (scene.caption) f += T.chart_caption;
+      f += scene.hold ?? T.chart_hold ?? T.diagramsvg_hold;
       f += T.inter_scene;
       return f;
     }

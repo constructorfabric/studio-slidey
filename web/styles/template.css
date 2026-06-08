@@ -792,7 +792,8 @@ body.instant .reveal { transition: none !important; }
   font-size: 19px;
   fill: #8b949e;
 }
-.dsvg-edge line {
+.dsvg-edge line,
+.dsvg-edge path {
   stroke: #58a6ff;
   stroke-width: 2.5;
   fill: none;

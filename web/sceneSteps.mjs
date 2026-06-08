@@ -25,7 +25,8 @@ export function stepsForScene(scene) {
       return ['diagram_title', ...range((s.panels || []).length, 'diagram_panel_'),
         ...(s.caption ? ['diagram_caption'] : [])];
     case 'diagram-svg':
-      return ['diagramsvg_title', ...range((s.panels || []).length, 'diagramsvg_panel_'),
+      return [...(s.skipTitle ? [] : ['diagramsvg_title']),
+        ...range((s.panels || []).length, 'diagramsvg_panel_'),
         ...(s.caption ? ['diagramsvg_caption'] : [])];
     case 'terminal-gif':
       return ['termgif_frame', ...(s.caption ? ['termgif_caption'] : [])];
@@ -43,6 +44,36 @@ export function stepsForScene(scene) {
     case 'thread':
       return ['thread_title', ...range((s.panels || []).length, 'thread_panel_'),
         ...(s.caption ? ['thread_caption'] : [])];
+    case 'cards': {
+      const v = s.variant || 'grid';
+      const twoCol = ['before-after', 'versus', 'point-counterpoint', 'pros-cons'].includes(v);
+      const n = (v === 'qa' || twoCol) ? 2 : (s.cards || []).length;
+      return [
+        ...(s.title ? ['cards_title'] : []),
+        ...range(n, 'cards_item_'),
+        ...(s.caption ? ['cards_caption'] : []),
+      ];
+    }
+    case 'code': {
+      return ['code_header', 'code_body',
+        ...(Array.isArray(s.annotations) && s.annotations.length ? ['code_notes'] : [])];
+    }
+    case 'table': {
+      const MAX_ROWS = 8;
+      const rows = (s.rows || []).slice(0, MAX_ROWS);
+      return ['table_title', 'table_header',
+        ...range(rows.length, 'table_row_'),
+        ...(s.caption ? ['table_caption'] : [])];
+    }
+    case 'chart': {
+      const v = s.variant || 'bar';
+      const n = (v === 'pie' || v === 'quadrant')
+        ? 1
+        : Math.max(1, (s.series || []).length);
+      return ['chart_title', 'chart_frame',
+        ...range(n, 'chart_series_'),
+        ...(s.caption ? ['chart_caption'] : [])];
+    }
     case 'request': {
       const r = s.request || {}, res = s.response || {};
       const steps = ['scene_header', 'request_url'];
@@ -79,5 +110,9 @@ export function applyShow(scene, opts) {
     case 'trace':        slidey.showTrace(scene); break;
     case 'transcript':   slidey.showTranscript(scene); break;
     case 'thread':       slidey.showThread(scene); break;
+    case 'cards':        slidey.showCards(scene); break;
+    case 'code':         slidey.showCode(scene); break;
+    case 'table':        slidey.showTable(scene); break;
+    case 'chart':        slidey.showChart(scene); break;
   }
 }

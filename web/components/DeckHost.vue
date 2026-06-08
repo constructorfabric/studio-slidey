@@ -16,6 +16,10 @@ import CtaScene from './CtaScene.vue';
 import TraceScene from './TraceScene.vue';
 import TranscriptScene from './TranscriptScene.vue';
 import ThreadScene from './ThreadScene.vue';
+import CardsScene from './CardsScene.vue';
+import CodeScene from './CodeScene.vue';
+import TableScene from './TableScene.vue';
+import ChartScene from './ChartScene.vue';
 
 const PITCH_COMPONENTS = {
   narrative: NarrativeScene,
@@ -27,6 +31,10 @@ const PITCH_COMPONENTS = {
   trace: TraceScene,
   transcript: TranscriptScene,
   thread: ThreadScene,
+  cards: CardsScene,
+  code: CodeScene,
+  table: TableScene,
+  chart: ChartScene,
 };
 
 // Toggle body classes for mode, mirroring slidey.setMode. body.instant is owned

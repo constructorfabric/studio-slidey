@@ -792,7 +792,8 @@ body.instant .reveal { transition: none !important; }
   font-size: 19px;
   fill: #8b949e;
 }
-.dsvg-edge line {
+.dsvg-edge line,
+.dsvg-edge path {
   stroke: #58a6ff;
   stroke-width: 2.5;
   fill: none;
@@ -1777,6 +1778,52 @@ window.slidey = {
           `</g>`;
       }
 
+      // Elbow/arch routing — orthogonal multi-segment paths instead of a diagonal line.
+      // e.arch: <number>  — inverted-U arch; exit source top-center, go up to arch y, cross, enter target top-center
+      // e.elbow: true     — Z-bend using natural H/V dominance
+      // e.elbow: "V"      — Z-bend forced V-axis (exit top/bottom → turn horizontal → enter top/bottom)
+      // e.elbow: "H"      — Z-bend forced H-axis (exit left/right → turn vertical → enter left/right)
+      if (e.arch !== undefined || e.elbow) {
+        let d, lx, ly;
+        if (e.arch !== undefined) {
+          const archY = e.arch;
+          const sx = fromCx, sy = from.y;
+          const tx = toCx,   ty = to.y;
+          d = `M ${sx} ${sy} V ${archY} H ${tx} V ${ty}`;
+          lx = (sx + tx) / 2;
+          ly = archY - 14;
+        } else {
+          const useH = e.elbow === 'H' ? true : e.elbow === 'V' ? false : horizontal;
+          let ex1, ey1, ex2, ey2;
+          if (useH) {
+            if (dx > 0) { ex1 = from.x + from.w; ex2 = to.x; }
+            else        { ex1 = from.x;           ex2 = to.x + to.w; }
+            ey1 = fromCy + offset;
+            ey2 = toCy   + offset;
+            const midx = (ex1 + ex2) / 2;
+            d = `M ${ex1} ${ey1} H ${midx} V ${ey2} H ${ex2}`;
+            lx = midx;
+            ly = (ey1 + ey2) / 2 - 14;
+          } else {
+            if (dy > 0) { ey1 = from.y + from.h; ey2 = to.y; }
+            else        { ey1 = from.y;           ey2 = to.y + to.h; }
+            ex1 = fromCx + offset;
+            ex2 = toCx   + offset;
+            const midy = (ey1 + ey2) / 2;
+            d = `M ${ex1} ${ey1} V ${midy} H ${ex2} V ${ey2}`;
+            lx = (ex1 + ex2) / 2;
+            ly = midy - 14;
+          }
+        }
+        const elbowLabel = e.label
+          ? `<text class="dsvg-edge-label" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle">${escapeHTML(e.label)}</text>`
+          : '';
+        return `<g class="dsvg-edge">` +
+               `<path d="${d}" marker-end="url(#${markerId})"/>` +
+               elbowLabel +
+               `</g>`;
+      }
+
       return `<g class="dsvg-edge">` +
              `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#${markerId})"/>` +
              labelEl +
@@ -1930,6 +1977,41 @@ const _PITCH_REVEALS = {
   thread_panel_1:      ['thread-panel-1'],
   thread_panel_2:      ['thread-panel-2'],
   thread_caption:      ['thread-caption'],
+  // Cards
+  cards_title:    ['cards-title'],
+  cards_item_0:   ['cards-item-0'],
+  cards_item_1:   ['cards-item-1'],
+  cards_item_2:   ['cards-item-2'],
+  cards_item_3:   ['cards-item-3'],
+  cards_item_4:   ['cards-item-4'],
+  cards_item_5:   ['cards-item-5'],
+  cards_caption:  ['cards-caption'],
+  // Code
+  code_header: ['code-header'],
+  code_body:   ['code-body'],
+  code_notes:  ['code-notes'],
+  // Table
+  table_title:   ['table-title'],
+  table_header:  ['table-header'],
+  table_row_0:   ['table-row-0'],
+  table_row_1:   ['table-row-1'],
+  table_row_2:   ['table-row-2'],
+  table_row_3:   ['table-row-3'],
+  table_row_4:   ['table-row-4'],
+  table_row_5:   ['table-row-5'],
+  table_row_6:   ['table-row-6'],
+  table_row_7:   ['table-row-7'],
+  table_caption: ['table-caption'],
+  // Chart
+  chart_title:     ['chart-title'],
+  chart_frame:     ['chart-frame'],
+  chart_series_0:  ['chart-series-0'],
+  chart_series_1:  ['chart-series-1'],
+  chart_series_2:  ['chart-series-2'],
+  chart_series_3:  ['chart-series-3'],
+  chart_series_4:  ['chart-series-4'],
+  chart_series_5:  ['chart-series-5'],
+  chart_caption:   ['chart-caption'],
 };
 
 const _origSetState = window.slidey.setState.bind(window.slidey);
