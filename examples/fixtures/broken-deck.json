@@ -1,0 +1,27 @@
+{
+  "meta": { "title": "Broken deck", "mode": "pitch", "resolution": { "width": 1920, "height": 1080 } },
+  "scenes": [
+    {
+      "type": "title",
+      "eyebrow": "Leak test",
+      "title": "Deploying to {{host}} with ${token}",
+      "subtitle": "value is undefined"
+    },
+    {
+      "type": "diagram-svg",
+      "title": "Cramped diagram",
+      "panels": [
+        {
+          "label": "tiny boxes, long labels",
+          "viewBox": "0 0 400 300",
+          "nodes": [
+            { "id": "a", "label": "AnExtremelyLongLabelThatCannotPossiblyFitInThisNarrowBox", "x": 20, "y": 20, "w": 90, "h": 40 },
+            { "id": "b", "label": "OverlapMe", "x": 60, "y": 30, "w": 120, "h": 60 },
+            { "id": "c", "label": "WayOutside", "x": 360, "y": 260, "w": 200, "h": 120 }
+          ],
+          "edges": [ { "from": "a", "to": "b" } ]
+        }
+      ]
+    }
+  ]
+}

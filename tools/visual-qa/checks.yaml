@@ -1,0 +1,116 @@
+# Visual-QA defect catalog for slidey frames.
+#
+# This is the EXTENSIBLE surface of the QA agent: when you spot a new bad case
+# in a real deck, add a check here and it's enforced on every future run. Keep
+# each check tight — one defect class, concrete cues, and an explicit
+# false-positive guard (vision models over-report overflow/illegibility, so the
+# guard is what keeps the review trustworthy).
+#
+# Fields per check:
+#   id        kebab-case, stable — referenced in findings.json and reports.
+#   title     short human label.
+#   severity  default severity when this defect is found: error | warn | info.
+#               error → blocks the gate (a frame a human would reject)
+#               warn  → blocks only under --strict (a frame worth a second look)
+#               info  → never blocks (a note)
+#   look_for  the literal visual cues that constitute this defect.
+#   not_this  things that look similar but are NOT this defect (false-positive guard).
+#
+# A finding cites the frame + quotes what is LITERALLY visible. The deterministic
+# DOM audit (slidey --audit) is the authority for geometric overflow/off-page;
+# these vision checks add the judgement metrics can't make.
+
+checks:
+  - id: text-overflow-box
+    title: Text overflows its box / node / card
+    severity: error
+    look_for: >
+      Text that visibly spills past the border of the box, node, panel, or card
+      that should contain it — characters clipped at an edge, a word crossing the
+      stroke/border line, or a line of text running under/over the box outline.
+    not_this: >
+      Text that fills a box tightly but stays inside the border. Captions or
+      labels deliberately placed OUTSIDE and below a box. A box with generous
+      padding is fine.
+
+  - id: text-overflow-page
+    title: Content runs off the page / frame edge
+    severity: error
+    look_for: >
+      Any text, box, node, or image cut off by the 1920x1080 frame boundary —
+      content clipped at the top/bottom/left/right edge, or a diagram so wide it
+      visibly extends past the canvas.
+    not_this: >
+      Intentional full-bleed backgrounds. Content that comes close to the edge
+      but has a clear margin and is fully visible.
+
+  - id: illegible-text
+    title: Text too small or low-contrast to read
+    severity: error
+    look_for: >
+      Body or label text rendered so small it would be unreadable on a slide, or
+      text whose colour is so close to its background that it nearly disappears
+      (e.g. dark-grey sub-text on a dark box).
+    not_this: >
+      Intentionally de-emphasised sub-text or captions that are still clearly
+      readable. A footnote-sized URL on a CTA is fine if legible. NOTE: measurable
+      contrast is now caught deterministically by the geometry audit's
+      `low-contrast` check (invisible text + small dim text), so here judge the
+      borderline, context-dependent cases it can't — e.g. text legible in
+      isolation but lost against a busy area, or a hue that reads as muddy on a
+      projector.
+
+  - id: text-overlap
+    title: Text overlaps other text or graphics
+    severity: error
+    look_for: >
+      Two pieces of text printed on top of each other, an edge label sitting on
+      top of a node's text, or a connector line drawn straight through a word so
+      it can't be read.
+    not_this: >
+      An edge label placed in clear space beside a line. A line that passes near
+      but not through text.
+
+  - id: diagram-legibility
+    title: Diagram cramped or hard to follow
+    severity: warn
+    look_for: >
+      Diagram nodes packed so tightly there's no breathing room, edges crossing
+      in a tangle that obscures the flow, arrowheads pointing nowhere clear, or
+      so many elements the relationships are unreadable at a glance.
+    not_this: >
+      A dense but orderly diagram where every node is separated and every edge is
+      traceable. Deliberate density is fine if the eye can still follow it.
+
+  - id: layout-balance
+    title: Layout lopsided or awkwardly spaced
+    severity: warn
+    look_for: >
+      Content jammed into one corner with a large empty void elsewhere, columns
+      of wildly unequal weight, or elements whose spacing is so uneven the slide
+      looks broken rather than designed.
+    not_this: >
+      Intentional asymmetry (e.g. a title card with the title left-aligned and
+      space to the right). Generous whitespace that reads as deliberate.
+
+  - id: missing-or-broken
+    title: Missing content, placeholder, or unrendered template
+    severity: error
+    look_for: >
+      A region that should hold content but is blank, a literal template
+      placeholder left in the output (e.g. "{{host}}", "${token}", "undefined",
+      "null", "NaN"), a broken/missing image, or an obviously truncated value.
+    not_this: >
+      A scene that is intentionally minimal (a title card with just a title).
+      Deliberately blank space used for pacing.
+
+  - id: truncated-ellipsis
+    title: Important text truncated with an ellipsis
+    severity: warn
+    look_for: >
+      A label, title, or value cut short with a trailing "…" where the truncation
+      hides meaningful content (a node label that reads "Authenticat…").
+    not_this: >
+      An ellipsis that is part of the intended copy (e.g. "plan · reason · …" used
+      as deliberate styling), or a long body paragraph where trailing text is not
+      essential.

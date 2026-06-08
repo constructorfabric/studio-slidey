@@ -40,6 +40,9 @@ const args = process.argv.slice(2);
 // --list and --estimate only need the input spec (not an output path).
 const wantsList     = args.includes('--list') || args.includes('--estimate');
 const wantsCheck    = args.includes('--check');
+const auditIdx      = args.indexOf('--audit');
+const auditOpt      = auditIdx !== -1 ? args[auditIdx + 1] : null;
+const wantsAudit    = auditIdx !== -1;
 const skipRender    = args.includes('--skip-render');
 const noGaps        = args.includes('--no-gaps');
 
@@ -74,6 +77,13 @@ if (((args.length < 2 && !wantsList && !wantsCheck) || args.length < 1) || args.
     '    --check                    Validate diagram-svg scenes without rendering.',
     '                               Checks node width/height and overlap. Exits 1 if',
     '                               any violations found (usable in CI).',
+    '    --audit [<file>]           Render every reveal step in headless Chrome and',
+    '                               measure the REAL laid-out geometry: off-page,',
+    '                               box/SVG-node overflow, rendered node overlap,',
+    '                               unsubstituted template vars, tiny text. Writes a',
+    '                               findings JSON to <file> (or stdout). Exits 1 if',
+    '                               any error-severity finding is found. The',
+    '                               deterministic half of the slidey-visual-qa skill.',
     '',
     '  Examples:',
     '    node index.js examples/hello.json out.mp4',
@@ -271,6 +281,71 @@ async function main() {
     const { runCheck } = require('./check');
     const violations = runCheck(spec);
     process.exit(violations > 0 ? 1 : 0);
+  }
+
+  // ── --audit: drive the render bundle and measure real laid-out geometry per
+  //    reveal step. Emits a findings JSON (to <file> or stdout). Exits 1 if any
+  //    error-severity finding is present (CI/QA gate). See src/audit.js. ──
+  if (wantsAudit) {
+    const { auditSpec } = require('./audit');
+    try {
+      const { frames, summary } = await auditSpec(spec, {
+        specPath: absInput,
+        selectedScenes,
+        onProgress: (n, i, type) => {
+          process.stderr.write(`\r[slidey] audit: scene ${i} (${type})`.padEnd(40) + `${n} frames`);
+        },
+      });
+      process.stderr.write('\n');
+      const report = { spec: absInput, resolution: (spec.meta && spec.meta.resolution) || { width: 1920, height: 1080 }, summary, frames };
+      const json = JSON.stringify(report, null, 2);
+      if (auditOpt && !auditOpt.startsWith('-')) {
+        const absOut = path.resolve(auditOpt);
+        fs.mkdirSync(path.dirname(absOut), { recursive: true });
+        fs.writeFileSync(absOut, json + '\n', 'utf-8');
+        console.error(`[slidey] audit → ${absOut}  (${summary.frames} frames, ${summary.errors} errors, ${summary.warnings} warnings)`);
+      } else {
+        process.stdout.write(json + '\n');
+      }
+      process.exit(summary.errors > 0 ? 1 : 0);
+    } catch (err) {
+      console.error(`\n[slidey] ERROR during audit: ${err.message}`);
+      process.exit(2);
+    }
+  }
+
+  // ── PNG output: a directory path (or path with no recognised extension) exports
+  //    one PNG per reveal step into that directory. Same reveal-step model as PDF,
+  //    but produces files a vision model can Read directly. Fast (~1-3s per scene).
+  //    Output files: <dir>/<scene-idx>-<step-idx>.png  e.g. 04-01.png, 04-02.png
+  if (!path.extname(outputPath) || outputPath.endsWith('/')) {
+    const { generatePngs } = require('./png');
+    const absOut = path.resolve(outputPath);
+    console.log(`[slidey] Input  : ${absInput}`);
+    console.log(`[slidey] Output : ${absOut}/  (PNG — one file per reveal step)`);
+    if (selectedScenes) {
+      const picked = [...selectedScenes].sort((a, b) => a - b).join(',');
+      console.log(`[slidey] Scenes : ${spec.scenes.length} total, exporting [${picked}]`);
+    } else {
+      console.log(`[slidey] Scenes : ${spec.scenes.length}`);
+    }
+    console.log('');
+    try {
+      const { fileCount, files } = await generatePngs(spec, absOut, {
+        specPath: absInput,
+        selectedScenes,
+        onProgress: (n, i, type) => {
+          process.stdout.write(`\r[slidey] PNG: scene ${i} (${type})`.padEnd(40) + `${n} files`);
+        },
+      });
+      process.stdout.write('\n');
+      console.log(`[slidey] Done → ${absOut}/  (${fileCount} files)`);
+      files.forEach(f => console.log(`         ${f}`));
+    } catch (err) {
+      console.error(`\n[slidey] ERROR during PNG export: ${err.message}`);
+      process.exit(1);
+    }
+    process.exit(0);
   }
 
   // ── PDF output: a .pdf extension exports slides (one page per reveal step)

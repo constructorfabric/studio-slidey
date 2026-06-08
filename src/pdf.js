@@ -69,6 +69,10 @@ async function generatePdf(spec, outputPath, opts = {}) {
       window.slidey.setMeta(meta);
       window.slidey.setMode(m);
     }, spec.meta || {}, mode);
+    // Snap reveal animations so each captured step is the fully-revealed frame a
+    // viewer sees during the hold, not a mid-fade (the 320ms transition is not
+    // complete at capture time otherwise). Same trick as renderer.js.
+    await page.evaluate(() => document.body.classList.add('instant'));
 
     const merged = await PDFDocument.create();
     const pdfOpts = {
