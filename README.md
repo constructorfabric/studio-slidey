@@ -1,4 +1,6 @@
-# Slidey
+# studio-slidey
+
+A part of Studio - a tool that generates animated presentations, videos and HTML viewer from declarative json manifest
 
 Deterministic, spec-driven declarative scene engine. A JSON spec describes an
 ordered list of scenes; from that **one spec** slidey produces three outputs that
