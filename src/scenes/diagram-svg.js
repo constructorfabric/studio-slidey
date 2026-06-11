@@ -42,7 +42,7 @@ const TIMING = require('../timing');
 
 async function render(page, scene, ctx) {
   await page.evaluate(s => window.slidey.showDiagramSvg(s), scene);
-  await ctx.setState('diagramsvg_title');
+  if (!scene.skipTitle) await ctx.setState('diagramsvg_title');
   for (let i = 0; i < (scene.panels || []).length; i++) {
     await ctx.setState(`diagramsvg_panel_${i}`);
   }

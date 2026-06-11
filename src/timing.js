@@ -163,6 +163,8 @@ function estimateScene(scene, opts = {}) {
       case 'chart':        return scene.hold ?? T.chart_hold ?? T.diagramsvg_hold;
       case 'stat':         return hold('stat_hold',        scene.hold);
       case 'cta':          return hold('cta_hold',         scene.hold);
+      case 'request':      return T.sending_ticks * T.sending_per_tick
+                                + T.complete_hold;
       default:             return 100;
     }
   }

@@ -8,7 +8,7 @@
 
 'use strict';
 
-const { execSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const path = require('path');
 const fs   = require('fs');
 
@@ -36,7 +36,7 @@ function framesToVideo(framesDir, outputPath, fps = 30, audioSegments = null) {
   // ── No-audio path: the original simple invocation ────────────────────────
   if (!audioSegments || audioSegments.length === 0) {
     const args = [
-      'ffmpeg', '-y',
+      '-y',
       '-framerate', String(fps),
       '-i', framePattern,
       '-c:v', 'libx264',
@@ -45,7 +45,11 @@ function framesToVideo(framesDir, outputPath, fps = 30, audioSegments = null) {
       '-preset', 'slow',
       outputPath,
     ];
-    execSync(args.join(' '), { stdio: 'pipe' });
+    const result = spawnSync('ffmpeg', args, { stdio: 'pipe' });
+    if (result.error) throw result.error;
+    if (result.status !== 0) {
+      throw new Error(`ffmpeg exited with status ${result.status}`);
+    }
     return;
   }
 
@@ -71,9 +75,9 @@ function framesToVideo(framesDir, outputPath, fps = 30, audioSegments = null) {
     `;${mixInputs}amix=inputs=${audioSegments.length}:duration=longest:dropout_transition=0,volume=2.0[aout]`;
 
   const args = [
-    'ffmpeg', '-y',
+    '-y',
     ...inputArgs,
-    '-filter_complex', `"${filterComplex}"`,
+    '-filter_complex', filterComplex,
     '-map', '0:v',
     '-map', '[aout]',
     '-c:v', 'libx264',
@@ -84,7 +88,11 @@ function framesToVideo(framesDir, outputPath, fps = 30, audioSegments = null) {
     '-b:a', '192k',
     outputPath,
   ];
-  execSync(args.join(' '), { stdio: 'pipe' });
+  const result = spawnSync('ffmpeg', args, { stdio: 'pipe' });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(`ffmpeg exited with status ${result.status}`);
+  }
 }
 
 module.exports = { framesToVideo };

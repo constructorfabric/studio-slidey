@@ -129,11 +129,15 @@ async function executeRequest(scene, context) {
   // Execute
   let fetchRes;
   let bodyText = '';
+  const timeoutMs  = Number(scene.timeoutMs ?? 15000);
+  const controller = new AbortController();
+  const timer      = setTimeout(() => controller.abort(), timeoutMs);
   try {
     fetchRes = await fetch(url, {
       method,
       headers,
       ...(body ? { body } : {}),
+      signal: controller.signal,
     });
     bodyText = await fetchRes.text();
   } catch (err) {
@@ -145,6 +149,8 @@ async function executeRequest(scene, context) {
       body:       err.message,
       error:      true,
     };
+  } finally {
+    clearTimeout(timer);
   }
 
   // Capture values from response into context
@@ -153,11 +159,22 @@ async function executeRequest(scene, context) {
   // Assertion check (throws with message if violated)
   if (scene.expect && scene.expect.status !== undefined) {
     if (fetchRes.status !== scene.expect.status) {
-      throw new AssertionError(
+      const liveHeaders = [];
+      for (const [name, value] of fetchRes.headers.entries()) {
+        liveHeaders.push({ name, value });
+      }
+      const err = new AssertionError(
         `Status assertion failed: expected ${scene.expect.status}, got ${fetchRes.status}`,
         fetchRes.status,
         scene.expect.status,
       );
+      err.liveResponse = {
+        status:     fetchRes.status,
+        statusText: STATUS_TEXTS[fetchRes.status] || fetchRes.statusText || '',
+        headers:    liveHeaders,
+        body:       bodyText,
+      };
+      throw err;
     }
   }
 

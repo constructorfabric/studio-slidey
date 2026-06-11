@@ -16,15 +16,15 @@ set -euo pipefail
 findings="" audit="" out="" strict=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --findings) findings="$2"; shift 2 ;;
-    --audit)    audit="$2"; shift 2 ;;
-    --out)      out="$2"; shift 2 ;;
+    --findings) [ $# -ge 2 ] || { echo "--findings needs a value" >&2; exit 2; }; findings="$2"; shift 2 ;;
+    --audit)    [ $# -ge 2 ] || { echo "--audit needs a value" >&2; exit 2; }; audit="$2"; shift 2 ;;
+    --out)      [ $# -ge 2 ] || { echo "--out needs a value" >&2; exit 2; }; out="$2"; shift 2 ;;
     --strict)   strict=1; shift ;;
-    *) echo "unknown arg: $1" >&2; exit 1 ;;
+    *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
 
-command -v jq >/dev/null 2>&1 || { echo "jq not on PATH" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo "jq not on PATH" >&2; exit 2; }
 [ -f "$audit" ] || { echo "no such audit: $audit" >&2; exit 2; }
 jq -e . "$audit" >/dev/null 2>&1 || { echo "audit is not valid JSON" >&2; exit 2; }
 # findings.json is optional — audit-only runs (no vision pass) are valid.

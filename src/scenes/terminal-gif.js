@@ -35,7 +35,7 @@ async function render(page, scene, ctx) {
   await page.evaluate((s, dataUri) =>
     window.slidey.showTerminalGif(s, dataUri), scene, gifDataUri);
   await ctx.setState('termgif_frame');
-  await ctx.setState('termgif_caption');
+  if (scene.caption) await ctx.setState('termgif_caption');
   await ctx.hold(scene.hold ?? TIMING.termgif_hold, 'termgif_hold');
   await page.evaluate(() => window.slidey.hideTerminalGif());
   await ctx.hold(TIMING.inter_scene, 'inter_scene');

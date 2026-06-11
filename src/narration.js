@@ -23,7 +23,7 @@
 
 'use strict';
 
-const { execFileSync, execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const path = require('path');
 const fs   = require('fs');
 
@@ -45,9 +45,12 @@ function generateOne(text, audioPath, voice = DEFAULT_VOICE, rate = '+0%') {
 }
 
 function getAudioDuration(audioPath) {
-  const out = execSync(
-    `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 "${audioPath}"`
-  ).toString();
+  const out = execFileSync('ffprobe', [
+    '-v', 'error',
+    '-show_entries', 'format=duration',
+    '-of', 'default=noprint_wrappers=1',
+    audioPath,
+  ]).toString();
   return parseFloat(out.split('=')[1] || '0');
 }
 

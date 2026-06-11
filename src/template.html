@@ -1431,7 +1431,9 @@ window.slidey = {
 
     // Footer annotation
     const annotType = res.annotationType || 'error';
-    $('footer-annotation').className = `type-${annotType}`;
+    const footer = $('footer-annotation');
+    footer.classList.remove('type-error', 'type-warning', 'type-success', 'type-info');
+    footer.classList.add(`type-${annotType}`);
     const icons = { error: '✗', warning: '⚠', success: '✓', info: 'ℹ' };
     $('annotation-icon').textContent = icons[annotType] || '·';
     $('annotation-text').textContent = res.annotation || '';

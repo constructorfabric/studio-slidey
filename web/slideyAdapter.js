@@ -85,7 +85,10 @@ export function installAdapter() {
     for (let i = 0; i < 6; i++) await nextTick();
     const pending = Array.from(document.images || []).filter(img => img.src && !img.complete);
     if (pending.length) {
-      await Promise.all(pending.map(img => (img.decode ? img.decode() : Promise.resolve()).catch(() => {})));
+      // A never-resolving decode() must not hang the capture barrier, so race
+      // each wait against a fixed timeout — the barrier always resolves.
+      const withTimeout = (p, ms = 1500) => Promise.race([p, new Promise((r) => setTimeout(r, ms))]);
+      await Promise.all(pending.map(img => withTimeout((img.decode ? img.decode() : Promise.resolve()).catch(() => {}))));
     }
   };
 }

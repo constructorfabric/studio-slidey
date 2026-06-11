@@ -41,8 +41,11 @@ html = html.replace(
 );
 
 if (/\bsrc="|rel="stylesheet"/.test(html)) {
-  const leftovers = readdirSync(srcDir);
-  console.warn('[inline-render] WARNING: external refs may remain. dist-render contents:', leftovers);
+  throw new Error(
+    '[inline-render] unresolved external refs remain after inlining — the '
+    + 'self-contained offline artifact would break. dist-render contents: '
+    + readdirSync(srcDir).join(', '),
+  );
 }
 
 mkdirSync(outDir, { recursive: true });

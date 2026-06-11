@@ -88,7 +88,11 @@ html = html.replace(
 );
 
 if (/\bsrc="|rel="stylesheet"/.test(html)) {
-  console.warn('[build-single] WARNING: external refs may remain. dist-web-single contents:', readdirSync(buildDir));
+  throw new Error(
+    '[build-single] unresolved external refs remain after inlining — the '
+    + 'self-contained offline artifact would break. dist-web-single contents: '
+    + readdirSync(buildDir).join(', '),
+  );
 }
 
 // 3. Embed the spec ahead of the app script so App.vue loads it without a fetch.

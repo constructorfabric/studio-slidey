@@ -73,8 +73,9 @@ async function render(page, scene, ctx) {
   // Progressive reveal
   await ctx.setState('scene_header');
   await ctx.setState('request_url');
-  await ctx.setState('request_headers');
-  await ctx.setState('request_body');
+  const req = scene.request || {};
+  if ((req.headers || []).length) await ctx.setState('request_headers');
+  if (String(req.body || '').trim()) await ctx.setState('request_body');
 
   // Sending animation
   await page.evaluate(() => window.slidey.setState('sending'));
@@ -91,9 +92,10 @@ async function render(page, scene, ctx) {
 
   // Response reveal
   await ctx.setState('response_status');
-  await ctx.setState('response_headers');
-  await ctx.setState('response_body');
-  await ctx.setState('response_annotation');
+  const res = scene.response || {};
+  if ((res.headers || []).length) await ctx.setState('response_headers');
+  if (String(res.body || '').trim()) await ctx.setState('response_body');
+  if (String(res.annotation || '').trim()) await ctx.setState('response_annotation');
 
   await page.evaluate(() => window.slidey.setState('complete'));
   await ctx.hold(TIMING.complete_hold, 'complete_hold');

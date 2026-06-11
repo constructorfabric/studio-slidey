@@ -45,9 +45,14 @@ echo "▸ rendering frames → $outdir/frames/" >&2
 node "$slidey_root/src/index.js" "$spec" "$outdir/frames/" "${scene_args[@]}" >&2
 
 echo "▸ geometry audit → $outdir/audit.json" >&2
+# Remove any stale audit.json from a reused outdir so a failed audit can't be
+# masked by leftover output.
+rm -f "$outdir/audit.json"
 # --audit exits 1 when it finds error-severity geometry defects; that's expected
-# here (we want the findings), so don't let set -e abort on it.
-node "$slidey_root/src/index.js" "$spec" --audit "$outdir/audit.json" "${scene_args[@]}" >&2 || true
+# here (we want the findings), so don't let set -e abort on it. Capture the real
+# exit code so we can tell "found defects" (1) from a genuine crash.
+audit_rc=0
+node "$slidey_root/src/index.js" "$spec" --audit "$outdir/audit.json" "${scene_args[@]}" >&2 || audit_rc=$?
 
-[ -f "$outdir/audit.json" ] || { echo "audit produced no output" >&2; exit 2; }
+[ -f "$outdir/audit.json" ] || { echo "audit produced no output (exit $audit_rc)" >&2; exit 2; }
 echo "$outdir"

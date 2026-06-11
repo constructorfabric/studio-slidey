@@ -403,7 +403,7 @@ html, body {
 #footer-annotation.type-info    { background: rgba(12,45,94,0.95);  border-color: #58a6ff; color: #58a6ff; }
 
 #annotation-icon { font-size: 44px; flex-shrink: 0; }
-#annotation-text { word-break: break-word; }
+#annotation-text { overflow-wrap: break-word; }
 
 /* ── JSON Syntax Highlighting ─────────────────────────────────────────────── */
 .json-key     { color: #79c0ff; }
@@ -1075,7 +1075,7 @@ body.instant .reveal { transition: none !important; }
 .tx-who-model { color: #6e7681; text-transform: none; letter-spacing: 0; }
 .tx-bubble {
   font-size: 26px; line-height: 1.5; color: #e6edf3; border-radius: 16px;
-  padding: 16px 22px; white-space: pre-wrap; word-break: break-word;
+  padding: 16px 22px; white-space: pre-wrap; overflow-wrap: break-word;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 9; overflow: hidden;
 }
 .tx-msg-user .tx-bubble { background: #1c2333; border: 1px solid #314066; -webkit-line-clamp: 5; }
@@ -1109,7 +1109,7 @@ body.instant .reveal { transition: none !important; }
 .tx-narration-body {
   margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace;
   font-size: 21px; line-height: 1.5; white-space: pre-wrap;
-  word-break: break-word; overflow: hidden;
+  overflow-wrap: break-word; overflow: hidden;
   /* TUI dark-mode source colours: the block is the template (cool slate)
      background; LLM-generated spans paint over it in warm bronze. */
   color: #e8e8e8; background: #2a3550;
