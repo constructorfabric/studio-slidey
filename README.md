@@ -30,12 +30,27 @@ This document is the **reference**: pipeline architecture and JSON schema.
 
 ## Requirements
 
-- **Node** ≥ 18 — `npm install` pulls `puppeteer` (pinned Chromium),
-  `jsonpath-plus`, `pdf-lib`, and the Vue/Vite build toolchain.
-- **ffmpeg** on `PATH` — muxes frames + audio into the MP4 (video output only).
-- **edge-tts** on `PATH` — synthesises narration. Only invoked when at least one
-  scene carries a `narration` string; a spec with no narration renders silently
-  without it. (PDF output skips narration entirely.)
+Three external prerequisites — only Node is needed for the schema/validation
+tooling; the other two are for actually rendering a video:
+
+| Prerequisite | Needed for | Check | Install |
+|---|---|---|---|
+| **Node ≥ 18** | everything (CLI, build, validation) | `node --version` | [nodejs.org](https://nodejs.org/) or `nvm install 18` |
+| **ffmpeg** on `PATH` | video output only — muxes frames + audio into the MP4 | `ffmpeg -version` | `apt install ffmpeg` · `brew install ffmpeg` |
+| **edge-tts** on `PATH` | narration audio only | `edge-tts --version` | `pipx install edge-tts` (or `pip install edge-tts`) |
+
+Notes:
+
+- **edge-tts** is a Python package and uses Microsoft's online TTS, so narrated
+  renders need network access. It is only invoked when at least one scene
+  carries a `narration` string — a spec with no narration renders silently
+  without it, and PDF output skips narration entirely. So a no-narration video
+  or any PDF needs neither edge-tts nor network.
+- `npm install` pulls `puppeteer` (which downloads a pinned Chromium on first
+  install), plus `ajv`, `dagre`, `jsonpath-plus`, `pdf-lib`, and the Vue/Vite
+  build toolchain. No system Chrome is required — Puppeteer brings its own.
+- This repo's `.npmrc` pins an internal registry (`global-npm-prod-virtual`);
+  `npm install` against the public registry may 401. Leave `.npmrc` in place.
 
 ## Quick start
 
@@ -43,14 +58,19 @@ This document is the **reference**: pipeline architecture and JSON schema.
 npm install
 npm run build:render                                  # build the Vue render bundle (required before video/PDF)
 
-node src/index.js examples/kitsoki-pitch.json --estimate   # scene/duration table, no render (~50ms)
-node src/index.js examples/kitsoki-pitch.json out.mp4      # video
-node src/index.js examples/kitsoki-pitch.json out.pdf      # slides — one page per reveal step
+node src/index.js examples/hello.json --validate           # check the spec is well-formed (no render, no deps)
+node src/index.js examples/hello.json --estimate           # scene/duration table, no render (~50ms)
+node src/index.js examples/hello.json out.mp4              # video  (needs ffmpeg; + edge-tts/network if narrated)
+node src/index.js examples/hello.json out.pdf             # slides — one page per reveal step (no ffmpeg/edge-tts)
 
 npm run dev                                           # interactive web app (Vite); open ?spec=<url> or drop a spec
 
-npm run build:single -- examples/kitsoki-pitch.json kitsoki.html   # one self-contained .html — open it straight off disk
+npm run build:single -- examples/hello.json hello.html   # one self-contained .html — open it straight off disk
 ```
+
+`examples/hello.json` is the smallest starting point; `examples/kitsoki-pitch.json`
+and `examples/layout-gallery.json` exercise every scene type. All are safe to
+delete or copy as templates.
 
 The video and PDF pipelines load the built `dist-render/render.html`; rebuild it
 with `npm run build:render` whenever you change anything under `web/`. `npm run
@@ -64,9 +84,6 @@ the deck. Output defaults to `dist-web-single/<spec>.html`. (The orchestrator is
 [`web/build-single.mjs`](web/build-single.mjs), built via the `webfile` Vite
 target; it folds the app's JS + CSS inline the same way the render harness does
 and injects the spec as `window.__SLIDEY_SPEC__`.)
-
-`examples/kitsoki-pitch.json` is a real-world sample that exercises every scene
-type; it's safe to delete.
 
 ## Visualizing a kitsoki session trace
 
@@ -117,6 +134,16 @@ reveal step; no frames, narration, or ffmpeg); anything else → MP4 video.
 | `--keep-frames` | Keep frame directory after render |
 | `--skip-render` | Skip PNG generation, reuse cached frames; regenerate narration + mux only |
 | `--capture-log FILE` | Write live HTTP responses to JSON (for later playback freeze) |
+| `--validate` | Validate the spec against the JSON Schema and exit. Human-readable error report; exits 0/1 (CI-friendly). No render, no ffmpeg/edge-tts |
+| `--schema` | Print the spec's JSON Schema to stdout and exit. Pipe to a file or hand to an LLM/editor for completion + inline validation. Needs no input file |
+| `--check` | Validate `diagram-svg` scenes' declared geometry (node width/height fit, node overlap) without rendering. Exits 1 on violations (CI-friendly) |
+| `--audit [FILE]` | Render every reveal step in headless Chrome and measure the *real* laid-out geometry — off-page content, box/SVG-node overflow, rendered overlap, unsubstituted template vars, tiny text. Writes findings JSON to `FILE` (or stdout); exits 1 on any error-severity finding. The deterministic half of the `slidey-visual-qa` skill |
+
+Every render also runs `--validate` implicitly at startup: a spec that fails the
+schema aborts before any frames are generated, with the same error report.
+`--check` (static geometry) and `--audit` (rendered geometry) are the two layers
+of diagram QA — `--check` is instant and needs no build; `--audit` needs the
+render bundle (`npm run build:render`).
 
 ## Pipeline
 
@@ -153,8 +180,8 @@ sampling (≈8/658 on the sample deck — on par with the legacy renderer).
 
 Internally, scene types fall into two families the template toggles between: a
 *slides* family (`title`, `narrative`, `diagram`, `diagram-svg`, `trace`,
-`transcript`, `thread`, `stat`, `cta`, `terminal-gif`) and an *api* family
-(`request`). The
+`transcript`, `thread`, `stat`, `cta`, `terminal-gif`, `cards`, `code`, `table`,
+`chart`) and an *api* family (`request`). The
 spec's optional `meta.mode` selects the default; you rarely set it by hand. (In
 the code this distinction still carries its original `pitch`/`api` names — e.g.
 `mode-pitch`, `_PITCH_REVEALS` — they're internal labels, not project identity.)
@@ -403,6 +430,74 @@ Up to three panels (`thread_panel_0..2`). `system` selects the visual chrome
 
 The default `termgif_hold` is 12s — one loop of a typical [VHS](https://github.com/charmbracelet/vhs) recording.
 
+#### `cards` — peer-set, contrast, or Q&A layouts
+
+```json
+{ "type": "cards", "variant": "grid", "title": "Three pillars",
+  "cards": [
+    { "label": "Deterministic", "sub": "same spec → same frames" },
+    { "label": "Declarative",   "sub": "no LLM in the loop" },
+    { "label": "Multi-output",  "sub": "video · PDF · web" }
+  ] }
+```
+
+One scene type, many shapes selected by `variant`:
+
+- **Peer sets** — `grid`, `list`, `numbered`, `agenda`, `icon-row`: an array of
+  `cards` (each `{ label, sub?, lines?, icon?, style? }`). `columns` overrides
+  the grid column count.
+- **Contrast** — `before-after`, `versus`, `point-counterpoint`, `pros-cons`:
+  use `left` and `right` card objects instead of the `cards` array.
+- **Q&A** — `qa`: a `question` string and an `answer` (string or array of
+  bullet lines).
+
+#### `code` — source, diff, function I/O, tree, config, or log
+
+```json
+{ "type": "code", "variant": "source", "title": "renderer.js", "lang": "javascript",
+  "code": "function render(page, scene, ctx) {\n  // …\n}",
+  "highlight": [1],
+  "annotations": [{ "line": 1, "text": "one entry point per scene type" }] }
+```
+
+`variant` picks the artifact: `source` (snippet, with optional 1-based
+`highlight` lines and `annotations`), `diff` (+/- coloured), `function-io`
+(`call` + `returns` pair), `tree` (indented file tree in `tree`), `config`, or
+`log`. `title` is the chrome bar filename; `lang` the language tag.
+
+#### `table` — bordered data / comparison grid
+
+```json
+{ "type": "table", "variant": "comparison", "title": "Output formats",
+  "columns": ["", "Video", "PDF", "Web"],
+  "rows": [
+    { "cells": ["Narration", "✓", "✗", "✗"] },
+    { "cells": ["Selectable text", "✗", "✓", "✓"] }
+  ],
+  "winner": 1 }
+```
+
+`variant`: `data` (plain values), `comparison` (first column is the criterion,
+`✓`/`✗` cells), or `scorecard` (comparison with a highlighted `winner` column).
+Max 6 columns, 8 rows. A row's `highlight` accents one column for that row.
+
+#### `chart` — deterministic inline-SVG chart
+
+```json
+{ "type": "chart", "variant": "bar", "title": "Frames per scene", "unit": "f",
+  "axes": { "x": "scene", "y": "frames" },
+  "series": [
+    { "name": "duration", "color": "primary",
+      "points": [{ "x": "title", "y": 90 }, { "x": "narrative", "y": 165 }] }
+  ] }
+```
+
+`variant`: `bar`, `line`, `area`, `pie`, `scatter`, or `quadrant`. No D3/Chart.js
+— charts are drawn as plain SVG so frames stay byte-deterministic. Each series'
+`color` is a design-token name (`primary`, `secondary`, `green`, `orange`,
+`red`, `teal`); omit it for the default palette. Point `x` is a category label
+or number; `y` is numeric.
+
 #### `request` — API request/response card
 
 ```json
@@ -444,12 +539,29 @@ narration alignment will drift.
 
 ## Adding a new scene type
 
-1. Add `src/scenes/<name>.js` exporting `{ render(page, scene, ctx) }`.
-2. Register it in `src/renderer.js`'s `SCENE_MODULES`.
-3. Add the HTML region and CSS in `src/template.html` (`<div id="<name>-region">…</div>`).
-4. Add `window.slidey.show<Name>(scene)` / `hide<Name>()` to the inline JS
-   in `src/template.html`.
-5. Add per-reveal frame budgets in `src/timing.js`, plus a branch in
-   `estimateScene()` so `--estimate` knows the duration.
-6. Add the reveal state names to the `_PITCH_REVEALS` table in
-   `src/template.html` so the renderer knows when each reveal step has settled.
+A scene type is wired across the render driver and the shared Vue bundle. Using
+an existing type (e.g. `cards`) as a template, touch these seven places:
+
+1. **`web/components/<Name>Scene.vue`** — the visual component (keep ids/classes
+   consistent with `web/styles/template.css`). This is the single source of
+   truth that video, PDF, and the web app all render.
+2. **`web/components/DeckHost.vue`** — import the component and add it to the
+   scene-type → component map.
+3. **`web/slideyAdapter.js`** — add `show<Name>(scene)` / `hide<Name>()` over the
+   store (`store.showScene('<name>', scene)` / `store.hidePitch()`).
+4. **`web/sceneSteps.mjs`** — add a `case '<name>':` to `stepsForScene()`
+   returning the ordered reveal-step base-names (one step = one PDF page / nav
+   advance / video dwell).
+5. **`src/scenes/<name>.js`** — render module exporting `{ render(page, scene,
+   ctx) }`; it calls `window.slidey.show<Name>` then walks the same reveal steps
+   via `ctx.setState('<step>')`. Register it in `src/renderer.js`'s
+   `SCENE_MODULES`.
+6. **`src/timing.js`** — per-reveal frame budgets for each step name, plus a
+   branch in `estimateScene()` so `--estimate` knows the duration.
+7. **`src/schema.js`** — add a `oneOf` branch (discriminated on `type`) so
+   `--validate` / `--schema` / startup validation accept the new type. Add its
+   name to `VALID_TYPES` in `src/validate.js`.
+
+Then rebuild the bundle (`npm run build:render`) and verify with `--estimate`
+and `--audit`. (Note: `src/template.html` is a **legacy reference** only — the
+pipeline no longer drives it; the Vue components above are authoritative.)
