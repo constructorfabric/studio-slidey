@@ -26,6 +26,7 @@ const { generateFrames }    = require('./renderer');
 const { framesToVideo }     = require('./assembler');
 const { generateAll: generateNarration } = require('./narration');
 const { estimateBoundaries } = require('./timing');
+const { validateSpec }       = require('./validate');
 
 // Calibrated speech rate for default Edge TTS voice (en-AU-NatashaNeural at
 // rate +0%). Measured across real narration: 1.7-2.3 wps depending on
@@ -40,13 +41,22 @@ const args = process.argv.slice(2);
 // --list and --estimate only need the input spec (not an output path).
 const wantsList     = args.includes('--list') || args.includes('--estimate');
 const wantsCheck    = args.includes('--check');
+const wantsSchema   = args.includes('--schema');
+const wantsValidate = args.includes('--validate');
 const auditIdx      = args.indexOf('--audit');
 const auditOpt      = auditIdx !== -1 ? args[auditIdx + 1] : null;
 const wantsAudit    = auditIdx !== -1;
 const skipRender    = args.includes('--skip-render');
 const noGaps        = args.includes('--no-gaps');
 
-if (((args.length < 2 && !wantsList && !wantsCheck) || args.length < 1) || args.includes('--help') || args.includes('-h')) {
+// --schema: print the JSON Schema and exit (no input file required)
+if (wantsSchema) {
+  const { SCHEMA } = require('./schema');
+  process.stdout.write(JSON.stringify(SCHEMA, null, 2) + '\n');
+  process.exit(0);
+}
+
+if (((args.length < 2 && !wantsList && !wantsCheck && !wantsValidate) || args.length < 1) || args.includes('--help') || args.includes('-h')) {
   console.log([
     '',
     '  SLIDEY — Deterministic, spec-driven declarative video generator',
@@ -74,6 +84,11 @@ if (((args.length < 2 && !wantsList && !wantsCheck) || args.length < 1) || args.
     '    --no-gaps                  Suppress the 0.8s blank inter-scene gap. Use with',
     '                               --scenes N-M to review a multi-scene sequence as a',
     '                               seamless clip (e.g. a progressive graph build-up).',
+    '    --validate                 Validate the spec against the JSON Schema and exit.',
+    '                               Prints a human-readable error report on failure.',
+    '                               Exits 0 if valid, 1 if invalid (usable in CI).',
+    '    --schema                   Print the JSON Schema for a slidey spec to stdout',
+    '                               and exit. Pipe to a file or pass to an LLM.',
     '    --check                    Validate diagram-svg scenes without rendering.',
     '                               Checks node width/height and overlap. Exits 1 if',
     '                               any violations found (usable in CI).',
@@ -249,6 +264,23 @@ async function main() {
   if (!spec.scenes || !Array.isArray(spec.scenes) || spec.scenes.length === 0) {
     console.error('[slidey] ERROR: spec must have a non-empty "scenes" array');
     process.exit(1);
+  }
+
+  // ── JSON Schema validation (always; exits on failure) ─────────────────────
+  {
+    const { valid, errors, count } = validateSpec(spec);
+    if (!valid) {
+      console.error(`[slidey] VALIDATION ERROR: ${count} problem(s) found in ${path.basename(absInput)}\n`);
+      for (const line of errors) console.error(line);
+      console.error('\n  Tip: run with --schema to get the full JSON Schema, or --validate for a standalone check.');
+      if (wantsValidate) process.exit(1);
+      // In non-validate modes, treat schema errors as fatal so bad specs fail
+      // fast rather than crashing mid-render with a confusing message.
+      process.exit(1);
+    } else if (wantsValidate) {
+      console.log(`[slidey] ✓ valid — ${spec.scenes.length} scene(s)  ${path.basename(absInput)}`);
+      process.exit(0);
+    }
   }
 
   // CLI context overrides take precedence over meta.context in the spec
