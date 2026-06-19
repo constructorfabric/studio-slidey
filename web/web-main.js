@@ -5,6 +5,7 @@ import App from './components/App.vue';
 import { installAdapter } from './slideyAdapter.js';
 import './styles/template.css';
 import './styles/app.css';
+import './styles/workspace.css';
 
 installAdapter();
 createApp(App).mount('#app');

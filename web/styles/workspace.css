@@ -1,0 +1,102 @@
+/* SLIDEY viewer — workspace sidebar (CLI `slidey <folder>` / `slidey <file>`).
+   Loaded only by the interactive web app (not the render harness). The deck
+   (#root, scaled by --slidey-scale) is centred in the area to the RIGHT of the
+   fixed sidebar via #app's left padding. */
+
+body.slidey-workspace #app {
+  justify-content: center;
+  padding-left: var(--slidey-sidebar-w, 300px);
+  box-sizing: border-box;
+}
+
+.slidey-sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  border-right: 1px solid #21262d;
+  color: #e6edf3;
+  font-family: 'Courier New', monospace;
+  user-select: none;
+}
+
+.slidey-sidebar-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #21262d;
+  flex: none;
+}
+.slidey-sidebar-mark {
+  font-weight: bold;
+  background: linear-gradient(180deg, #58a6ff, #bc8cff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-size: 16px;
+}
+.slidey-sidebar-root {
+  color: #8b949e;
+  font-size: 12px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Live-reload pill — shown in the header when the open spec changes on disk. */
+.slidey-reload {
+  margin-left: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid #1f6feb;
+  border-radius: 999px;
+  background: #1f6feb22;
+  color: #79c0ff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  animation: slidey-reload-pulse 1.6s ease-in-out infinite;
+}
+.slidey-reload:hover { background: #1f6feb44; }
+.slidey-reload:disabled,
+.slidey-reload.spinning { cursor: default; opacity: 0.7; animation: none; }
+
+@keyframes slidey-reload-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 #1f6feb55; }
+  50%      { box-shadow: 0 0 0 4px #1f6feb00; }
+}
+
+.slidey-sidebar-body { flex: 1; overflow: auto; padding: 6px 0; }
+.slidey-sidebar-empty { color: #484f58; font-size: 13px; padding: 12px 16px; }
+
+/* drag handle to resize */
+.slidey-sidebar-resize {
+  position: absolute;
+  top: 0; bottom: 0; right: -3px;
+  width: 6px;
+  cursor: col-resize;
+}
+.slidey-sidebar-resize:hover { background: #1f6feb55; }
+
+/* tree */
+.slidey-tree { list-style: none; margin: 0; padding: 0; }
+.slidey-tree.root { font-size: 13px; }
+.slidey-tree-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 12px 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: #c9d1d9;
+}
+.slidey-tree-row:hover { background: #161b22; }
+.slidey-tree-row.dir { color: #8b949e; }
+.slidey-tree-caret { width: 12px; display: inline-block; font-size: 10px; color: #6e7681; }
+.slidey-tree-name { overflow: hidden; text-overflow: ellipsis; }
+.slidey-tree-row.file.active {
+  background: #1f6feb33;
+  color: #79c0ff;
+  box-shadow: inset 2px 0 0 #1f6feb;
+}

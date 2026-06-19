@@ -17,8 +17,10 @@ function onKey(e) {
   }
 }
 function onClick(e) {
-  // Click right 2/3 → next, left 1/3 → prev (ignore clicks on the HUD).
+  // Click right 2/3 → next, left 1/3 → prev (ignore clicks on the HUD and the
+  // workspace file-tree sidebar so selecting a deck doesn't advance the slide).
   if (e.target.closest('.slidey-hud')) return;
+  if (e.target.closest('.slidey-sidebar')) return;
   if (e.clientX < window.innerWidth / 3) props.deck.prev();
   else props.deck.next();
 }
