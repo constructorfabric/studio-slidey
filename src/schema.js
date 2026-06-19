@@ -518,6 +518,65 @@ const SCHEMA = {
               ...COMMON,
             },
           },
+          // ── video ──────────────────────────────────────────────────────────
+          {
+            type: 'object',
+            required: ['type'],
+            description: 'Embed a demo MP4 (pre-rendered or captured on the fly) into the deck — fullscreen or inset in a slide, with auto chapter captions, hand-authored annotations, and time-keyed narration. Provide exactly one of "src" or "capture".',
+            properties: {
+              type: { const: 'video' },
+              src: { type: 'string', description: 'Path to a pre-rendered demo MP4 (relative to the spec). A sibling <src>.chapters.json is used for auto captions when present.' },
+              capture: { type: 'string', description: 'Path to a tour spec (relative to the spec) captured on the fly via the slidey tour engine, then embedded.' },
+              mode: { type: 'string', enum: ['fullscreen', 'embedded'], description: '"fullscreen" (default) fills the frame; "embedded" insets the video in a deck slide with title/caption chrome.' },
+              fit: { type: 'string', enum: ['contain', 'cover'], description: '"contain" (default) letterboxes on the deck background; "cover" crops to fill.' },
+              start: { type: 'number', minimum: 0, description: 'Trim start (seconds into the source).' },
+              end: { type: 'number', minimum: 0, description: 'Trim end (seconds into the source).' },
+              speed: { type: 'number', exclusiveMinimum: 0, description: 'Playback speed multiplier (>1 faster).' },
+              duration: { type: 'number', exclusiveMinimum: 0, description: 'Explicit on-screen duration hint (seconds) for --estimate; skips probing the source.' },
+              title: { type: 'string', description: 'Deck chrome heading (embedded mode).' },
+              eyebrow: { type: 'string', description: 'Small label above the title (embedded mode).' },
+              caption: { type: 'string', description: 'Caption under the inset (embedded mode).' },
+              chapters: {
+                description: '"auto" (default) derives lower-third captions from the <src>.chapters.json sidecar; false disables; a string path points at an explicit sidecar.',
+                oneOf: [{ type: 'string' }, { type: 'boolean' }],
+              },
+              annotations: {
+                type: 'array',
+                description: 'Hand-authored overlays composited over the video, keyed to time.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    at: { type: 'number', minimum: 0, description: 'Start time (seconds into the trimmed video).' },
+                    until: { type: 'number', minimum: 0, description: 'End time (seconds); defaults to scene end.' },
+                    chapter: { type: 'string', description: 'Alternative to "at": a chapter id from the sidecar.' },
+                    text: { type: 'string', description: 'Caption/callout text.' },
+                    sub: { type: 'string', description: 'Secondary line.' },
+                    x: { type: 'number', description: 'Overlay x (px); omit to center.' },
+                    y: { type: 'number', description: 'Overlay y (px); omit for lower-third.' },
+                  },
+                },
+              },
+              ...COMMON,
+              narration: {
+                description: 'A whole-scene string (positioned at the scene start) OR time-keyed cues synced to video moments.',
+                oneOf: [
+                  { type: 'string' },
+                  {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      required: ['text'],
+                      properties: {
+                        at: { type: 'number', minimum: 0, description: 'Start time (seconds into the video).' },
+                        chapter: { type: 'string', description: 'Alternative to "at": a chapter id from the sidecar.' },
+                        text: { type: 'string' },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
         ],
       },
     },

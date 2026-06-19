@@ -72,6 +72,24 @@ async function generatePngs(spec, outputDir, opts = {}) {
       if (selectedScenes && !selectedScenes.has(i)) continue;
       const scene = scenes[i];
 
+      // video scenes are not rendered through the Vue bundle — emit a poster
+      // frame (a representative still) straight from the source MP4 instead.
+      if (scene.type === 'video' && scene.src) {
+        const v = require('./video');
+        const src = path.resolve(path.dirname(specPath || '.'), scene.src);
+        if (fs.existsSync(src)) {
+          const dur = v.probeDuration(src);
+          const at = Math.max(0, scene.start || 0) + Math.min(1, dur * 0.1);
+          const sceneStr = String(i).padStart(2, '0');
+          const filePath = path.join(outputDir, `${sceneStr}-01.png`);
+          v.extractPoster({ src, outPng: filePath, width, height, fit: scene.fit || 'contain', atSec: at });
+          files.push(filePath);
+          fileCount++;
+          if (onProgress) onProgress(fileCount, i, scene.type);
+          continue;
+        }
+      }
+
       const showOpts = {};
       if (scene.type === 'terminal-gif' && scene.gif) {
         const gifPath = path.resolve(path.dirname(specPath || '.'), scene.gif);

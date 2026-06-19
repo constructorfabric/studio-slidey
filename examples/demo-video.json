@@ -1,0 +1,36 @@
+{
+  "_comment": "Demonstrates the `video` scene. Put a demo MP4 (+ optional <name>.mp4.chapters.json sidecar) at examples/demos/your-demo.mp4 — e.g. copy a kitsoki .artifacts/<feature>/<feature>-demo.mp4, or capture one with `slidey capture examples/demos/kitsoki-onboarding-tour.json examples/demos/your-demo.mp4`. Then: slidey examples/demo-video.json out.mp4. PNG/PDF export shows poster frames.",
+  "meta": { "mode": "pitch", "narration": { "voice": "en-AU-NatashaNeural" } },
+  "scenes": [
+    { "type": "title", "title": "Product demo", "subtitle": "captured tour, embedded in the deck" },
+
+    { "type": "video",
+      "src": "demos/your-demo.mp4",
+      "mode": "fullscreen",
+      "fit": "contain",
+      "chapters": "auto",
+      "narration": [
+        { "at": 0, "text": "Here is the product, walked through end to end." },
+        { "chapter": "home-story-cards", "text": "Each card is a story you can run." }
+      ] },
+
+    { "type": "narrative", "eyebrow": "Zoom in",
+      "body": "The same recording also embeds inside a slide, framed in the deck's own chrome.",
+      "lede": "One source of truth — the tour storyboard — drives both." },
+
+    { "type": "video",
+      "src": "demos/your-demo.mp4",
+      "mode": "embedded",
+      "eyebrow": "Live demo",
+      "title": "The conversation view",
+      "caption": "Driving a story, no LLM — deterministic replay",
+      "chapters": false,
+      "start": 4,
+      "end": 12,
+      "annotations": [
+        { "at": 0.5, "until": 6, "text": "Spotlight tracks the tour", "sub": "deck-styled overlay" }
+      ] },
+
+    { "type": "cta", "wordmark": "slidey", "tagline": "decks + demos, one pipeline", "url": "" }
+  ]
+}

@@ -22,6 +22,10 @@ export function stepsForScene(scene) {
   switch (s.type) {
     case 'title':
       return [];
+    case 'video':
+      // Rendered as a single poster page in PDF/PNG export (the MP4 itself is
+      // only produced for video output). No progressive reveal.
+      return [];
     case 'narrative':
       return ['narrative_eyebrow', 'narrative_body', ...(s.lede ? ['narrative_lede'] : [])];
     case 'diagram':

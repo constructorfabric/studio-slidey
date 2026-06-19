@@ -106,12 +106,31 @@ function generateAll(sceneBoundaries, fps, totalFrames, narrationMeta, audioDir)
   const segments = [];
   for (let i = 0; i < sceneBoundaries.length; i++) {
     const sb = sceneBoundaries[i];
-    if (!sb.narration) continue;
 
     const next = sceneBoundaries[i + 1];
     const endFrame = next ? next.startFrame : totalFrames;
     const sceneDuration = (endFrame - sb.startFrame) / fps;
-    const startSeconds  = sb.startFrame / fps;
+    const sceneStart    = sb.startFrame / fps;
+
+    // Time-keyed cues (video scenes): one audio segment per cue, each positioned
+    // at its own absolute timestamp. Resolved upstream by the video scene into
+    // { startSeconds, text } (absolute, already offset by the scene start).
+    if (Array.isArray(sb.narrationCues) && sb.narrationCues.length) {
+      sb.narrationCues.forEach((cue, ci) => {
+        if (!cue.text) return;
+        const audioPath = path.join(
+          audioDir, `scene-${String(sb.sceneIndex).padStart(2, '0')}-${String(ci).padStart(2, '0')}.mp3`
+        );
+        const start = cue.startSeconds != null ? cue.startSeconds : sceneStart;
+        process.stdout.write(`[slidey] TTS scene ${sb.sceneIndex} cue ${ci} (@${start.toFixed(1)}s) `);
+        const audioDuration = generateOne(applyPronunciations(cue.text, pronunciations), audioPath, voice, rate);
+        process.stdout.write(`→ ${audioDuration.toFixed(1)}s\n`);
+        segments.push({ sceneIndex: sb.sceneIndex, startSeconds: start, sceneDuration, audioPath, audioDuration });
+      });
+      continue;
+    }
+
+    if (typeof sb.narration !== 'string' || !sb.narration) continue;
 
     const audioPath = path.join(
       audioDir,
@@ -134,7 +153,7 @@ function generateAll(sceneBoundaries, fps, totalFrames, narrationMeta, audioDir)
 
     segments.push({
       sceneIndex: sb.sceneIndex,
-      startSeconds,
+      startSeconds: sceneStart,
       sceneDuration,
       audioPath,
       audioDuration,

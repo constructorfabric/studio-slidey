@@ -44,6 +44,7 @@ const SCENE_MODULES = {
   code:           require('./scenes/code'),
   table:          require('./scenes/table'),
   chart:          require('./scenes/chart'),
+  video:          require('./scenes/video'),
 };
 
 /**
@@ -141,12 +142,13 @@ async function generateFrames(spec, framesDir, fps = 30, onProgress = null, capt
     for (let sceneIndex = 0; sceneIndex < (spec.scenes || []).length; sceneIndex++) {
       if (selectedScenes && !selectedScenes.has(sceneIndex)) continue;
       const scene = spec.scenes[sceneIndex];
-      sceneBoundaries.push({
+      const boundary = {
         sceneIndex,
         startFrame: frameIndex,
         type: scene.type,
         narration: scene.narration || null,
-      });
+      };
+      sceneBoundaries.push(boundary);
       const mod   = SCENE_MODULES[scene.type];
       if (!mod) {
         throw new Error(
@@ -177,6 +179,21 @@ async function generateFrames(spec, framesDir, fps = 30, onProgress = null, capt
         onProgress,
         requestContext,
         captureLog: captureLogPath ? captureLog : null,
+        // Frame-emitting surface for scenes that produce frames OUTSIDE the
+        // Puppeteer screenshot loop (e.g. the `video` scene, which ffmpeg-
+        // extracts an MP4 straight into the global sequence). A scene writes
+        // frame-NNNNNN.png starting at frameIndex() into framesDir, then calls
+        // advanceFrames(n) so the global counter and narration timing stay exact.
+        framesDir,
+        framePath,
+        fps,
+        width,
+        height,
+        advanceFrames: n => { frameIndex += n; },
+        // Attach resolved time-keyed narration cues to this scene's boundary so
+        // narration.js can emit one audio segment per cue at its own timestamp
+        // (used by the video scene for narration synced to chapter/seconds).
+        setNarrationCues: cues => { boundary.narrationCues = cues; },
       };
 
       await mod.render(page, scene, ctx);

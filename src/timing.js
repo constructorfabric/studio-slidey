@@ -127,6 +127,41 @@ const TIMING = {
   chart_hold:         210,  // 7.0 s
 };
 
+const fs   = require('fs');
+const path = require('path');
+
+/**
+ * Frames a `video` scene contributes. Needs the source duration:
+ *   - `scene.duration` (seconds) if given — explicit, no probe;
+ *   - else ffprobe `scene.src` (resolved against opts.specPath);
+ *   - else (a `capture:` tour, or a missing src) sum the tour's dwellMs, or fall
+ *     back to scene.estimateSeconds. Estimates assume 30fps like the rest of
+ *     this table.
+ */
+function videoSceneFrames(scene, opts = {}) {
+  const fps = 30;
+  const { videoFrameCount } = require('./video');
+  if (scene.duration) return videoFrameCount(scene.duration, scene, fps);
+  const specDir = opts.specPath ? path.dirname(opts.specPath) : process.cwd();
+  if (scene.src) {
+    const abs = path.resolve(specDir, scene.src);
+    const dur = fs.existsSync(abs) ? require('./video').probeDuration(abs) : 0;
+    if (dur) return videoFrameCount(dur, scene, fps);
+  }
+  if (scene.capture) {
+    const tp = path.resolve(specDir, scene.capture);
+    if (fs.existsSync(tp)) {
+      try {
+        const tour = JSON.parse(fs.readFileSync(tp, 'utf-8'));
+        const pace = tour.pace != null ? tour.pace : 1;
+        const ms = (tour.steps || []).reduce((s, st) => s + (st.dwellMs || 3000), 0);
+        return Math.max(1, Math.round((ms / 1000) * fps * pace));
+      } catch { /* fall through */ }
+    }
+  }
+  return Math.round((scene.estimateSeconds || 10) * fps);
+}
+
 /**
  * Estimate the total frame count a scene will produce when rendered.
  * Mirrors the actual reveal/hold sequence in scenes/*.js. Used by
@@ -138,6 +173,9 @@ const TIMING = {
  * branch here.
  */
 function estimateScene(scene, opts = {}) {
+  // video scenes produce frames straight from ffmpeg (no reveal sequence, no
+  // inter_scene gap) — same count whether or not --no-gaps is set.
+  if (scene.type === 'video') return videoSceneFrames(scene, opts);
   const T = TIMING;
   const hold = (k, custom) => (custom != null ? custom : T[k]);
 

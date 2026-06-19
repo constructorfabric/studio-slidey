@@ -1,0 +1,25 @@
+{
+  "_comment": "Kitsoki onboarding tour, ported to the slidey capture engine (was tools/runstatus/tests/playwright/tour-video.spec.ts + src/tour/manifest.ts). Run: (1) build kitsoki: `make build && cp ./kitsoki bin/kitsoki`; (2) `PUPPETEER_EXECUTABLE_PATH=... slidey capture examples/demos/kitsoki-onboarding-tour.json out.mp4` (set cwd/launch to your kitsoki checkout). Produces out.mp4 + out.mp4.chapters.json — drop into a `video` scene with chapters:auto. Steps + dwellMs mirror features/onboarding-tour.yaml.",
+  "target": {
+    "launch": "bin/kitsoki web --stories-dir stories --flow stories/bugfix/flows/happy_llm.yaml --addr 127.0.0.1:7799 --db /tmp/kitsoki-tour.db",
+    "addr": "127.0.0.1:7799",
+    "readyPath": "/",
+    "cwd": "/Users/brad/code/kitsoki",
+    "timeoutMs": 30000
+  },
+  "startPath": "/#/",
+  "viewport": { "width": 1600, "height": 900 },
+  "deviceScaleFactor": 1,
+  "curtain": "The kitsoki web UI",
+  "specPath": "features/onboarding-tour.yaml",
+  "pace": 1,
+  "steps": [
+    { "id": "home-welcome", "label": "Welcome to kitsoki", "caption": "Welcome to kitsoki", "sub": "LLM workflows as deterministic, auditable state machines", "waitFor": "[data-testid=home-view]", "dwellMs": 4000, "kind": "explain" },
+    { "id": "home-story-cards", "label": "Your stories", "caption": "Your stories", "sub": "each card is a deterministic graph of rooms", "target": "[data-testid=story-card]", "dwellMs": 3500, "kind": "explain" },
+    { "id": "home-rescan", "label": "Rescan the library", "caption": "Rescan the library", "target": "[data-testid=rescan-btn]", "dwellMs": 3000, "kind": "explain" },
+    { "id": "home-start", "label": "Start a session", "caption": "Start a session", "target": "[data-testid=new-session-btn]", "dwellMs": 2800, "kind": "action", "advance": "route-match", "advanceUrl": "/s/" },
+    { "id": "iv-current-state", "label": "Where the run is", "caption": "Where the run is", "target": "[data-testid=current-state]", "waitFor": "[data-testid=current-state]", "dwellMs": 3500, "kind": "explain" },
+    { "id": "iv-chat", "label": "The conversation", "caption": "The conversation", "target": "[data-testid=chat-section]", "dwellMs": 3500, "kind": "explain" },
+    { "id": "iv-input", "label": "Drive the story", "caption": "Drive the story", "target": "[data-testid=composer-input]", "dwellMs": 3500, "kind": "explain" }
+  ]
+}
