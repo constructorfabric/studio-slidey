@@ -1,7 +1,6 @@
 // SLIDEY — shared formatting helpers
-// Ported verbatim from src/template.html (escapeHTML / highlightJSON /
-// renderBody / renderHeaders / statusClass) so the Vue render core produces
-// byte-equivalent request/response markup. Returned HTML strings are injected
+// escapeHTML / highlightJSON / renderBody / renderHeaders / statusClass for the
+// Vue render core's request/response markup. Returned HTML strings are injected
 // via v-html in RequestScene.vue.
 
 export function escapeHTML(str) {

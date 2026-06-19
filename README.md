@@ -208,7 +208,6 @@ Render pipeline (`src/`):
 | `src/narration.js` | Calls `edge-tts` per scene; bundles audio segments aligned to scene start frames |
 | `src/assembler.js` | ffmpeg invocation; muxes audio segments if supplied |
 | `src/runner.js` | Live-HTTP runner for `request` scenes (template substitution + JSONPath capture) |
-| `src/template.html` | **Legacy reference** — the original single-page renderer the Vue components were ported from. No longer driven by the pipeline; kept as the visual source of truth `web/styles/template.css` was extracted from. |
 
 Shared Vue render core (`web/`, built by `npm run build:*`):
 
@@ -636,5 +635,5 @@ an existing type (e.g. `cards`) as a template, touch these seven places:
    name to `VALID_TYPES` in `src/validate.js`.
 
 Then rebuild the bundle (`npm run build:render`) and verify with `--estimate`
-and `--audit`. (Note: `src/template.html` is a **legacy reference** only — the
-pipeline no longer drives it; the Vue components above are authoritative.)
+and `--audit`. The Vue components in `web/` are the single renderer — the live
+viewer and every headless export (PDF/PNG/MP4) drive the same bundle.

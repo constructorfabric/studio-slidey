@@ -368,7 +368,6 @@ slidey/
 │   │   ├── overlays.js       #   portable curtain/caption/spotlight (deck theme)
 │   │   ├── launch.js         #   optional spawn + health-poll of the target app
 │   │   └── chapters.js       #   ChapterRecorder + producer-agnostic sidecar
-│   ├── template.html         # The single HTML page Puppeteer drives — all CSS + JS API
 │   └── scenes/
 │       ├── title.js
 │       ├── narrative.js
@@ -397,13 +396,21 @@ slidey/
 > module is the thin Puppeteer driver. See `docs/layout-taxonomy.md` for the full
 > layout catalogue and the primitive-vs-preset architecture.
 
-To add a new scene type:
-1. Add a render module in `src/scenes/<name>.js` (`{ render(page, scene, ctx) }`)
-2. Register it in `src/renderer.js`'s `SCENE_MODULES`
-3. Add HTML region + CSS in `src/template.html` (`<div id="<name>-region">…</div>`)
-4. Add `window.slidey.show<Name>(scene)` / `hide<Name>()` methods inline in src/template.html
-5. Add reveal state names to `src/timing.js` and to the `_PITCH_REVEALS` table in `src/template.html`
-6. Add a branch to `estimateScene()` in `src/timing.js` so `--estimate` knows the duration
+To add a new scene type (the Vue components in `web/` are the one renderer the
+viewer and every headless export share):
+1. Add the visual as `web/components/<Name>Scene.vue` (reads `store.scene`; mark
+   reveal targets with the `reveal` class + `store.isRevealed('<id>')`)
+2. Register it in `web/components/DeckHost.vue`'s scene-dispatch map
+3. Add the reveal-step list (`stepsForScene`) and the `slidey.show<Name>` call
+   (`applyShow`) for the type in `web/sceneSteps.mjs`
+4. Add `show<Name>(scene)` + any reveal ids to `web/store.js` (and the
+   `PITCH_REVEALS` step→id table)
+5. Add the thin Puppeteer driver `src/scenes/<name>.js` (`{ render(page, scene,
+   ctx) }`) and register it in `src/renderer.js`'s `SCENE_MODULES`
+6. Add reveal state names + an `estimateScene()` branch in `src/timing.js` so
+   `--estimate` knows the duration
+7. `npm run build:render` to rebuild the headless bundle (or just run any export —
+   it auto-rebuilds when `web/` is newer; see `src/render-bundle.js`)
 
 ## Render pipeline (one-line summary)
 

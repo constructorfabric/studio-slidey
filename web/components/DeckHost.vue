@@ -1,8 +1,7 @@
 <script setup>
-// Root render surface — faithful reproduction of src/template.html's #root DOM.
-// Keeps every id/class so web/styles/template.css applies verbatim. API/request
-// chrome is inline here; pitch scenes are dispatched to child components. All
-// visibility/reveal flows through the reactive store.
+// Root render surface — the #root DOM whose ids/classes web/styles/template.css
+// targets. API/request chrome is inline here; pitch scenes are dispatched to
+// child components. All visibility/reveal flows through the reactive store.
 import { computed, watchEffect } from 'vue';
 import { store } from '../store.js';
 import { renderBody, renderHeadersHTML, statusClass, escapeHTML } from '../format.js';

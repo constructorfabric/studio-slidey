@@ -1,9 +1,8 @@
 // SLIDEY — reactive render store
 //
-// Single source of truth the Vue scene components render from. It is a faithful
-// port of the imperative state machine in src/template.html's `window.slidey`:
-//   - `visible`  mirrors show()/hide()/.hidden  (API/request mode sections)
-//   - `revealed` mirrors _reveal()/.shown        (pitch-mode progressive reveal)
+// Single source of truth the Vue scene components render from:
+//   - `visible`  show()/hide()/.hidden  (API/request mode sections)
+//   - `revealed` _reveal()/.shown        (pitch-mode progressive reveal)
 //   - `scene`    holds the current scene object  (components read content from it)
 // The window.slidey adapter (slideyAdapter.js) is a thin wrapper that calls these
 // methods, so renderer.js + src/scenes/*.js drive it unchanged.
@@ -11,7 +10,6 @@
 import { reactive } from 'vue';
 
 // Pitch-scene reveal step name → element id(s) to mark .shown.
-// Verbatim from src/template.html `_PITCH_REVEALS`.
 export const PITCH_REVEALS = {
   narrative_eyebrow: ['narrative-eyebrow'],
   narrative_body:    ['narrative-body'],
