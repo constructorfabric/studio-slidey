@@ -56,15 +56,128 @@ if (wantsSchema) {
   process.exit(0);
 }
 
+// The authoring skill is the single source of truth for both `slidey docs`
+// (printed to stdout for an LLM/agent) and `slidey skill install` (copied into
+// a .claude/skills/ dir). Keeping one file behind both means they never drift.
+const SKILL_DIR = path.join(__dirname, '..', '.claude', 'skills', 'slidey-authoring');
+
+// ── `slidey docs` — print the LLM-facing authoring guide to stdout ──────────
+// Everything an agent needs to author a deck (iteration loop, scene-type
+// vocabulary, narration budgeting, gotchas). Self-serve with one command:
+//   slidey docs            # the full guide
+//   slidey docs | head     # or pipe it anywhere
+if (args[0] === 'docs') {
+  try {
+    let body = fs.readFileSync(path.join(SKILL_DIR, 'SKILL.md'), 'utf-8');
+    // Strip the YAML frontmatter — that's skill-loader metadata, not content.
+    body = body.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n+/, '');
+    process.stdout.write(body.endsWith('\n') ? body : body + '\n');
+    process.exit(0);
+  } catch (err) {
+    console.error(`[slidey] ERROR: could not read authoring guide: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+// ── `slidey skill install [--user|--project]` — install the authoring skill ──
+// Copies the bundled slidey-authoring skill into a .claude/skills/ directory so
+// Claude Code (or any agent that reads that convention) loads it automatically.
+//   slidey skill install              # into ./.claude/skills (this project)
+//   slidey skill install --user       # into ~/.claude/skills (all projects)
+if (args[0] === 'skill') {
+  if (args[1] !== 'install') {
+    console.error('[slidey] usage: slidey skill install [--user|--project]');
+    process.exit(1);
+  }
+  const toUser  = args.includes('--user');
+  const baseDir = toUser ? path.join(os.homedir(), '.claude') : path.join(process.cwd(), '.claude');
+  const destDir = path.join(baseDir, 'skills', 'slidey-authoring');
+  try {
+    if (!fs.existsSync(path.join(SKILL_DIR, 'SKILL.md'))) {
+      throw new Error(`bundled skill not found at ${SKILL_DIR}`);
+    }
+    fs.mkdirSync(path.dirname(destDir), { recursive: true });
+    fs.cpSync(SKILL_DIR, destDir, { recursive: true });
+    console.log(`[slidey] Installed slidey-authoring skill → ${destDir}`);
+    console.log(`[slidey] ${toUser ? 'Available in every project' : 'Available in this project'}. Restart your agent / Claude Code to load it.`);
+    process.exit(0);
+  } catch (err) {
+    console.error(`[slidey] ERROR installing skill: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+// ── Viewer mode ──────────────────────────────────────────────────────────
+// `slidey <dir>` or `slidey <file.json>` (no output path) opens the interactive
+// viewer in the browser instead of rendering — a file-tree sidebar (folder) +
+// click-through deck. Only entered when no action flag is set and the single
+// positional resolves to a directory, or a spec file with no second positional.
+const VALUE_FLAGS = new Set([
+  '--fps', '--frames-dir', '--capture-log', '--scenes', '--context',
+  '--pdf-raster-quality', '--pdf-raster-scale', '--port', '--pace',
+]);
+function positionalArgs(argv) {
+  const out = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith('-')) { if (VALUE_FLAGS.has(a)) i++; continue; }
+    out.push(a);
+  }
+  return out;
+}
+const wantsHelp = args.includes('--help') || args.includes('-h');
+const anyAction = wantsList || wantsCheck || wantsValidate || wantsAudit;
+const noOpen    = args.includes('--no-open');
+const portIdx   = args.indexOf('--port');
+const portOpt   = portIdx !== -1 ? parseInt(args[portIdx + 1], 10) : 4321;
+if (!wantsHelp && !anyAction && args[0] !== 'capture') {
+  const pos = positionalArgs(args);
+  let viewerRoot = null, openFile = null;
+  if (pos.length === 0) {
+    // Bare `slidey` (or just flags like --port) → open the current directory.
+    viewerRoot = process.cwd();
+  } else {
+    const firstAbs = path.resolve(pos[0]);
+    if (fs.existsSync(firstAbs)) {
+      const st = fs.statSync(firstAbs);
+      if (st.isDirectory()) {
+        viewerRoot = firstAbs;
+      } else if (st.isFile() && /\.(json|jsonl)$/i.test(firstAbs) && pos.length < 2) {
+        viewerRoot = path.dirname(firstAbs);
+        openFile = path.basename(firstAbs);
+      }
+    }
+  }
+  if (viewerRoot) {
+    require('./serve').startViewer({
+      root: viewerRoot,
+      openFile,
+      port: Number.isInteger(portOpt) ? portOpt : 4321,
+      open: !noOpen,
+    });
+    return; // Node wraps modules in a function — top-level return is valid.
+  }
+}
+
 if (((args.length < 2 && !wantsList && !wantsCheck && !wantsValidate) || args.length < 1) || args.includes('--help') || args.includes('-h')) {
   console.log([
     '',
     '  SLIDEY — Deterministic, spec-driven declarative video generator',
     '',
     '  Usage:',
-    '    node index.js <input.json> <output.mp4> [options]',
+    '    node index.js <input.json> <output.mp4> [options]   render a video/PDF/PNG',
+    '    node index.js                                       open the viewer on the current folder',
+    '    node index.js <folder>                              open the viewer (file-tree sidebar)',
+    '    node index.js <input.json>                          open the viewer on one deck',
+    '    node index.js capture <tour.json> <out.mp4>         record a demo MP4 + chapter sidecar from a tour',
+    '    slidey docs                                          print the authoring guide (for LLMs/agents)',
+    '    slidey skill install [--user|--project]             install the slidey-authoring agent skill',
     '',
-    '  Options:',
+    '  Viewer options:',
+    '    --port <n>                 Viewer port (default: 4321; auto-increments if taken)',
+    '    --no-open                  Do not launch the browser; just print the URL',
+    '',
+    '  Render options:',
     '    --fps <n>                  Frames per second (default: 30)',
     '    --context key=value        Override a template variable (repeatable)',
     '    --keep-frames              Keep temp frame directory after render',
@@ -89,9 +202,21 @@ if (((args.length < 2 && !wantsList && !wantsCheck && !wantsValidate) || args.le
     '                               Exits 0 if valid, 1 if invalid (usable in CI).',
     '    --schema                   Print the JSON Schema for a slidey spec to stdout',
     '                               and exit. Pipe to a file or pass to an LLM.',
+    '    --no-compress              Skip the PDF post-process (PDF output only). By',
+    '                               default a finished PDF is losslessly dedup-compressed',
+    '                               (mutool) and linearized (qpdf) when those are on PATH.',
+    '    --pdf-raster               PDF output only: render each page as a flat JPEG',
+    '                               (faithful, paints instantly) instead of vector. Use',
+    '                               when vector pages repaint slowly in a viewer.',
+    '    --pdf-raster-quality <n>   JPEG quality for --pdf-raster (default 92). Raise',
+    '                               toward 95 to remove banding on dark gradients (e.g.',
+    '                               on iPhone/OLED); lowers below ~88 get blocky.',
+    '    --pdf-raster-scale <n>     Device-scale for --pdf-raster (default 2). 1.5 ≈',
+    '                               2880px wide — smaller file, still crisp on phones.',
     '    --check                    Validate diagram-svg scenes without rendering.',
-    '                               Checks node width/height and overlap. Exits 1 if',
-    '                               any violations found (usable in CI).',
+    '                               Checks node width/height, node overlap, slanted',
+    '                               connectors (misaligned box centres) and gate/label',
+    '                               clearance. Exits 1 if any violations (usable in CI).',
     '    --audit [<file>]           Render every reveal step in headless Chrome and',
     '                               measure the REAL laid-out geometry: off-page,',
     '                               box/SVG-node overflow, rendered node overlap,',
@@ -124,8 +249,16 @@ const framesDirIdx  = args.indexOf('--frames-dir');
 const framesDirOpt  = framesDirIdx !== -1 ? args[framesDirIdx + 1] : null;
 const captureLogIdx = args.indexOf('--capture-log');
 const captureLogOpt = captureLogIdx !== -1 ? args[captureLogIdx + 1] : null;
+const paceIdx       = args.indexOf('--pace');
+const paceOpt       = paceIdx !== -1 ? parseFloat(args[paceIdx + 1]) : null;
 const scenesIdx     = args.indexOf('--scenes');
 const scenesOpt     = scenesIdx !== -1 ? args[scenesIdx + 1] : null;
+const noCompress    = args.includes('--no-compress');
+const pdfRaster     = args.includes('--pdf-raster');
+const rasterQIdx    = args.indexOf('--pdf-raster-quality');
+const rasterQuality = rasterQIdx !== -1 ? parseInt(args[rasterQIdx + 1], 10) : 92;
+const rasterSIdx    = args.indexOf('--pdf-raster-scale');
+const rasterScale   = rasterSIdx !== -1 ? parseFloat(args[rasterSIdx + 1]) : 2;
 
 // Parse --scenes "0,3-5,7" into a Set of scene indices. null = all scenes.
 function parseScenes(spec) {
@@ -198,24 +331,32 @@ function printSceneList(spec, fps, withAudio, opts = {}) {
     const start = (b.startFrame / fps).toFixed(1).padStart(5) + 's';
     const dur   = (b.durationFrames / fps).toFixed(1).padStart(5) + 's';
 
+    // narration may be a plain string or, for video scenes, an array of
+    // time-keyed cues. Flatten to one string for the budget estimate.
+    const cueCount = Array.isArray(b.narration) ? b.narration.length : 0;
+    const narrStr = cueCount
+      ? b.narration.map(c => c && c.text).filter(Boolean).join(' ')
+      : (typeof b.narration === 'string' ? b.narration : '');
+    const cuePrefix = cueCount ? `(${cueCount} cues) ` : '';
+
     if (!withAudio) {
-      const narr = b.narration ? `"${b.narration.slice(0, 60)}${b.narration.length > 60 ? '…' : ''}"` : '—';
+      const narr = narrStr ? `${cuePrefix}"${narrStr.slice(0, 60)}${narrStr.length > 60 ? '…' : ''}"` : '—';
       console.log(`  ${idx}  ${type}  ${start}  ${dur}  | ${narr}`);
       return;
     }
 
     const sceneSec = b.durationFrames / fps;
-    if (!b.narration) {
+    if (!narrStr) {
       console.log(`  ${idx}  ${type}  ${start}  ${dur}  | (none)`);
       return;
     }
-    const audioSec = estimateAudioSeconds(applyPronunciations(b.narration, pronunciations));
+    const audioSec = estimateAudioSeconds(applyPronunciations(narrStr, pronunciations));
     const margin = sceneSec - audioSec;
     const fit = margin < 0
       ? `✗ +${(-margin).toFixed(1)}s`
       : margin < 0.6 ? `△ ${margin.toFixed(1)}s` : `✓ ${margin.toFixed(1)}s`;
     if (margin < 0.6) warnings++;
-    const narr = `"${b.narration.slice(0, 36)}${b.narration.length > 36 ? '…' : ''}"`;
+    const narr = `${cuePrefix}"${narrStr.slice(0, 36)}${narrStr.length > 36 ? '…' : ''}"`;
     console.log(`  ${idx}  ${type}  ${start}  ${dur}  | ${narr.padEnd(38)}  ${audioSec.toFixed(1).padStart(4)}s   ${fit}`);
   });
 
@@ -229,9 +370,62 @@ function printSceneList(spec, fps, withAudio, opts = {}) {
   console.log('');
 }
 
+// ── `slidey capture <tour.json> <out.mp4>` ──────────────────────────────────
+//
+// Drive a live web app through a tour storyboard and record a deterministic
+// demo MP4 + chapter sidecar (the generalized successor to kitsoki's per-app
+// Playwright recording specs). The same engine backs the `video` deck scene's
+// `capture:` field. See src/tour/.
+async function runCapture() {
+  const tourPath = args[1];
+  const outMp4   = args[2];
+  if (!tourPath || !outMp4) {
+    console.error('[slidey] usage: slidey capture <tour.json> <out.mp4> [--fps n] [--pace n] [--keep-frames]');
+    process.exit(1);
+  }
+  const absTour = path.resolve(tourPath);
+  if (!fs.existsSync(absTour)) {
+    console.error(`[slidey] ERROR: tour spec not found: ${absTour}`);
+    process.exit(1);
+  }
+  let tour;
+  try {
+    tour = JSON.parse(fs.readFileSync(absTour, 'utf-8'));
+  } catch (err) {
+    console.error(`[slidey] ERROR: failed to parse tour JSON: ${err.message}`);
+    process.exit(1);
+  }
+  // Record the spec path into chapter source_refs (relative to cwd if possible).
+  if (!tour.specPath) tour.specPath = path.relative(process.cwd(), absTour);
+
+  const { captureToVideo } = require('./tour');
+  console.log(`[slidey] Capture: ${absTour}`);
+  console.log(`[slidey] Output : ${path.resolve(outMp4)}`);
+  console.log(`[slidey] Steps  : ${(tour.steps || []).length}  pace ${paceOpt != null ? paceOpt : (tour.pace != null ? tour.pace : 1)}\n`);
+  try {
+    const { mp4, sidecar, frameCount, chapters } = await captureToVideo(tour, outMp4, {
+      fps, pace: paceOpt != null ? paceOpt : undefined,
+      framesDir: framesDirOpt, keepFrames,
+      onProgress: (idx, label) => {
+        process.stdout.write(`\r[slidey] capture: ${String(label).padEnd(28)} frame ${idx}`);
+      },
+    });
+    process.stdout.write('\n');
+    const sizeMB = (fs.statSync(mp4).size / 1024 / 1024).toFixed(1);
+    console.log(`[slidey] Done → ${mp4}  (${(frameCount / fps).toFixed(1)}s, ${sizeMB} MB)`);
+    if (sidecar) console.log(`[slidey] Chapters → ${sidecar}  (${chapters.length})`);
+  } catch (err) {
+    console.error(`\n[slidey] ERROR during capture: ${err.message}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
+  if (args[0] === 'capture') { await runCapture(); return; }
+
   // Read and validate spec
   const absInput = path.resolve(inputPath);
   if (!fs.existsSync(absInput)) {
@@ -305,7 +499,7 @@ async function main() {
   // ── --list / --estimate: print scene table and exit, no rendering ──
   if (wantsList) {
     const wantsAudioEstimate = args.includes('--estimate');
-    printSceneList(spec, fps, wantsAudioEstimate, { noGaps });
+    printSceneList(spec, fps, wantsAudioEstimate, { noGaps, specPath: absInput });
     process.exit(0);
   }
 
@@ -399,6 +593,10 @@ async function main() {
       const { pageCount } = await generatePdf(spec, absOut, {
         specPath: absInput,
         selectedScenes,
+        compress: !noCompress,
+        raster: pdfRaster,
+        rasterQuality,
+        rasterScale,
         onProgress: (pages, i, type) => {
           process.stdout.write(`\r[slidey] PDF: scene ${i} (${type})`.padEnd(40) + `${pages} pages`);
         },
@@ -446,7 +644,7 @@ async function main() {
       console.error(`[slidey] ERROR: --skip-render needs cached frames in ${framesDir}. Re-run without --skip-render first (with --keep-frames + --frames-dir).`);
       process.exit(1);
     }
-    sceneBoundaries = require('./timing').estimateBoundaries(spec, selectedScenes, { noGaps });
+    sceneBoundaries = require('./timing').estimateBoundaries(spec, selectedScenes, { noGaps, specPath: absInput });
     frameCount = sceneBoundaries.reduce((s, b) => s + b.durationFrames, 0);
     console.log(`[slidey] --skip-render: reusing ${frameCount} cached frames (${(frameCount / fps).toFixed(1)}s) from ${framesDir}`);
   } else {
