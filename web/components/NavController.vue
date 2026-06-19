@@ -7,6 +7,8 @@ const props = defineProps({ deck: { type: Object, required: true } });
 const s = props.deck.state;
 
 function onKey(e) {
+  if (e.target.closest && e.target.closest('.slidey-editor')) return;
+  if (e.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
   switch (e.key) {
     case 'ArrowRight': case ' ': case 'PageDown': case 'Enter':
       e.preventDefault(); props.deck.next(); break;
@@ -21,6 +23,7 @@ function onClick(e) {
   // workspace file-tree sidebar so selecting a deck doesn't advance the slide).
   if (e.target.closest('.slidey-hud')) return;
   if (e.target.closest('.slidey-sidebar')) return;
+  if (e.target.closest('.slidey-editor')) return;
   if (e.clientX < window.innerWidth / 3) props.deck.prev();
   else props.deck.next();
 }

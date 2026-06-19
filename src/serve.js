@@ -13,7 +13,9 @@
  * Routes:
  *   GET /api/config            → { root, openFile }  (App.vue → workspace mode)
  *   GET /api/tree              → nested tree of *.json / *.jsonl under root
+ *   GET /api/schema            → Slidey JSON Schema for editor metadata
  *   GET /api/spec?path=<rel>   → { spec, dir, mtimeMs }  (.jsonl built via src/trace.js)
+ *   POST /api/spec?path=<rel>  → save a JSON spec back to disk
  *   GET /api/stat?path=<rel>   → { mtimeMs }  (poll target for live on-disk reload)
  *   GET /workspace/<rel>       → raw workspace file (spec-relative gif/img assets)
  *   *                          → static from dist/ with index.html SPA fallback
@@ -136,6 +138,24 @@ function sendFile(res, absFile) {
   res.end(data);
 }
 
+function readBody(req, limit = 10 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new Error('request body too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
 // ── browser open (best-effort) ──────────────────────────────────────────────
 
 function openBrowser(url) {
@@ -162,7 +182,7 @@ function startViewer({ root, openFile = null, port = 4321, open = true, _tries =
   if (!ensureDist()) process.exit(1);
   const workspaceRoot = path.resolve(root);
 
-  const server = http.createServer((req, res) => {
+  const server = http.createServer(async (req, res) => {
     let url;
     try {
       url = new URL(req.url, 'http://localhost');
@@ -186,7 +206,15 @@ function startViewer({ root, openFile = null, port = 4321, open = true, _tries =
       });
     }
 
-    if (pathname === '/api/spec') {
+    if (pathname === '/api/schema') {
+      try {
+        return sendJSON(res, 200, require('./schema').SCHEMA);
+      } catch (err) {
+        return sendJSON(res, 500, { error: String(err.message || err) });
+      }
+    }
+
+    if (pathname === '/api/spec' && req.method === 'GET') {
       const rel = url.searchParams.get('path') || '';
       const abs = safeResolve(workspaceRoot, rel);
       if (!abs || !fs.existsSync(abs)) return sendJSON(res, 404, { error: `not found: ${rel}` });
@@ -197,6 +225,28 @@ function startViewer({ root, openFile = null, port = 4321, open = true, _tries =
           : JSON.parse(fs.readFileSync(abs, 'utf8'));
         const dir = path.dirname(rel).replace(/\\/g, '/');
         return sendJSON(res, 200, { spec, dir: dir === '.' ? '' : dir, mtimeMs });
+      } catch (err) {
+        return sendJSON(res, 400, { error: String(err.message || err) });
+      }
+    }
+
+    if (pathname === '/api/spec' && req.method === 'POST') {
+      const rel = url.searchParams.get('path') || '';
+      const abs = safeResolve(workspaceRoot, rel);
+      if (!abs || !fs.existsSync(abs)) return sendJSON(res, 404, { error: `not found: ${rel}` });
+      if (!/\.json$/i.test(abs)) return sendJSON(res, 400, { error: 'only .json specs can be edited in the viewer' });
+      try {
+        const raw = await readBody(req);
+        const payload = JSON.parse(raw || '{}');
+        if (!payload || typeof payload.spec !== 'object' || Array.isArray(payload.spec)) {
+          return sendJSON(res, 400, { error: 'expected { spec } JSON body' });
+        }
+        if (!Array.isArray(payload.spec.scenes) || !payload.spec.scenes.length) {
+          return sendJSON(res, 400, { error: 'spec must have a non-empty "scenes" array' });
+        }
+        const body = JSON.stringify(payload.spec, null, 2) + '\n';
+        fs.writeFileSync(abs, body, 'utf8');
+        return sendJSON(res, 200, { ok: true, mtimeMs: fs.statSync(abs).mtimeMs });
       } catch (err) {
         return sendJSON(res, 400, { error: String(err.message || err) });
       }

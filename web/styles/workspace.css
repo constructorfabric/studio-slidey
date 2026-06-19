@@ -6,6 +6,7 @@
 body.slidey-workspace #app {
   justify-content: center;
   padding-left: var(--slidey-sidebar-w, 300px);
+  padding-right: var(--slidey-editor-w, 0px);
   box-sizing: border-box;
 }
 
@@ -42,9 +43,41 @@ body.slidey-workspace #app {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
+.slidey-mode-toggle {
+  margin-left: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid #30363d;
+  border-radius: 999px;
+  background: #161b22;
+  gap: 2px;
+}
+.slidey-mode-toggle button {
+  min-width: 58px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #8b949e;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.slidey-mode-toggle button:hover {
+  color: #c9d1d9;
+}
+.slidey-mode-toggle button.active {
+  background: #1f6feb;
+  color: #fff;
+  box-shadow: 0 0 0 1px #58a6ff55;
+}
+
 /* Live-reload pill — shown in the header when the open spec changes on disk. */
 .slidey-reload {
-  margin-left: auto;
+  margin-left: 0;
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -99,4 +132,170 @@ body.slidey-workspace #app {
   background: #1f6feb33;
   color: #79c0ff;
   box-shadow: inset 2px 0 0 #1f6feb;
+}
+
+/* current-scene editor */
+.slidey-editor {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  z-index: 1500;
+  width: var(--slidey-editor-w, 380px);
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  border-left: 1px solid #21262d;
+  color: #e6edf3;
+  font-family: 'Courier New', monospace;
+  box-sizing: border-box;
+}
+.slidey-editor-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #21262d;
+}
+.slidey-editor-kicker {
+  color: #8b949e;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.slidey-editor-title {
+  color: #e6edf3;
+  font-size: 18px;
+  font-weight: bold;
+}
+.slidey-editor-save,
+.slidey-editor-add {
+  border: 1px solid #1f6feb;
+  border-radius: 6px;
+  background: #1f6feb;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.slidey-editor-save {
+  padding: 7px 12px;
+}
+.slidey-editor-save:disabled {
+  border-color: #30363d;
+  background: #21262d;
+  color: #8b949e;
+  cursor: default;
+}
+.slidey-editor-add {
+  align-self: flex-start;
+  padding: 8px 12px;
+}
+.slidey-editor-add:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.slidey-editor-error,
+.slidey-editor-warning,
+.slidey-editor-note {
+  margin: 12px 16px 0;
+  padding: 9px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.slidey-editor-error {
+  border: 1px solid #da3633;
+  background: #da36331f;
+  color: #ffb4ad;
+}
+.slidey-editor-warning {
+  border: 1px solid #9e6a03;
+  background: #9e6a031f;
+  color: #f0d894;
+}
+.slidey-editor-note {
+  border: 1px solid #9e6a03;
+  background: #9e6a031f;
+  color: #f0d894;
+}
+.slidey-editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #21262d;
+  overflow: visible;
+}
+.slidey-editor-section:last-child {
+  flex: 1;
+  overflow: auto;
+}
+.slidey-editor-section-title {
+  color: #79c0ff;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.slidey-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.slidey-editor-field span {
+  color: #8b949e;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slidey-editor-field input,
+.slidey-editor-field textarea,
+.slidey-editor-field select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #161b22;
+  color: #e6edf3;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 8px 9px;
+  outline: none;
+}
+.slidey-editor-field textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+.slidey-editor-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #1f6feb;
+}
+.slidey-editor-field input:focus,
+.slidey-editor-field textarea:focus,
+.slidey-editor-field select:focus {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 2px #1f6feb33;
+}
+.slidey-editor-help,
+.slidey-editor-field-error {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.slidey-editor-help {
+  color: #6e7681;
+}
+.slidey-editor-field-error {
+  color: #ffb4ad;
+}
+.slidey-editor-empty {
+  margin: 0;
+  color: #484f58;
+  font-size: 13px;
 }

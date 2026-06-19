@@ -8,10 +8,12 @@ import { ref, shallowRef, onMounted, onUnmounted } from 'vue';
 import DeckHost from './DeckHost.vue';
 import NavController from './NavController.vue';
 import FileTree from './FileTree.vue';
+import SceneEditor from './SceneEditor.vue';
 import { store } from '../store.js';
 import { createDeck } from '../useDeck.js';
 
 const deck = shallowRef(null);
+const currentSpec = ref(null);
 const error = ref('');
 const loading = ref(true);
 
@@ -20,6 +22,12 @@ const workspace = ref(false);
 const tree = shallowRef(null);       // { name, children: [...] }
 const activePath = ref('');
 const sidebarWidth = ref(300);
+const editorWidth = ref(380);
+const editMode = ref(false);
+const dirty = ref(false);
+const saving = ref(false);
+const saveError = ref('');
+const schema = shallowRef(null);
 
 // Live on-disk reload: poll the open spec's mtime and offer a reload when it
 // changes underneath us. A failed reload never tears down the session — it
@@ -39,7 +47,10 @@ async function loadSpec(spec, baseUrl, restore) {
   }
   store.setMeta(spec.meta || {});
   store.setMode((spec.meta && spec.meta.mode) || 'api');
-  const d = createDeck(spec, baseUrl);
+  currentSpec.value = spec;
+  dirty.value = false;
+  saveError.value = '';
+  const d = createDeck(currentSpec.value, baseUrl);
   // Preserve the viewer's place across a reload: map the prior scene/step onto
   // the closest position in the freshly-loaded deck before the first render, so
   // there's no flash back to the start.
@@ -49,6 +60,7 @@ async function loadSpec(spec, baseUrl, restore) {
   }
   await d.render();
   deck.value = d;
+  fitScale();
   error.value = '';
 }
 
@@ -56,6 +68,13 @@ async function fetchSpec(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${res.status} fetching ${url}`);
   return res.json();
+}
+
+async function loadSchema() {
+  try {
+    const res = await fetch('/api/schema');
+    if (res.ok) schema.value = await res.json();
+  } catch (_) { /* schema metadata is optional in non-CLI contexts */ }
 }
 
 // ── Workspace: load a spec selected in the file tree ────────────────────────
@@ -73,6 +92,8 @@ async function openPath(rel) {
     loadedMtime = latestMtime = data.mtimeMs || 0;
     stale.value = false;
     clearReloadError();
+    dirty.value = false;
+    saveError.value = '';
   } catch (err) {
     error.value = String(err.message || err);
     deck.value = null;
@@ -143,9 +164,20 @@ async function onFile(e) {
 
 function fitScale() {
   const sw = workspace.value ? sidebarWidth.value : 0;
-  const scale = Math.min((window.innerWidth - sw) / 1920, window.innerHeight / 1080);
+  const ew = workspace.value && deck.value && editMode.value ? editorWidth.value : 0;
+  const availableW = Math.max(320, window.innerWidth - sw - ew);
+  const scale = Math.min(availableW / 1920, window.innerHeight / 1080);
   document.documentElement.style.setProperty('--slidey-scale', String(scale));
   document.documentElement.style.setProperty('--slidey-sidebar-w', `${sw}px`);
+  document.documentElement.style.setProperty('--slidey-editor-w', `${ew}px`);
+}
+
+function setEditMode(enabled) {
+  editMode.value = !!enabled;
+  document.body.classList.toggle('slidey-edit-mode', editMode.value);
+  document.body.classList.toggle('slidey-presentation-mode', !editMode.value);
+  try { localStorage.setItem('slidey.editMode', editMode.value ? '1' : '0'); } catch (_) {}
+  fitScale();
 }
 
 // ── Sidebar resize ──────────────────────────────────────────────────────────
@@ -163,7 +195,37 @@ function startResize(e) {
   window.addEventListener('mouseup', up);
 }
 
+function markDirty() {
+  dirty.value = true;
+  saveError.value = '';
+}
+
+async function saveActive() {
+  if (!activePath.value || !currentSpec.value || saving.value) return;
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const res = await fetch(`/api/spec?path=${encodeURIComponent(activePath.value)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ spec: currentSpec.value }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `${res.status} saving ${activePath.value}`);
+    loadedMtime = latestMtime = data.mtimeMs || latestMtime;
+    stale.value = false;
+    dirty.value = false;
+  } catch (err) {
+    saveError.value = String(err.message || err);
+  } finally {
+    saving.value = false;
+  }
+}
+
 onMounted(async () => {
+  try { editMode.value = localStorage.getItem('slidey.editMode') === '1'; } catch (_) {}
+  document.body.classList.toggle('slidey-edit-mode', editMode.value);
+  document.body.classList.toggle('slidey-presentation-mode', !editMode.value);
   fitScale();
   window.addEventListener('resize', fitScale);
   try {
@@ -188,7 +250,9 @@ onMounted(async () => {
       document.body.classList.add('slidey-workspace');
       fitScale();
       try { tree.value = await (await fetch('/api/tree')).json(); } catch (_) { tree.value = null; }
+      await loadSchema();
       if (cfg.openFile) await openPath(cfg.openFile);
+      fitScale();
       // Watch the open spec for on-disk edits (CLI viewer only).
       pollTimer = setInterval(pollMtime, POLL_MS);
       return;
@@ -206,6 +270,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', fitScale);
   if (pollTimer) clearInterval(pollTimer);
   if (errTimer) clearTimeout(errTimer);
+  document.body.classList.remove('slidey-edit-mode', 'slidey-presentation-mode');
 });
 </script>
 
@@ -215,6 +280,22 @@ onUnmounted(() => {
     <div class="slidey-sidebar-head">
       <span class="slidey-sidebar-mark">slidey</span>
       <span class="slidey-sidebar-root" :title="tree && tree.name">{{ tree ? tree.name : '' }}</span>
+      <div v-if="deck" class="slidey-mode-toggle" role="group" aria-label="Viewer mode">
+        <button
+          type="button"
+          :class="{ active: !editMode }"
+          :aria-pressed="!editMode ? 'true' : 'false'"
+          title="Presentation mode"
+          @click.stop="setEditMode(false)"
+        >Present</button>
+        <button
+          type="button"
+          :class="{ active: editMode }"
+          :aria-pressed="editMode ? 'true' : 'false'"
+          title="Edit mode"
+          @click.stop="setEditMode(true)"
+        >Edit</button>
+      </div>
       <!-- Live-reload affordance: appears when the open spec changes on disk. -->
       <button
         v-if="stale"
@@ -245,6 +326,19 @@ onUnmounted(() => {
 
   <DeckHost />
   <NavController v-if="deck" :key="activePath" :deck="deck" />
+  <SceneEditor
+    v-if="workspace && editMode && deck && currentSpec"
+    :key="activePath"
+    :deck="deck"
+    :spec="currentSpec"
+    :active-path="activePath"
+    :dirty="dirty"
+    :saving="saving"
+    :save-error="saveError"
+    :schema="schema"
+    @change="markDirty"
+    @save="saveActive"
+  />
 
   <!-- Empty stage hint in workspace mode before a deck is chosen -->
   <div v-if="workspace && !deck" class="slidey-stage-empty">
