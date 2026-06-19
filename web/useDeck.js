@@ -82,5 +82,20 @@ export function createDeck(spec, specBaseUrl = '') {
     if (idx >= 0) return go(idx);
   };
 
-  return { state, render, go, next, prev, first, last, gotoScene };
+  // Map a (sceneIndex, stepIndex) onto the closest flat position in THIS deck.
+  // Used to preserve the viewer's place across a live reload when the spec —
+  // and thus the flat step list — may have shifted underneath us. Falls back to
+  // the nearest scene (then position 0) when the original scene no longer exists.
+  function posForScene(sceneIndex, stepIndex) {
+    const inScene = flat.filter(f => f.sceneIndex === sceneIndex);
+    if (inScene.length) {
+      const want = Math.max(0, Math.min(inScene.length - 1, stepIndex || 0));
+      return flat.indexOf(inScene[want]);
+    }
+    const clamped = Math.max(0, Math.min(scenes.length - 1, sceneIndex || 0));
+    const idx = flat.findIndex(f => f.sceneIndex === clamped);
+    return idx >= 0 ? idx : 0;
+  }
+
+  return { state, render, go, next, prev, first, last, gotoScene, posForScene };
 }

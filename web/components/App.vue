@@ -33,13 +33,20 @@ let pollTimer = null;
 let errTimer = null;
 const POLL_MS = 1500;
 
-async function loadSpec(spec, baseUrl) {
+async function loadSpec(spec, baseUrl, restore) {
   if (!spec || !Array.isArray(spec.scenes) || !spec.scenes.length) {
     throw new Error('spec must have a non-empty "scenes" array');
   }
   store.setMeta(spec.meta || {});
   store.setMode((spec.meta && spec.meta.mode) || 'api');
   const d = createDeck(spec, baseUrl);
+  // Preserve the viewer's place across a reload: map the prior scene/step onto
+  // the closest position in the freshly-loaded deck before the first render, so
+  // there's no flash back to the start.
+  if (restore) {
+    d.state.pos = Math.max(0, Math.min(d.state.total - 1,
+      d.posForScene(restore.sceneIndex, restore.stepIndex)));
+  }
   await d.render();
   deck.value = d;
   error.value = '';
@@ -101,12 +108,15 @@ async function reloadActive() {
   if (!rel || reloading.value) return;
   reloading.value = true;
   clearReloadError();
+  // Remember where we are so the reloaded deck lands on the same slide.
+  const cur = deck.value && deck.value.state;
+  const restore = cur ? { sceneIndex: cur.sceneIndex, stepIndex: cur.stepIndex } : null;
   try {
     const res = await fetch(`/api/spec?path=${encodeURIComponent(rel)}`);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `${res.status} loading ${rel}`);
     const base = new URL(`/workspace/${data.dir ? data.dir + '/' : ''}`, window.location.href).href;
-    await loadSpec(data.spec, base);   // swaps deck.value only on success
+    await loadSpec(data.spec, base, restore);   // swaps deck.value only on success
     loadedMtime = latestMtime = data.mtimeMs || latestMtime;
     stale.value = false;
   } catch (err) {
