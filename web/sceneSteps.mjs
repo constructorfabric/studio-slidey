@@ -16,6 +16,9 @@ function range(n, prefix) {
 // progressive reveal (title) — callers render it as one page with no setState.
 export function stepsForScene(scene) {
   const s = scene || {};
+  // `instant: true` — reveal the whole scene at once (no progressive build, no
+  // title-only first page). One PDF page / one nav advance for the entire scene.
+  if (s.instant && s.type !== 'title') return ['reveal_all'];
   switch (s.type) {
     case 'title':
       return [];

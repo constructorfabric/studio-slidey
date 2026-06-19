@@ -102,6 +102,9 @@ export const store = reactive({
   // visibility / reveal sets
   visible: new Set(),
   revealed: new Set(),
+  // `instant` scenes reveal everything in one step (no progressive build) — set
+  // by the 'reveal_all' step so isRevealed() returns true for every id.
+  revealAll: false,
   // request-scene imperative bits
   isMock: false,
   isPlayback: false,
@@ -110,7 +113,7 @@ export const store = reactive({
   progress: 0,
 
   isVisible(id) { return this.visible.has(id); },
-  isRevealed(id) { return this.revealed.has(id); },
+  isRevealed(id) { return this.revealAll || this.revealed.has(id); },
 
   _show(id) { this.visible.add(id); },
   _hide(id) { this.visible.delete(id); },
@@ -231,7 +234,7 @@ export const store = reactive({
   },
 
   // ── Pitch scenes ──────────────────────────────────────────────────────────
-  _resetPitch() { this.revealed = new Set(); },
+  _resetPitch() { this.revealed = new Set(); this.revealAll = false; },
 
   showScene(type, scene) {
     this._resetScene();
@@ -247,6 +250,7 @@ export const store = reactive({
   setState(step) {
     const m = /^transcript_card_(\d+)$/.exec(step);
     if (m) { this.transcriptCard = parseInt(m[1], 10); return; }
+    if (step === 'reveal_all') { this.revealAll = true; return; }
     const ids = PITCH_REVEALS[step];
     if (ids) { ids.forEach(id => this.revealed.add(id)); return; }
     this.applyRequestStep(step);

@@ -6,6 +6,7 @@
 const COMMON = {
   narration: { type: 'string', description: 'Text synthesized to speech audio via edge-tts' },
   hold: { type: 'integer', minimum: 0, description: 'Extra frames to hold after the last reveal step' },
+  instant: { type: 'boolean', description: 'Reveal the whole scene at once (no progressive build / no title-only first page) — one PDF page / nav advance for the scene' },
 };
 
 const CARDS_ITEM = {
