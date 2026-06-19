@@ -14,8 +14,21 @@
     "build:web": "SLIDEY_TARGET=web vite build",
     "build:single": "node web/build-single.mjs",
     "build": "npm run build:render && npm run build:web",
-    "dev": "SLIDEY_TARGET=web vite"
+    "dev": "SLIDEY_TARGET=web vite",
+    "prepublishOnly": "npm run build:web"
   },
+  "files": [
+    "src",
+    "web",
+    "dist",
+    "dist-render",
+    "docs",
+    ".claude/skills/slidey-authoring",
+    "examples",
+    "index.html",
+    "render.html",
+    "vite.config.js"
+  ],
   "dependencies": {
     "ajv": "^8.20.0",
     "dagre": "^0.8.5",

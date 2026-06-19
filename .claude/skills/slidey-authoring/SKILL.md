@@ -94,6 +94,7 @@ All are declared in JSON; render handlers live in `src/scenes/`:
 | `stat` | Big gradient number + caption | `value`, `label`, `detail` | 7s |
 | `cta` | Wordmark + tagline + URL end card | `wordmark`, `tagline`, `url` | 8s |
 | `terminal-gif` | Embed a recorded gif in a fake-terminal chrome | `gif`, `title`, `caption` | 8–12s |
+| `video` | Embed a demo MP4 — fullscreen or inset in a slide, with chapter captions, annotations, and synced narration | `src` \| `capture`, `mode`, `annotations[]`, `narration[]` | = video length |
 | `request` | API request/response card (live/mock/playback) | see `src/scenes/request.js` | varies |
 | `transcript` | Full agent/chat session as per-turn cards | `turns: [...]` | varies |
 | `cards` | Peer items OR side-by-side contrast | `variant`, `cards[]` \| `left`/`right` \| `question`/`answer` | 8–14s |
@@ -185,6 +186,76 @@ Slidey's CSS treats `diagram-svg` panels differently based on count:
 - **Single panel** (hero diagram): bigger boxes, bigger fonts, SVG height 680px. Good for standalone diagrams.
 
 If you need both panels visually consistent, use TWO single-panel scenes back-to-back with a `title` scene transition between them.
+
+## Demo videos — the `video` scene + tour capture
+
+Slidey can splice a recorded product demo into a deck. Two halves:
+
+### 1. Capture a demo (the tour engine)
+
+`slidey capture <tour.json> <out.mp4>` drives any live web app through a
+time-based **storyboard** with headless Chrome and records a deterministic demo
+MP4 + a `<out>.mp4.chapters.json` sidecar. It is the generalized, app-agnostic
+successor to a per-app Playwright recording harness — overlays (a setup curtain,
+a caption banner, a spotlight + dim) are injected as plain DOM **styled from the
+deck palette**, so a captured demo already looks like the rest of the deck.
+
+```jsonc
+{
+  "target": { "launch": "myapp serve --addr 127.0.0.1:8123", "addr": "127.0.0.1:8123" },
+  // or:     { "url": "http://localhost:5173/" }   // app you already serve
+  "startPath": "/", "viewport": { "width": 1600, "height": 900 },
+  "curtain": "My App", "pace": 1,                  // pace 0 ⇒ 1 frame/step (fast check)
+  "steps": [
+    { "id": "home", "label": "The home screen", "caption": "Welcome",
+      "waitFor": "[data-testid=home]", "dwellMs": 4000, "kind": "explain" },
+    { "id": "open", "label": "Open a project", "target": "[data-testid=go]",
+      "dwellMs": 2500, "kind": "action", "advance": "click-target" }
+  ]
+}
+```
+
+Steps: `target` is a CSS selector (`targetText` disambiguates by text);
+`kind:"action"` clicks the target to advance (`advance:"route-match"` +
+`advanceUrl` waits for a URL change); `before:[…]` runs off-camera setup actions
+(`goto`/`click`/`type`/`waitFor`/`wait`/`eval`). Capture is **freeze-frame**
+(settle, screenshot, hold for the dwell) — byte-identical reruns; smooth
+real-time motion capture is a planned opt-in.
+
+### 2. Embed it (the `video` scene)
+
+```jsonc
+{ "type": "video",
+  "src": "demos/tour.mp4",        // a pre-rendered MP4, OR:
+  "capture": "demos/tour.json",   // capture on the fly, then embed
+  "mode": "fullscreen",           // or "embedded" (inset in a slide w/ chrome)
+  "fit": "contain",               // contain = letterbox on deck bg; cover = crop
+  "start": 0, "end": null, "speed": 1,
+  "eyebrow": "Live demo", "title": "My App", "caption": "…",   // embedded chrome
+  "chapters": "auto",             // lower-third captions from the sidecar
+  "annotations": [ { "at": 4, "until": 7, "text": "Note this", "sub": "…" },
+                   { "chapter": "open", "text": "…" } ],
+  "narration": [ { "at": 0, "text": "We open on the home screen." },
+                 { "chapter": "open", "text": "Now we open a project." } ] }
+```
+
+- The MP4 is ffmpeg-extracted into the frame sequence (scaled/letterboxed to the
+  deck resolution, or inset for `embedded`). One ffmpeg pass composites the
+  overlays. The scene's duration **equals the video length** — `--estimate`
+  probes it (or use a `duration` hint).
+- `chapters`: `"auto"` (default for `src`) derives a deck-styled lower-third per
+  chapter from the sidecar; default is OFF for `capture` (its captions are
+  already baked in). Set `false` to disable, or a path to an explicit sidecar.
+- `annotations` (deck-styled, timed by `at`/`until` seconds or a `chapter` id)
+  composite on top — for emphasis on a clean video.
+- `narration` may be the usual whole-scene string **or** an array of time-keyed
+  cues (`{at|chapter, text}`) so the voiceover tracks demo moments.
+- PNG/PDF export shows a representative **poster** frame (the MP4 is only made
+  for video output) — so the normal PNG/PDF iteration loop still works.
+
+> Kitsoki demos already emit this exact chapter-sidecar shape, so an existing
+> `…-demo.mp4` + `.chapters.json` drops straight into a `video` scene with
+> `"chapters": "auto"`.
 
 ## Narration
 
@@ -289,6 +360,14 @@ slidey/
 │   ├── narration.js          # Calls edge-tts CLI per scene; bundles segments
 │   ├── runner.js             # Live-HTTP runner for `request` scenes
 │   ├── timing.js             # Frame counts per state name + estimateScene/estimateBoundaries
+│   ├── video.js              # ffmpeg helpers for the `video` scene (probe/extract/poster)
+│   ├── overlay-render.js     # Deck-styled transparent overlay PNGs (captions/chrome)
+│   ├── tour/                 # Tour-capture engine for `slidey capture` (app-agnostic)
+│   │   ├── index.js          #   capture → ffmpeg MP4 + chapter sidecar
+│   │   ├── capture.js        #   Puppeteer freeze-frame driver
+│   │   ├── overlays.js       #   portable curtain/caption/spotlight (deck theme)
+│   │   ├── launch.js         #   optional spawn + health-poll of the target app
+│   │   └── chapters.js       #   ChapterRecorder + producer-agnostic sidecar
 │   ├── template.html         # The single HTML page Puppeteer drives — all CSS + JS API
 │   └── scenes/
 │       ├── title.js
