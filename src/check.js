@@ -152,6 +152,64 @@ function runCheck(spec) {
           }
         }
       }
+
+      // ── edge geometry ─────────────────────────────────────────────────
+      // Mirrors the renderer's edge solver (web/svg.js buildPanel): a plain
+      // connector runs centre-to-centre, so two stacked boxes whose centres are
+      // not aligned get a SLANTED line, and a gate/label drawn at the mid-gap
+      // OVERLAPS the boxes when the gap is too small. Both render fine
+      // geometrically (no node overlap) so the node checks above miss them —
+      // both were shipped bugs. Only hand-placed nodes are checked; dagre
+      // auto-layout (no explicit x/y) routes its own edges.
+      const SLANT_TOL = 4;   // px of perpendicular drift tolerated on a connector
+      const placed = (id) => {
+        const n = nodes.find((x) => x.id === id);
+        return n && ['x', 'y', 'w', 'h'].every((k) => Number.isFinite(n[k])) ? n : null;
+      };
+      for (const e of panel.edges || []) {
+        if (e.elbow || e.arch !== undefined) continue; // intentionally bent routes
+        const from = placed(e.from);
+        const to = placed(e.to);
+        if (!from || !to) continue;
+
+        const fcx = from.x + from.w / 2, fcy = from.y + from.h / 2;
+        const tcx = to.x + to.w / 2, tcy = to.y + to.h / 2;
+        const dx = tcx - fcx, dy = tcy - fcy;
+        const horizontal = Math.abs(dx) >= Math.abs(dy);
+
+        // 1) slanted connector — the perpendicular centres must coincide, else
+        //    the straight line tilts. Skip true diagonals (perp ≈ along) so only
+        //    "meant-to-be-straight but misaligned" edges are flagged.
+        const perp = horizontal ? Math.abs(fcy - tcy) : Math.abs(fcx - tcx);
+        const along = horizontal ? Math.abs(dx) : Math.abs(dy);
+        if (perp > SLANT_TOL && perp < along * 0.5) {
+          const axis = horizontal ? 'y' : 'x';
+          const a = horizontal ? `${Math.round(fcy)} vs ${Math.round(tcy)}` : `${Math.round(fcx)} vs ${Math.round(tcx)}`;
+          sceneViolations.push(
+            `  panel ${pi}, edge "${e.from}"→"${e.to}": ${horizontal ? 'horizontal' : 'vertical'} connector slants ${Math.round(perp)}px — node centres misaligned on ${axis} (${a}); equalise the box ${horizontal ? 'heights/y' : 'widths/x'} so it renders straight`
+          );
+        }
+
+        // 2) gate/label clearance — a gate bar / edge label sits at the mid-gap;
+        //    the inter-node gap must clear its text height or it overlaps a box.
+        const labelText = e.gate || e.label;
+        if (labelText) {
+          const gap = horizontal
+            ? (dx > 0 ? to.x - (from.x + from.w) : from.x - (to.x + to.w))
+            : (dy > 0 ? to.y - (from.y + from.h) : from.y - (to.y + to.h));
+          // font px from template.css (single-panel overrides vs base)
+          const font = e.gate
+            ? (single ? (e.highlighted ? 32 : 26) : (e.highlighted ? 22 : 18))
+            : (single ? 26 : 20);
+          // text half-height (~0.7·font) + stroke halo/leading each side.
+          const needGap = Math.ceil(font * 1.4 + 24);
+          if (gap < needGap) {
+            sceneViolations.push(
+              `  panel ${pi}, edge "${e.from}"→"${e.to}": ${e.gate ? 'gate' : 'label'} "${labelText}" has only ${Math.round(gap)}px between the nodes — needs ≥${needGap} or it overlaps the boxes`
+            );
+          }
+        }
+      }
     }
 
     if (sceneViolations.length > 0) {

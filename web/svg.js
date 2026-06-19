@@ -247,6 +247,34 @@ export function buildPanel(panel, idx, sizeOverrides = {}) {
       };
     }
 
+    // Return bus — a loop-back / recycle arrow that must NOT overlap the
+    // forward column. It exits the source's RIGHT edge, runs out to a
+    // dedicated vertical lane (`e.bus` = lane x), travels along it, then
+    // re-enters the TARGET's right edge — two right-angle elbows. Several
+    // buses fan off the same source: give each a distinct `e.bus` lane and an
+    // `e.lift` (vertical offset on the source exit) so their exit runs don't
+    // stack. `style:"back"` gives it the recycle styling + its own arrowhead.
+    if (e.bus !== undefined) {
+      const busX = e.bus;
+      const sx = from.x + from.w, sy = fromCy + (e.lift || 0);
+      const tx = to.x + to.w,     ty = toCy;
+      const isBack = e.style === 'back';
+      const groupClass = 'dsvg-edge' +
+        (isBack ? ' dsvg-edge-back' : '') +
+        (e.highlighted ? ' dsvg-highlighted' : '');
+      return {
+        type: 'elbow',
+        d: `M ${sx} ${sy} H ${busX} V ${ty} H ${tx}`,
+        markerId: isBack ? `arrow-back-${idx}` : markerId,
+        groupClass,
+        label: e.label || null,
+        labelX: busX + 14,
+        labelY: (sy + ty) / 2,
+        labelAnchor: 'start',
+        dim: !!e.dim,
+      };
+    }
+
     if (e.arch !== undefined || e.elbow) {
       let d, lx, ly;
       if (e.arch !== undefined) {
@@ -293,9 +321,16 @@ export function buildPanel(panel, idx, sizeOverrides = {}) {
       };
     }
 
+    // Pull the head back from the target box: nodes are drawn over edges, and
+    // the arrowhead marker tip lands on the box edge, so without a gap the box
+    // fill clips the arrowhead (it reads as "not connected / cut off").
+    const END_GAP = 10;
+    let ax2 = x2, ay2 = y2;
+    if (horizontal) ax2 = dx > 0 ? x2 - END_GAP : x2 + END_GAP;
+    else            ay2 = dy > 0 ? y2 - END_GAP : y2 + END_GAP;
     return {
       type: 'arrow',
-      line: { x1, y1, x2, y2 },
+      line: { x1, y1, x2: ax2, y2: ay2 },
       markerId,
       label: e.label || null,
       labelX, labelY, anchor,

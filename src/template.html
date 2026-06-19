@@ -845,6 +845,23 @@ body.instant .reveal { transition: none !important; }
   stroke-width: 3.5;
   stroke-dasharray: 6 3;
 }
+/* Return-bus / recycle edges (style:"back") — dashed warm-violet to read as
+   "rework", distinct from the blue forward edges and orange gates. */
+.dsvg-edge-back path {
+  stroke: #d2a8ff;
+  stroke-width: 2.5;
+  stroke-dasharray: 8 5;
+}
+.dsvg-arrow-back path { fill: #d2a8ff; stroke: none; }
+.dsvg-edge-back .dsvg-edge-label { fill: #d2a8ff; }
+.dsvg-edge-back.dsvg-highlighted path {
+  stroke: #e8d6ff;
+  stroke-width: 4;
+}
+.dsvg-edge-back.dsvg-highlighted .dsvg-edge-label {
+  fill: #e8d6ff;
+  font-weight: bold;
+}
 .dsvg-node.dsvg-style-primary .dsvg-label { fill: #79c0ff; }
 
 /* ── Trace ───────────────────────────────────────────────────────────────── */
@@ -1780,6 +1797,32 @@ window.slidey = {
           `</g>`;
       }
 
+      // Return bus — a loop-back / recycle arrow that must NOT overlap the
+      // forward column. It exits the source's RIGHT edge, runs out to a
+      // dedicated vertical lane (`e.bus` = lane x), travels along it, then
+      // re-enters the TARGET's right edge — two right-angle elbows. Several
+      // buses fan off the same source: give each a distinct `e.bus` lane and
+      // an `e.lift` (vertical offset on the source exit) so their exit runs
+      // don't sit on top of each other. Styled via `style:"back"`.
+      if (e.bus !== undefined) {
+        const busX = e.bus;
+        const sx = from.x + from.w, sy = fromCy + (e.lift || 0);
+        const tx = to.x + to.w,     ty = toCy;
+        const d  = `M ${sx} ${sy} H ${busX} V ${ty} H ${tx}`;
+        const isBack = e.style === 'back';
+        const cls = (isBack ? ' dsvg-edge-back' : '') + (e.highlighted ? ' dsvg-highlighted' : '');
+        const mk  = isBack ? `arrow-back-${idx}` : markerId;
+        // Label rides the lane, just to its right, at the run's mid-height —
+        // each lane is at a distinct x so the labels never collide.
+        const busLabel = e.label
+          ? `<text class="dsvg-edge-label" x="${busX + 14}" y="${(sy + ty) / 2}" text-anchor="start" dominant-baseline="middle">${escapeHTML(e.label)}</text>`
+          : '';
+        return `<g class="dsvg-edge${cls}">` +
+               `<path d="${d}" marker-end="url(#${mk})"/>` +
+               busLabel +
+               `</g>`;
+      }
+
       // Elbow/arch routing — orthogonal multi-segment paths instead of a diagonal line.
       // e.arch: <number>  — inverted-U arch; exit source top-center, go up to arch y, cross, enter target top-center
       // e.elbow: true     — Z-bend using natural H/V dominance
@@ -1839,6 +1882,9 @@ window.slidey = {
       `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" class="diagramsvg-svg">` +
         `<defs>` +
           `<marker id="${markerId}" class="dsvg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">` +
+            `<path d="M 0 0 L 10 5 L 0 10 z"/>` +
+          `</marker>` +
+          `<marker id="arrow-back-${idx}" class="dsvg-arrow-back" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">` +
             `<path d="M 0 0 L 10 5 L 0 10 z"/>` +
           `</marker>` +
         `</defs>` +

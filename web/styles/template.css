@@ -845,6 +845,23 @@ body.instant .reveal { transition: none !important; }
   stroke-width: 3.5;
   stroke-dasharray: 6 3;
 }
+/* Return-bus / recycle edges (style:"back") — dashed warm-violet to read as
+   "rework", distinct from the blue forward edges and orange gates. */
+.dsvg-edge-back path {
+  stroke: #d2a8ff;
+  stroke-width: 2.5;
+  stroke-dasharray: 8 5;
+}
+.dsvg-arrow-back path { fill: #d2a8ff; stroke: none; }
+.dsvg-edge-back .dsvg-edge-label { fill: #d2a8ff; }
+.dsvg-edge-back.dsvg-highlighted path {
+  stroke: #e8d6ff;
+  stroke-width: 4;
+}
+.dsvg-edge-back.dsvg-highlighted .dsvg-edge-label {
+  fill: #e8d6ff;
+  font-weight: bold;
+}
 .dsvg-node.dsvg-style-primary .dsvg-label { fill: #79c0ff; }
 
 /* ── Trace ───────────────────────────────────────────────────────────────── */

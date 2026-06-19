@@ -126,6 +126,9 @@ onUpdated(async () => { await nextTick(); autoSizeNodes(); });
             <marker :id="p.markerId" class="dsvg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" />
             </marker>
+            <marker :id="`arrow-back-${i}`" class="dsvg-arrow-back" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" />
+            </marker>
           </defs>
           <!-- edges first so nodes render on top -->
           <template v-for="(e, j) in p.edges" :key="`e${j}`">
@@ -134,9 +137,9 @@ onUpdated(async () => { await nextTick(); autoSizeNodes(); });
               <line :x1="e.bar2.x1" :y1="e.bar2.y1" :x2="e.bar2.x2" :y2="e.bar2.y2" :class="e.barClass" />
               <text :class="e.textClass" :x="e.labelX" :y="e.labelY" text-anchor="middle" dominant-baseline="middle">{{ e.text }}</text>
             </g>
-            <g v-else-if="e.type === 'elbow'" class="dsvg-edge">
+            <g v-else-if="e.type === 'elbow'" :class="e.groupClass || 'dsvg-edge'">
               <path :d="e.d" :marker-end="`url(#${e.markerId})`" />
-              <text v-if="e.label" class="dsvg-edge-label" :x="e.labelX" :y="e.labelY" text-anchor="middle" dominant-baseline="middle">{{ e.label }}</text>
+              <text v-if="e.label" class="dsvg-edge-label" :x="e.labelX" :y="e.labelY" :text-anchor="e.labelAnchor || 'middle'" dominant-baseline="middle">{{ e.label }}</text>
             </g>
             <g v-else class="dsvg-edge">
               <line :x1="e.line.x1" :y1="e.line.y1" :x2="e.line.x2" :y2="e.line.y2" :marker-end="`url(#${e.markerId})`" />
