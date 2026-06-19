@@ -129,6 +129,9 @@ onUpdated(async () => { await nextTick(); autoSizeNodes(); });
             <marker :id="`arrow-back-${i}`" class="dsvg-arrow-back" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" />
             </marker>
+            <marker :id="`arrow-recycle-${i}`" class="dsvg-arrow-recycle" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" />
+            </marker>
           </defs>
           <!-- edges first so nodes render on top -->
           <template v-for="(e, j) in p.edges" :key="`e${j}`">

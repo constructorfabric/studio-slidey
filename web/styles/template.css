@@ -794,7 +794,7 @@ body.instant .reveal { transition: none !important; }
   font-size: 19px;
   fill: #8b949e;
 }
-.dsvg-edge line,
+.dsvg-edge line:not(.dsvg-gate-bar),
 .dsvg-edge path {
   stroke: #58a6ff;
   stroke-width: 2.5;
@@ -864,6 +864,19 @@ body.instant .reveal { transition: none !important; }
   fill: #e8d6ff;
   font-weight: bold;
 }
+/* Oracle gate (oracle:true) — an adversarial LLM-judged gate. Solid violet,
+   distinct from the dashed-orange deterministic script/test gate. */
+.dsvg-edge-gate.dsvg-gate-oracle { fill: #d2a8ff; }
+.dsvg-gate-bar.dsvg-gate-oracle { stroke: #d2a8ff; stroke-dasharray: none; }
+.dsvg-edge-gate.dsvg-highlighted.dsvg-gate-oracle { fill: #e8d6ff; }
+.dsvg-gate-bar.dsvg-highlighted.dsvg-gate-oracle { stroke: #e8d6ff; stroke-dasharray: none; }
+/* In-place recycle (style:"recycle") — the deterministic gate failing and the
+   phase retrying itself. Orange to pair with the gate it springs from. */
+.dsvg-edge-recycle path { stroke: #f0883e; stroke-width: 2.5; stroke-dasharray: 5 4; }
+.dsvg-arrow-recycle path { fill: #f0883e; stroke: none; }
+.dsvg-edge-recycle .dsvg-edge-label { fill: #f0883e; }
+.dsvg-edge-recycle.dsvg-highlighted path { stroke: #ffab70; stroke-width: 4; }
+.dsvg-edge-recycle.dsvg-highlighted .dsvg-edge-label { fill: #ffab70; font-weight: bold; }
 .dsvg-node.dsvg-style-primary .dsvg-label { fill: #79c0ff; }
 
 /* ── Trace ───────────────────────────────────────────────────────────────── */

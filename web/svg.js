@@ -236,10 +236,13 @@ export function buildPanel(panel, idx, sizeOverrides = {}) {
         ? gateText.length * 11 + 27
         : gateText.length * 9  + 22;
       const hl = e.highlighted ? ' dsvg-highlighted' : '';
+      // `oracle: true` marks an adversarial LLM-judged gate (solid violet) as
+      // opposed to the default deterministic script/test gate (dashed orange).
+      const oc = e.oracle ? ' dsvg-gate-oracle' : '';
       return {
         type: 'gate',
-        barClass: `dsvg-gate-bar${hl}`,
-        textClass: `dsvg-edge-gate${hl}`,
+        barClass: `dsvg-gate-bar${hl}${oc}`,
+        textClass: `dsvg-edge-gate${hl}${oc}`,
         bar1: { x1: labelX - gateBarReach - gateGap, y1: labelY, x2: labelX - gateGap, y2: labelY },
         bar2: { x1: labelX + gateGap, y1: labelY, x2: labelX + gateBarReach + gateGap, y2: labelY },
         text: gateText, labelX, labelY,
@@ -253,19 +256,24 @@ export function buildPanel(panel, idx, sizeOverrides = {}) {
     // re-enters the TARGET's right edge — two right-angle elbows. Several
     // buses fan off the same source: give each a distinct `e.bus` lane and an
     // `e.lift` (vertical offset on the source exit) so their exit runs don't
-    // stack. `style:"back"` gives it the recycle styling + its own arrowhead.
+    // stack. `style:"back"` gives it the cross-phase rework styling (violet) +
+    // its own arrowhead; `style:"recycle"` is an in-place self-loop (orange,
+    // deterministic) — `e.land` offsets the TARGET re-entry so a from==to loop
+    // exits and re-enters at different heights.
     if (e.bus !== undefined) {
       const busX = e.bus;
       const sx = from.x + from.w, sy = fromCy + (e.lift || 0);
-      const tx = to.x + to.w,     ty = toCy;
+      const tx = to.x + to.w,     ty = toCy + (e.land || 0);
       const isBack = e.style === 'back';
+      const isRecycle = e.style === 'recycle';
       const groupClass = 'dsvg-edge' +
         (isBack ? ' dsvg-edge-back' : '') +
+        (isRecycle ? ' dsvg-edge-recycle' : '') +
         (e.highlighted ? ' dsvg-highlighted' : '');
       return {
         type: 'elbow',
         d: `M ${sx} ${sy} H ${busX} V ${ty} H ${tx}`,
-        markerId: isBack ? `arrow-back-${idx}` : markerId,
+        markerId: isBack ? `arrow-back-${idx}` : isRecycle ? `arrow-recycle-${idx}` : markerId,
         groupClass,
         label: e.label || null,
         labelX: busX + 14,
