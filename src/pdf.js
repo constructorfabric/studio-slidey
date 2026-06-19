@@ -21,9 +21,95 @@
 const puppeteer = require('puppeteer');
 const path      = require('path');
 const fs        = require('fs');
+const { execFileSync, spawnSync } = require('child_process');
 const { PDFDocument } = require('pdf-lib');
 
 const RENDER_BUNDLE = path.resolve(__dirname, '..', 'dist-render', 'render.html');
+
+/**
+ * Compress a finished PDF in place, LOSSLESSLY, with mutool + qpdf.
+ *
+ * Merging one single-page PDF per reveal step (pdf-lib copyPages) re-embeds the
+ * page fonts on every page, so a long deck balloons to many MB and scrolls
+ * sluggishly. The fix must be purely structural: `mutool clean -gggg -z`
+ * garbage-collects and DEDUPLICATES the byte-identical per-page font streams and
+ * deflates everything, then `qpdf --linearize` enables "fast web view"
+ * (progressive open) — together a ~3× shrink that scrolls instantly.
+ *
+ * Deliberately NOT Ghostscript: `gs -sDEVICE=pdfwrite` re-renders content and
+ * flattens the slides' radial-gradient backdrops into solid opaque shapes (a
+ * giant blue disc on every page). mutool/qpdf never re-render, so vectors,
+ * gradients and transparency are preserved byte-for-byte.
+ *
+ * Best-effort: with neither tool present (or on failure) the uncompressed PDF is
+ * kept and a hint is logged. Returns { compressed, before, after }.
+ *
+ * @param {string} pdfPath  path to the PDF to compress in place
+ * @param {object} [opts]
+ * @param {function} [opts.log] message sink (defaults to console.error)
+ * @returns {{compressed:boolean, before:number, after:number}}
+ */
+function compressPdf(pdfPath, opts = {}) {
+  const { log = (m) => console.error(m) } = opts;
+  const mutool = resolveBin('mutool', []);
+  const qpdf = resolveBin('qpdf', ['--version']);
+  const before = fs.statSync(pdfPath).size;
+
+  if (!mutool && !qpdf) {
+    log(
+      '[slidey] mutool/qpdf not found — skipping PDF compression. Install for a ' +
+        'smaller, linearized file:  brew install mupdf-tools qpdf  ·  apt install mupdf-tools qpdf'
+    );
+    return { compressed: false, before, after: before };
+  }
+
+  const tmpA = pdfPath + '.mu.tmp';
+  const tmpB = pdfPath + '.qp.tmp';
+  const rm = (p) => { if (fs.existsSync(p)) { try { fs.unlinkSync(p); } catch (_) { /* ignore */ } } };
+  const ok = (p) => fs.existsSync(p) && fs.statSync(p).size > 0;
+
+  let current = pdfPath; // most-compressed valid file so far
+  try {
+    // 1. mutool clean: dedup the duplicated font objects + deflate streams.
+    if (mutool) {
+      execFileSync(mutool, ['clean', '-gggg', '-z', current, tmpA], { stdio: ['ignore', 'ignore', 'pipe'] });
+      if (ok(tmpA)) current = tmpA;
+    }
+    // 2. qpdf --linearize: fast-web-view, plus object-stream/flate recompression.
+    //    qpdf exits 0 (clean) or 3 (warnings, output still valid).
+    if (qpdf) {
+      const r = spawnSync(
+        qpdf,
+        ['--linearize', '--object-streams=generate', '--compress-streams=y', current, tmpB],
+        { stdio: ['ignore', 'ignore', 'pipe'] }
+      );
+      if ((r.status === 0 || r.status === 3) && ok(tmpB)) current = tmpB;
+    }
+
+    const after = current === pdfPath ? before : fs.statSync(current).size;
+    if (current !== pdfPath && after < before) {
+      fs.renameSync(current, pdfPath);          // promote winner
+      rm(current === tmpB ? tmpA : tmpB);        // drop the loser temp
+      return { compressed: true, before, after };
+    }
+    rm(tmpA); rm(tmpB);
+    return { compressed: false, before, after: before };
+  } catch (err) {
+    rm(tmpA); rm(tmpB);
+    log(`[slidey] PDF compression skipped — ${err.message.split('\n')[0]}`);
+    return { compressed: false, before, after: before };
+  }
+}
+
+/**
+ * Return `name` if the binary is runnable (no ENOENT), else null. Presence is
+ * judged by whether the probe spawned at all — exit code is ignored, since
+ * `mutool` with no command exits non-zero but is clearly installed.
+ */
+function resolveBin(name, probeArgs) {
+  const r = spawnSync(name, probeArgs, { stdio: 'ignore' });
+  return r.error ? null : name;
+}
 
 /**
  * @param {object} spec            Parsed scene spec
@@ -35,7 +121,14 @@ const RENDER_BUNDLE = path.resolve(__dirname, '..', 'dist-render', 'render.html'
  * @returns {Promise<{pageCount:number, scenePages:Array}>}
  */
 async function generatePdf(spec, outputPath, opts = {}) {
-  const { specPath = null, selectedScenes = null, onProgress = null } = opts;
+  const {
+    specPath = null, selectedScenes = null, onProgress = null,
+    // raster mode: capture each page as a flat JPEG (rendered by Chrome, so
+    // gradients/SVG are faithful) instead of a vector page. Vector pages with
+    // radial-gradient backdrops repaint slowly + progressively in some viewers
+    // (macOS Preview shows white → partial → full); a flat image paints at once.
+    raster = false, rasterScale = 2, rasterQuality = 82,
+  } = opts;
 
   if (!fs.existsSync(RENDER_BUNDLE)) {
     throw new Error(
@@ -60,7 +153,8 @@ async function generatePdf(spec, outputPath, opts = {}) {
 
   try {
     const page = await browser.newPage();
-    await page.setViewport({ width, height, deviceScaleFactor: 1 });
+    // 2× device scale in raster mode keeps the flat JPEG crisp on retina.
+    await page.setViewport({ width, height, deviceScaleFactor: raster ? rasterScale : 1 });
     await page.goto(`file://${RENDER_BUNDLE}`, { waitUntil: 'load' });
     await page.waitForFunction('window.__slideyReady === true', { timeout: 15000 });
     // Force screen styles into the PDF (default print media would drop them).
@@ -106,10 +200,18 @@ async function generatePdf(spec, outputPath, opts = {}) {
       for (const step of pageSteps) {
         if (step) await page.evaluate(s => window.slidey.setState(s), step);
         await page.evaluate('window.__slideySettle && window.__slideySettle()');
-        const buf = await page.pdf(pdfOpts);
-        const doc = await PDFDocument.load(buf);
-        const [pg] = await merged.copyPages(doc, [0]);
-        merged.addPage(pg);
+        if (raster) {
+          // Flat image page — paints instantly, no progressive vector repaint.
+          const shot = await page.screenshot({ type: 'jpeg', quality: rasterQuality });
+          const img = await merged.embedJpg(shot);
+          const pg = merged.addPage([width, height]);
+          pg.drawImage(img, { x: 0, y: 0, width, height });
+        } else {
+          const buf = await page.pdf(pdfOpts);
+          const doc = await PDFDocument.load(buf);
+          const [pg] = await merged.copyPages(doc, [0]);
+          merged.addPage(pg);
+        }
         pageCount++;
         scenePageCount++;
       }
@@ -122,10 +224,24 @@ async function generatePdf(spec, outputPath, opts = {}) {
 
     const bytes = await merged.save();
     fs.writeFileSync(outputPath, bytes);
-    return { pageCount, scenePages };
+
+    // Post-process: losslessly dedup fonts, deflate, linearize (best-effort).
+    const { compress = true } = opts;
+    let compression = { compressed: false, before: bytes.length, after: bytes.length };
+    if (compress) {
+      compression = compressPdf(outputPath);
+      if (compression.compressed) {
+        const pct = Math.round((1 - compression.after / compression.before) * 100);
+        const mb = (n) => (n / 1e6).toFixed(2);
+        console.error(
+          `[slidey] PDF compressed ${mb(compression.before)}MB → ${mb(compression.after)}MB  (-${pct}%, fast-web-view)`
+        );
+      }
+    }
+    return { pageCount, scenePages, compression };
   } finally {
     await browser.close();
   }
 }
 
-module.exports = { generatePdf };
+module.exports = { generatePdf, compressPdf };
