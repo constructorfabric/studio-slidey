@@ -198,6 +198,15 @@ Audio must be **shorter** than its scene. Margin of >0.6s is comfortable; 0–0.
 
 ### Pronunciation tips
 
+Edge TTS ignores SSML `<phoneme>` tags (the read-aloud endpoint strips custom markup), so the only reliable fix for a mispronounced word is to **respell it phonetically**. Two ways:
+
+- **Inline** in the narration text for one-offs.
+- **`meta.narration.pronunciations`** — a `{ "term": "respelling" }` map applied whole-word and case-insensitively to the *spoken* text only (the narration shown in specs/`--list` stays clean). Define a tricky term once and it's fixed in every scene. Longest terms win, so `"API key"` can override `"API"`. Example:
+  ```json
+  "narration": { "voice": "en-AU-NatashaNeural",
+    "pronunciations": { "Anthropic": "an-THROP-ik", "SDLC": "S D L C", "kitsoki": "kit-SOH-kee" } }
+  ```
+  `--estimate` accounts for respellings, so a multi-word expansion (e.g. `SDLC → S D L C`) correctly shows the extra duration.
 - **URLs** read literally. Write them phonetically: `"github dot com slash org slash repo"`. Even then, **URLs are slow** (3–5s for a single short URL) — often better to drop the URL from narration and let it appear only on the visual.
 - **Em-dashes (`—`)** create a natural pause (~0.4s). Useful for pacing but eats into your budget.
 - **Numbers**: write "seventy-eight percent" not "78%" — TTS reads it the same way but writing it out makes the budget more predictable.

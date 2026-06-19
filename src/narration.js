@@ -30,6 +30,38 @@ const fs   = require('fs');
 const DEFAULT_VOICE = 'en-AU-NatashaNeural';
 
 /**
+ * Apply phonetic respellings to spoken narration text.
+ *
+ * The Edge read-aloud endpoint that edge-tts uses ignores custom SSML (so
+ * <phoneme> tags don't work); the reliable way to fix a mispronunciation is to
+ * respell the word. `pronunciations` is a { term: respelling } map from
+ * meta.narration: each term is matched whole-word and case-insensitively and
+ * replaced with its respelling, so fixes live in one place and the narration
+ * text shown in specs / `--list` stays clean.
+ *
+ * Matching uses lookarounds rather than \b so terms with leading/trailing
+ * non-word chars (acronyms with dots, "C++", ".NET") still match. A single
+ * combined pass is used so longer terms win over their sub-words and inserted
+ * respellings are never re-scanned.
+ *
+ * @param {string} text
+ * @param {Object<string,string>} pronunciations
+ * @returns {string}
+ */
+function applyPronunciations(text, pronunciations) {
+  if (!text || !pronunciations) return text;
+  const terms = Object.keys(pronunciations)
+    .filter(t => t && pronunciations[t])
+    .sort((a, b) => b.length - a.length); // longest first → wins in alternation
+  if (!terms.length) return text;
+
+  const escaped = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp(`(?<!\\w)(?:${escaped.join('|')})(?!\\w)`, 'gi');
+  const lookup = new Map(terms.map(t => [t.toLowerCase(), pronunciations[t]]));
+  return text.replace(re, m => lookup.get(m.toLowerCase()) ?? m);
+}
+
+/**
  * Generate one narration audio file via edge-tts CLI.
  * @returns {number} duration of generated audio in seconds
  */
@@ -67,6 +99,7 @@ function getAudioDuration(audioPath) {
 function generateAll(sceneBoundaries, fps, totalFrames, narrationMeta, audioDir) {
   const voice = (narrationMeta && narrationMeta.voice) || DEFAULT_VOICE;
   const rate  = (narrationMeta && narrationMeta.rate)  || '+0%';
+  const pronunciations = (narrationMeta && narrationMeta.pronunciations) || null;
 
   fs.mkdirSync(audioDir, { recursive: true });
 
@@ -86,7 +119,8 @@ function generateAll(sceneBoundaries, fps, totalFrames, narrationMeta, audioDir)
     );
 
     process.stdout.write(`[slidey] TTS scene ${sb.sceneIndex} (${sceneDuration.toFixed(1)}s) `);
-    const audioDuration = generateOne(sb.narration, audioPath, voice, rate);
+    const spokenText = applyPronunciations(sb.narration, pronunciations);
+    const audioDuration = generateOne(spokenText, audioPath, voice, rate);
 
     if (audioDuration > sceneDuration - 0.3) {
       const overrun = (audioDuration - sceneDuration + 0.3).toFixed(2);
@@ -109,4 +143,4 @@ function generateAll(sceneBoundaries, fps, totalFrames, narrationMeta, audioDir)
   return segments;
 }
 
-module.exports = { generateAll, generateOne, getAudioDuration, DEFAULT_VOICE };
+module.exports = { generateAll, generateOne, getAudioDuration, applyPronunciations, DEFAULT_VOICE };

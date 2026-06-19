@@ -24,7 +24,7 @@ const os   = require('os');
 
 const { generateFrames }    = require('./renderer');
 const { framesToVideo }     = require('./assembler');
-const { generateAll: generateNarration } = require('./narration');
+const { generateAll: generateNarration, applyPronunciations } = require('./narration');
 const { estimateBoundaries } = require('./timing');
 const { validateSpec }       = require('./validate');
 
@@ -180,6 +180,7 @@ function estimateAudioSeconds(text) {
  */
 function printSceneList(spec, fps, withAudio, opts = {}) {
   const boundaries = estimateBoundaries(spec, null, opts);
+  const pronunciations = (spec.meta && spec.meta.narration && spec.meta.narration.pronunciations) || null;
   const total = boundaries.reduce((s, b) => s + b.durationFrames, 0);
 
   console.log(`\n[slidey] ${spec.scenes.length} scenes · est. ${(total / fps).toFixed(1)}s @ ${fps}fps · ${total} frames\n`);
@@ -208,7 +209,7 @@ function printSceneList(spec, fps, withAudio, opts = {}) {
       console.log(`  ${idx}  ${type}  ${start}  ${dur}  | (none)`);
       return;
     }
-    const audioSec = estimateAudioSeconds(b.narration);
+    const audioSec = estimateAudioSeconds(applyPronunciations(b.narration, pronunciations));
     const margin = sceneSec - audioSec;
     const fit = margin < 0
       ? `✗ +${(-margin).toFixed(1)}s`

@@ -216,6 +216,7 @@ A spec is a JSON object with two top-level keys: `meta` (optional) and
 | `meta.resolution` | `{ width, height }`. Default 1920×1080. Changing this is unusual |
 | `meta.narration.voice` | edge-tts voice id. Default `en-AU-NatashaNeural` |
 | `meta.narration.rate` | edge-tts speech rate, e.g. `"+0%"`, `"-10%"` |
+| `meta.narration.pronunciations` | `{ "term": "respelling" }` map fixing TTS mispronunciations. Applied whole-word and case-insensitively to the **spoken** audio only (spec/`--list` text is unchanged). e.g. `{ "Anthropic": "an-THROP-ik", "SDLC": "S D L C" }` |
 | `meta.context` | Key/value template variables interpolated into scene fields. Overridden by `--context` CLI flags |
 
 A scene also takes a top-level `narration: "..."` string (any scene type). If

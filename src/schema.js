@@ -77,6 +77,11 @@ const SCHEMA = {
           properties: {
             voice: { type: 'string', description: 'Edge TTS voice name, e.g. "en-AU-NatashaNeural"' },
             rate: { type: 'string', description: 'Speech rate offset, e.g. "+0%" or "+10%"' },
+            pronunciations: {
+              type: 'object',
+              description: 'Map of term → phonetic respelling, applied whole-word and case-insensitively to the SPOKEN narration only (the text shown in specs/--list is unchanged). Fixes TTS mispronunciations of brand names, acronyms, and jargon. e.g. { "Anthropic": "an-THROP-ik", "SDLC": "S D L C", "kitsoki": "kit-SOH-kee" }',
+              additionalProperties: { type: 'string' },
+            },
           },
         },
         context: {
