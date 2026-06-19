@@ -30,11 +30,9 @@ const RENDER_BUNDLE = path.resolve(__dirname, '..', 'dist-render', 'render.html'
 async function generatePngs(spec, outputDir, opts = {}) {
   const { specPath = null, selectedScenes = null, onProgress = null } = opts;
 
-  if (!fs.existsSync(RENDER_BUNDLE)) {
-    throw new Error(
-      `[slidey] render bundle missing: ${RENDER_BUNDLE}\nBuild it first:  npm run build:render`
-    );
-  }
+  // Rebuilds dist-render if missing OR stale vs web/ — keeps PNG exports in
+  // lockstep with the live viewer's renderer.
+  require('./render-bundle').ensureRenderBundle();
 
   fs.mkdirSync(outputDir, { recursive: true });
 

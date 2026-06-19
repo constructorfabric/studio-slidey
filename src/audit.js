@@ -364,9 +364,9 @@ function auditDom(W, H, cfg) {
 async function auditSpec(spec, opts = {}) {
   const { specPath = null, selectedScenes = null, onProgress = null } = opts;
 
-  if (!fs.existsSync(RENDER_BUNDLE)) {
-    throw new Error(`[slidey] render bundle missing: ${RENDER_BUNDLE}\nBuild it first:  npm run build:render`);
-  }
+  // Rebuilds dist-render if missing OR stale vs web/ — audit always reflects
+  // the current viewer renderer.
+  require('./render-bundle').ensureRenderBundle();
 
   const { stepsForScene, applyShow } = await import('../web/sceneSteps.mjs');
   const { width = 1920, height = 1080 } = (spec.meta && spec.meta.resolution) || {};

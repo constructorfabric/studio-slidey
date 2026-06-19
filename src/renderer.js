@@ -70,12 +70,9 @@ async function generateFrames(spec, framesDir, fps = 30, onProgress = null, capt
   // Shared HTTP context (mutated by request-scene captures across scenes)
   const requestContext = Object.assign({}, (spec.meta && spec.meta.context) || {});
 
-  if (!fs.existsSync(RENDER_BUNDLE)) {
-    throw new Error(
-      `[slidey] render bundle missing: ${RENDER_BUNDLE}\n` +
-      `Build it first:  npm run build:render`
-    );
-  }
+  // Rebuilds dist-render if missing OR stale vs web/ — the MP4 always renders
+  // the current viewer renderer.
+  require('./render-bundle').ensureRenderBundle();
 
   const browser = await puppeteer.launch({
     headless: 'new',

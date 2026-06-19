@@ -130,11 +130,9 @@ async function generatePdf(spec, outputPath, opts = {}) {
     raster = false, rasterScale = 2, rasterQuality = 82,
   } = opts;
 
-  if (!fs.existsSync(RENDER_BUNDLE)) {
-    throw new Error(
-      `[slidey] render bundle missing: ${RENDER_BUNDLE}\nBuild it first:  npm run build:render`
-    );
-  }
+  // Rebuilds dist-render if missing OR stale vs web/ — the export can never
+  // silently render an older renderer than the live viewer.
+  require('./render-bundle').ensureRenderBundle();
 
   // Shared reveal-step model (ESM) — loaded via dynamic import from this CJS file.
   const { stepsForScene, applyShow } = await import('../web/sceneSteps.mjs');
