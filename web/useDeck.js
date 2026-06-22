@@ -30,12 +30,13 @@ export function createDeck(spec, specBaseUrl = '') {
     sceneCount: scenes.length,
   });
 
-  const gifCache = {};
-  async function ensureGif(sc) {
-    if (!sc.gif) return '';
-    if (gifCache[sc.gif]) return gifCache[sc.gif];
+  const assetCache = {};
+  async function ensureAsset(src) {
+    if (!src) return '';
+    if (/^data:/i.test(src)) return src;
+    if (assetCache[src]) return assetCache[src];
     try {
-      const url = new URL(sc.gif, specBaseUrl || window.location.href).href;
+      const url = new URL(src, specBaseUrl || window.location.href).href;
       const blob = await (await fetch(url)).blob();
       const dataUri = await new Promise((res, rej) => {
         const r = new FileReader();
@@ -43,11 +44,16 @@ export function createDeck(spec, specBaseUrl = '') {
         r.onerror = rej;
         r.readAsDataURL(blob);
       });
-      gifCache[sc.gif] = dataUri;
+      assetCache[src] = dataUri;
       return dataUri;
     } catch (_) {
-      return ''; // gif unresolvable (e.g. spec loaded via file picker) — skip
+      return ''; // unresolvable (e.g. spec loaded via file picker) — skip
     }
+  }
+  const ensureGif = sc => ensureAsset(sc.gif);
+  async function ensureBookCovers(sc) {
+    const books = Array.isArray(sc.books) ? sc.books.slice(0, 3) : [];
+    return Promise.all(books.map(book => ensureAsset(book && book.cover)));
   }
 
   // rrweb log loader for live `video` scenes (mirrors ensureGif): fetch the log
@@ -75,6 +81,7 @@ export function createDeck(spec, specBaseUrl = '') {
     const sc = scenes[cur.sceneIndex];
     const opts = {};
     if (sc.type === 'terminal-gif') opts.gifDataUri = await ensureGif(sc);
+    if (sc.type === 'book') opts.bookCoverDataUris = await ensureBookCovers(sc);
     if (sc.type === 'video' && sc.rrweb) opts.rrweb = await ensureRrweb(sc);
 
     applyShow(sc, opts); // resets reveal state + injects scene content
