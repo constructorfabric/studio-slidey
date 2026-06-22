@@ -206,6 +206,36 @@ slidey skill install --user            # …into ~/.claude/skills (every project
 the accumulated gotchas) — one source backs both, so they never drift. After
 `slidey skill install`, Claude Code loads the skill automatically.
 
+### MCP server
+
+For agents that should not have shell access, Slidey also ships a stdio MCP
+server:
+
+```sh
+slidey-mcp --root /path/to/presentation-workspace
+```
+
+The server keeps all file access inside `--root` and exposes tools for the full
+authoring loop:
+
+- `slidey_workspace_tree`, `slidey_read_spec` — discover and read `.json` decks
+  and generated `.jsonl` trace decks.
+- `slidey_write_spec`, `slidey_patch_spec` — edit `.json` specs directly;
+  `.jsonl` traces stay read-only because their specs are generated.
+- `slidey_validate`, `slidey_check`, `slidey_audit` — schema/semantic
+  validation, static `diagram-svg` geometry checks, and rendered browser
+  geometry debugging.
+- `slidey_scene_summary` — list scenes, reveal steps, estimated timing, and
+  narration snippets.
+- `slidey_render_png`, `slidey_render_html` — render a specific scene/reveal
+  step through the real Vue render bundle and return an image or HTML snapshot.
+- `slidey_schema`, `slidey_docs`, `slidey_doctor` — expose the schema, bundled
+  authoring guide, and headless-browser health check.
+
+The PNG/HTML/audit tools launch headless Chrome, so they need the same browser
+setup as PDF/PNG/video rendering. The MCP protocol itself uses stdout; Slidey
+diagnostics are written to stderr so client framing stays clean.
+
 ## Pipeline
 
 Render pipeline (`src/`):

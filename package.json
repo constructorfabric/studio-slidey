@@ -4,7 +4,8 @@
   "description": "Deterministic, spec-driven declarative video generator — renders a JSON scene spec into a narrated MP4 (Puppeteer + edge-tts + ffmpeg)",
   "main": "src/index.js",
   "bin": {
-    "slidey": "src/index.js"
+    "slidey": "src/index.js",
+    "slidey-mcp": "src/mcp.js"
   },
   "exports": {
     ".": "./src/index.js",
