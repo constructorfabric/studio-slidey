@@ -70,6 +70,14 @@ export function createDeck(spec, specBaseUrl = '') {
     return resolveAssetHref(src, specBaseUrl, window.location.href);
   }
 
+  function applyPitchSteps(appliedSteps) {
+    if (typeof window.slidey.setPitchSteps === 'function') {
+      window.slidey.setPitchSteps(appliedSteps);
+      return;
+    }
+    for (const step of appliedSteps) window.slidey.setState(step);
+  }
+
   const bookCoverCache = {};
   async function ensureBookCover(src) {
     if (!src) return '';
@@ -122,7 +130,7 @@ export function createDeck(spec, specBaseUrl = '') {
     const appliedSteps = steps.slice(0, Math.min(cur.stepIndex + 1, steps.length));
 
     if (renderedSceneIndex === cur.sceneIndex && sc.type !== 'request') {
-      window.slidey.setPitchSteps(appliedSteps);
+      applyPitchSteps(appliedSteps);
       state.sceneIndex = cur.sceneIndex;
       state.stepIndex = cur.stepIndex;
       state.stepsInScene = cur.stepsInScene;
@@ -143,7 +151,7 @@ export function createDeck(spec, specBaseUrl = '') {
     if (sc.type === 'request') {
       for (const step of appliedSteps) window.slidey.setState(step);
     } else {
-      window.slidey.setPitchSteps(appliedSteps);
+      applyPitchSteps(appliedSteps);
     }
     renderedSceneIndex = cur.sceneIndex;
 
