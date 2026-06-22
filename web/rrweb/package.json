@@ -1,0 +1,4 @@
+{
+  "comment": "web/rrweb/ is browser ESM (capture buffer, chapter extractor, the Vue player) consumed via slidey's subpath exports and by Vite. Marking the dir ESM lets Node treat buffer.js / chapters.js as modules without a typeless-package reparse warning.",
+  "type": "module"
+}

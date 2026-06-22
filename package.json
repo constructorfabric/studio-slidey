@@ -6,6 +6,14 @@
   "bin": {
     "slidey": "src/index.js"
   },
+  "exports": {
+    ".": "./src/index.js",
+    "./rrweb-buffer": "./web/rrweb/buffer.js",
+    "./rrweb-player": "./web/rrweb/RrwebPlayer.vue",
+    "./rrweb-chapters": "./web/rrweb/chapters.js",
+    "./rrweb-format": "./src/rrweb-format.js",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "test": "node --test",
     "estimate": "node src/index.js examples/hello.json --estimate",
