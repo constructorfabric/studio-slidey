@@ -10,6 +10,7 @@ dist-web-single/
 *.mp4
 *.pdf
 .artifacts/
+.worktrees/
 frames/
 *-frames/
 audio/
