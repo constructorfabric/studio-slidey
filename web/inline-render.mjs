@@ -40,7 +40,14 @@ html = html.replace(
   },
 );
 
-if (/\bsrc="|rel="stylesheet"/.test(html)) {
+// Guard for residual EXTERNAL references — match the actual tag shapes the
+// inliner replaces (a <script> with src=, or a <link rel="stylesheet">), not a
+// blanket substring scan: bundled JS legitimately contains strings like
+// `[rel="stylesheet"]` (Vite's dynamic-import preload helper) and `src="…"`,
+// which a substring scan would false-flag once any chunk uses a dynamic import.
+const residualScript = /<script\b[^>]*\bsrc=/i.test(html);
+const residualLink = /<link\b[^>]*\brel=["']?stylesheet/i.test(html);
+if (residualScript || residualLink) {
   throw new Error(
     '[inline-render] unresolved external refs remain after inlining — the '
     + 'self-contained offline artifact would break. dist-render contents: '

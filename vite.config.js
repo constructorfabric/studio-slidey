@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
 import vue from '@vitejs/plugin-vue';
 
 // Three build targets share the same Vue scene components:
@@ -15,9 +16,21 @@ const target = process.env.SLIDEY_TARGET || 'web';
 const isRender = target === 'render';
 const isWebFile = target === 'webfile';
 
+// The headless RENDER bundle must be self-contained and never plays rrweb (video
+// scenes render node-side), so stub rrweb out of it — otherwise rrweb's 265 KB
+// bundle is inlined and its source strings (e.g. rel="stylesheet") trip the
+// inline-render guard. The interactive web targets keep the real rrweb.
+const renderAlias = isRender
+  ? [
+      { find: /^rrweb$/, replacement: fileURLToPath(new URL('./web/rrweb/_stub-render.js', import.meta.url)) },
+      { find: 'rrweb/dist/style.css', replacement: fileURLToPath(new URL('./web/rrweb/_empty.css', import.meta.url)) },
+    ]
+  : [];
+
 export default defineConfig({
   plugins: [vue()],
   base: './',
+  resolve: { alias: renderAlias },
   build: isRender
     ? {
         outDir: 'dist-render',
