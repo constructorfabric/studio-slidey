@@ -6,6 +6,13 @@ const sc = computed(() => store.scene || {});
 const shown = name => store.isRevealed(name);
 const src = computed(() => store.imageDataUri || sc.value.dataUri || sc.value.src || '');
 const fit = computed(() => sc.value.fit === 'cover' ? 'cover' : 'contain');
+const frameStyle = computed(() => ({
+  height: sc.value.frameHeight || undefined,
+}));
+const mediaStyle = computed(() => ({
+  background: sc.value.mediaBackground || undefined,
+  padding: sc.value.mediaPadding || undefined,
+}));
 </script>
 
 <template>
@@ -21,11 +28,13 @@ const fit = computed(() => sc.value.fit === 'cover' ? 'cover' : 'contain');
       id="image-frame"
       class="image-frame reveal"
       :class="{ shown: shown('image-frame') }"
+      :style="frameStyle"
     >
       <img
         v-if="src"
         class="image-media"
         :class="`image-fit-${fit}`"
+        :style="mediaStyle"
         :src="src"
         :alt="sc.alt || sc.title || ''"
       />

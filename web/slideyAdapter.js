@@ -16,6 +16,8 @@ import { nextTick } from 'vue';
 import { store } from './store.js';
 
 export function installAdapter() {
+  window.__slideyPendingRenders = new Set();
+
   window.slidey = {
     setMeta(meta) { store.setMeta(meta); },
     setMode(mode) { store.setMode(mode); },
@@ -25,6 +27,7 @@ export function installAdapter() {
 
     loadScene(scene, opts) { store.loadScene(scene, opts); },
     setState(step) { store.setState(step); },
+    setPitchSteps(steps) { store.setPitchSteps(steps); },
     setProgress(pct) { store.setProgress(pct); },
     setSendingText(text) { store.setSendingText(text); },
 
@@ -36,6 +39,9 @@ export function installAdapter() {
 
     showDiagramSvg(scene) { store.showScene('diagram-svg', scene); },
     hideDiagramSvg() { store.hidePitch(); },
+
+    showMermaid(scene) { store.showScene('mermaid', scene); },
+    hideMermaid() { store.hidePitch(); },
 
     showTerminalGif(scene, dataUri) {
       store.showScene('terminal-gif', scene);
@@ -76,6 +82,17 @@ export function installAdapter() {
     },
     hideImage() { store.hidePitch(); store.imageDataUri = ''; },
 
+    showImageCompare(scene, leftDataUri, rightDataUri) {
+      store.showScene('image-compare', scene);
+      store.leftImageDataUri = leftDataUri || '';
+      store.rightImageDataUri = rightDataUri || '';
+    },
+    hideImageCompare() {
+      store.hidePitch();
+      store.leftImageDataUri = '';
+      store.rightImageDataUri = '';
+    },
+
     showBook(scene, coverDataUris) {
       store.showScene('book', scene);
       store.bookCoverDataUris = Array.isArray(coverDataUris) ? coverDataUris : [];
@@ -100,6 +117,12 @@ export function installAdapter() {
     // re-layout) needs ~4 ticks per pass. All ticks are microtasks so this
     // doesn't jitter the 320ms CSS reveal transitions in any observable way.
     for (let i = 0; i < 6; i++) await nextTick();
+    const pendingRenders = Array.from(window.__slideyPendingRenders || []);
+    if (pendingRenders.length) {
+      const withTimeout = (p, ms = 3000) => Promise.race([p, new Promise((r) => setTimeout(r, ms))]);
+      await Promise.all(pendingRenders.map(p => withTimeout(p.catch(() => {}))));
+      for (let i = 0; i < 2; i++) await nextTick();
+    }
     const pending = Array.from(document.images || []).filter(img => img.src && !img.complete);
     if (pending.length) {
       // A never-resolving decode() must not hang the capture barrier, so race

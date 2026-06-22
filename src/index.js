@@ -163,6 +163,49 @@ if (args[0] === 'bundle') {
   }
 }
 
+// ── `slidey drawio <input...> --out-dir <dir>` — Draw.io PNG/XML to SVG ───
+// Converts Draw.io XML, or PNGs exported with an embedded `mxfile` chunk, into
+// themed SVG diagrams suitable for image scenes and self-contained bundles.
+if (args[0] === 'drawio') {
+  const outIdx = args.indexOf('--out-dir');
+  const extractIdx = args.indexOf('--extract-dir');
+  const themeIdx = args.indexOf('--theme');
+  const labelIdx = args.indexOf('--label');
+  const outDir = outIdx !== -1 ? args[outIdx + 1] : null;
+  const extractDir = extractIdx !== -1 ? args[extractIdx + 1] : null;
+  const theme = themeIdx !== -1 ? args[themeIdx + 1] : 'rose-pine-moon';
+  const label = labelIdx !== -1 ? args[labelIdx + 1] : null;
+  const inputs = [];
+  for (let i = 1; i < args.length; i++) {
+    const a = args[i];
+    if (['--out-dir', '--extract-dir', '--theme', '--label'].includes(a)) { i++; continue; }
+    if (a.startsWith('-')) continue;
+    inputs.push(a);
+  }
+  if (!inputs.length || !outDir) {
+    console.error('[slidey] usage: slidey drawio <input.png|input.drawio.xml...> --out-dir <dir> [--extract-dir <dir>] [--theme rose-pine-moon]');
+    process.exit(1);
+  }
+  if (label && inputs.length !== 1) {
+    console.error('[slidey] ERROR: --label can only be used with one Draw.io input');
+    process.exit(1);
+  }
+  try {
+    const { convertDrawioFile } = require('./drawio');
+    for (const input of inputs) {
+      const abs = path.resolve(input);
+      if (!fs.existsSync(abs)) throw new Error(`input file not found: ${abs}`);
+      const result = convertDrawioFile(abs, { outDir, extractDir, theme, label });
+      console.log(`[slidey] drawio ${abs} → ${result.svgPath}  (${result.stats.vertices} vertices, ${result.stats.edges} edges, viewBox ${result.stats.viewBox.join(' ')})`);
+      if (result.xmlPath) console.log(`[slidey] extracted XML → ${result.xmlPath}`);
+    }
+    process.exit(0);
+  } catch (err) {
+    console.error(`[slidey] ERROR converting Draw.io: ${err.message}`);
+    process.exit(1);
+  }
+}
+
 // ── Viewer mode ──────────────────────────────────────────────────────────
 // `slidey <dir>` or `slidey <file.json>` (no output path) opens the interactive
 // viewer in the browser instead of rendering — a file-tree sidebar (folder) +
@@ -171,6 +214,7 @@ if (args[0] === 'bundle') {
 const VALUE_FLAGS = new Set([
   '--fps', '--frames-dir', '--capture-log', '--scenes', '--context',
   '--pdf-raster-quality', '--pdf-raster-scale', '--port', '--pace', '--format',
+  '--out-dir', '--extract-dir', '--theme', '--label',
 ]);
 function positionalArgs(argv) {
   const out = [];
@@ -227,6 +271,7 @@ if (((args.length < 2 && !wantsList && !wantsCheck && !wantsValidate) || args.le
     '    node index.js <input.json>                          open the viewer on one deck',
     '    node index.js convert <input.md> <output.json>       convert Markdown/Marp slides to Slidey JSON',
     '    node index.js bundle <input.json> <output.html>      build a self-contained interactive HTML deck',
+    '    node index.js drawio <input...> --out-dir <dir>       convert Draw.io PNG/XML to themed SVG',
     '    node index.js capture <tour.json> <out.mp4>         record a demo MP4 + chapter sidecar from a tour',
     '    slidey docs                                          print the authoring guide (for LLMs/agents)',
     '    slidey skill install [--user|--project]             install the slidey-authoring agent skill',
@@ -234,6 +279,12 @@ if (((args.length < 2 && !wantsList && !wantsCheck && !wantsValidate) || args.le
     '  Viewer options:',
     '    --port <n>                 Viewer port (default: 4321; auto-increments if taken)',
     '    --no-open                  Do not launch the browser; just print the URL',
+    '',
+    '  Draw.io options:',
+    '    --out-dir <dir>            Directory for generated SVG files',
+    '    --extract-dir <dir>        Also write embedded Draw.io XML from PNG inputs',
+    '    --theme <name>             SVG theme (default: rose-pine-moon)',
+    '    --label <text>             Accessible SVG label for a single input',
     '',
     '  Render options:',
     '    --fps <n>                  Frames per second (default: 30)',

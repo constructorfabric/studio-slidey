@@ -84,7 +84,7 @@ const publisherLine = book => [book.publisher, book.isbn ? `ISBN ${book.isbn}` :
   align-items: stretch;
 }
 
-.book-count-1 { grid-template-columns: minmax(0, 560px); justify-content: center; }
+.book-count-1 { grid-template-columns: minmax(0, 1180px); justify-content: center; }
 .book-count-2 { grid-template-columns: repeat(2, minmax(0, 540px)); justify-content: center; }
 
 .book-card {
@@ -99,6 +99,15 @@ const publisherLine = book => [book.publisher, book.isbn ? `ISBN ${book.isbn}` :
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
 }
 
+.book-count-1 .book-card {
+  min-height: 560px;
+  grid-template-columns: 360px minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  align-items: center;
+  gap: 44px;
+  padding: 34px 42px;
+}
+
 .book-cover-wrap {
   width: 100%;
   height: 390px;
@@ -106,6 +115,10 @@ const publisherLine = book => [book.publisher, book.isbn ? `ISBN ${book.isbn}` :
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+
+.book-count-1 .book-cover-wrap {
+  height: 492px;
 }
 
 .book-cover {
@@ -116,6 +129,11 @@ const publisherLine = book => [book.publisher, book.isbn ? `ISBN ${book.isbn}` :
   border-radius: 4px;
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.36);
   background: #010409;
+}
+
+.book-count-1 .book-cover {
+  width: 100%;
+  height: 100%;
 }
 
 .book-cover-fallback {
@@ -131,6 +149,11 @@ const publisherLine = book => [book.publisher, book.isbn ? `ISBN ${book.isbn}` :
   justify-content: space-between;
   text-align: left;
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.36);
+}
+
+.book-count-1 .book-cover-fallback {
+  width: 328px;
+  height: 492px;
 }
 
 .book-cover-fallback span {
@@ -152,11 +175,20 @@ const publisherLine = book => [book.publisher, book.isbn ? `ISBN ${book.isbn}` :
   gap: 8px;
 }
 
+.book-count-1 .book-info {
+  gap: 14px;
+}
+
 .book-name {
   color: #f0f6fc;
   font-size: 28px;
   font-weight: 760;
   line-height: 1.12;
+}
+
+.book-count-1 .book-name {
+  font-size: 42px;
+  line-height: 1.08;
 }
 
 .book-subtitle {
@@ -166,11 +198,21 @@ const publisherLine = book => [book.publisher, book.isbn ? `ISBN ${book.isbn}` :
   font-style: italic;
 }
 
+.book-count-1 .book-subtitle {
+  font-size: 27px;
+  line-height: 1.25;
+}
+
 .book-meta,
 .book-publisher {
   color: #8b949e;
   font-size: 18px;
   line-height: 1.35;
+}
+
+.book-count-1 .book-meta,
+.book-count-1 .book-publisher {
+  font-size: 23px;
 }
 
 .book-takeaway {
@@ -180,6 +222,13 @@ const publisherLine = book => [book.publisher, book.isbn ? `ISBN ${book.isbn}` :
   line-height: 1.32;
   border-top: 1px solid #30363d;
   padding-top: 14px;
+}
+
+.book-count-1 .book-takeaway {
+  margin-top: 20px;
+  font-size: 28px;
+  line-height: 1.32;
+  padding-top: 22px;
 }
 
 .book-caption {

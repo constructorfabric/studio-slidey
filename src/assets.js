@@ -36,6 +36,10 @@ function sceneShowOpts(scene, specPath) {
   if (scene.type === 'image' && scene.src) {
     opts.imageDataUri = assetDataUri(specPath, scene.src);
   }
+  if (scene.type === 'image-compare') {
+    opts.leftImageDataUri = assetDataUri(specPath, scene.left && scene.left.src);
+    opts.rightImageDataUri = assetDataUri(specPath, scene.right && scene.right.src);
+  }
   if (scene.type === 'book' && Array.isArray(scene.books)) {
     opts.bookCoverDataUris = scene.books
       .slice(0, 3)

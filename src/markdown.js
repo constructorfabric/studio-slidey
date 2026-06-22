@@ -39,11 +39,49 @@ function cleanInline(s) {
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
+    .replace(/`([^`\n]+)`/g, (m, code, offset, full) => {
+      return code + (/[A-Za-z0-9_]/.test(full[offset + m.length] || '') ? ' ' : '');
+    })
     .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, '')
+    .replace(/<\/?(?:span|div|section|p|strong|em|b|i|small|sup|sub|code)\b[^>]*>/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function escapeHtml(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function cleanInlineRich(s) {
+  let text = String(s || '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/?(?:span|div|section|p|small|sup|sub)\b[^>]*>/gi, '');
+
+  text = escapeHtml(text)
+    .replace(/`([^`\n]+)`/g, (m, code, offset, full) => {
+      return `<code>${code}</code>` + (/[A-Za-z0-9_]/.test(full[offset + m.length] || '') ? ' ' : '');
+    })
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return text;
+}
+
+function richLine(s) {
+  return {
+    text: cleanInline(s),
+    html: cleanInlineRich(s),
+  };
 }
 
 function extractCode(slide) {
@@ -67,12 +105,69 @@ function extractHeading(lines) {
   return null;
 }
 
+function listMarker(line) {
+  return line.match(/^(\s*)([-*]|\d+\.)\s+(.+)$/);
+}
+
+function isStructuralLine(line) {
+  return /^(#{1,3})\s+/.test(line)
+    || /^\s*\|.*\|\s*$/.test(line)
+    || /^>\s+/.test(line)
+    || /^```/.test(line)
+    || /^\s*!\[[^\]]*\]\([^)]+\)/.test(line)
+    || /^\s*<!--/.test(line);
+}
+
 function extractBullets(lines) {
-  return lines
-    .map(l => l.match(/^\s*(?:[-*]|\d+\.)\s+(.+)$/))
-    .filter(Boolean)
-    .map(m => cleanInline(m[1]))
-    .filter(Boolean);
+  const items = [];
+  let cur = null;
+  let inCode = false;
+
+  for (const line of lines) {
+    if (/^```/.test(line.trim())) {
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) continue;
+
+    const marker = listMarker(line);
+    if (marker) {
+      const indent = marker[1].length;
+      const { text, html } = richLine(marker[3]);
+      if (!text) continue;
+
+      if (cur && indent > cur.indent) {
+        cur.lines.push(text);
+        cur.linesHtml.push(html);
+      } else {
+        cur = { indent, label: text, labelHtml: html, lines: [], linesHtml: [] };
+        items.push(cur);
+      }
+      continue;
+    }
+
+    if (!cur || !line.trim() || isStructuralLine(line)) continue;
+    if (/^\s+/.test(line) || !/^\S/.test(line)) {
+      const { text, html } = richLine(line);
+      if (text) {
+        cur.label = `${cur.label} ${text}`;
+        cur.labelHtml = `${cur.labelHtml} ${html}`;
+      }
+    }
+  }
+
+  return items
+    .map(({ label, labelHtml, lines, linesHtml }) => ({
+      label,
+      ...(labelHtml && labelHtml !== label ? { labelHtml } : {}),
+      ...(lines.length ? { lines } : {}),
+      ...(linesHtml.some((html, i) => html && html !== lines[i]) ? { linesHtml } : {}),
+    }))
+    .filter(item => item.label);
+}
+
+function stripCodeBlocks(slide) {
+  return slide.replace(/```[A-Za-z0-9_-]*\n[\s\S]*?```/g, '');
 }
 
 function extractTable(lines) {
@@ -84,6 +179,33 @@ function extractTable(lines) {
   return { columns: parsed[0], rows: parsed.slice(2).map(cells => ({ cells })) };
 }
 
+function flattenBullets(items) {
+  return (items || []).map(item => {
+    const parts = [item.label, ...((item.lines || []).filter(Boolean))].filter(Boolean);
+    return parts.join(' — ');
+  }).filter(Boolean);
+}
+
+function flattenBulletsHtml(items) {
+  return (items || []).map(item => {
+    const lines = item.lines || [];
+    const lineHtml = item.linesHtml || [];
+    const parts = [
+      item.labelHtml || escapeHtml(item.label || ''),
+      ...lines.map((line, i) => lineHtml[i] || escapeHtml(line)).filter(Boolean),
+    ].filter(Boolean);
+    return parts.join(' &mdash; ');
+  }).filter(Boolean);
+}
+
+function captionText(...parts) {
+  return parts.flat().filter(Boolean).join(' ');
+}
+
+function captionHtml(...parts) {
+  return parts.flat().filter(Boolean).join(' ');
+}
+
 function relativeFromOutput(inputPath, outputPath, src) {
   if (!src || /^data:/i.test(src) || /^https?:\/\//i.test(src) || path.isAbsolute(src)) return src;
   const abs = path.resolve(path.dirname(inputPath), src);
@@ -92,28 +214,58 @@ function relativeFromOutput(inputPath, outputPath, src) {
 
 function slideToScene(slide, idx, inputPath, outputPath) {
   const lead = /<!--\s*_class:\s*lead\s*-->/.test(slide);
-  const lines = slide.split('\n').filter(l => !/^\s*<!--/.test(l));
+  const textSlide = stripCodeBlocks(slide);
+  const lines = textSlide.split('\n').filter(l => !/^\s*<!--/.test(l));
   const heading = extractHeading(lines);
   const title = heading ? heading.text : `Slide ${idx + 1}`;
-  const subheading = lines
+  const subheadingMatch = lines
     .map(l => l.match(/^#{3}\s+(.+)$/))
     .filter(Boolean)
-    .map(m => cleanInline(m[1]))[0] || '';
+    [0];
+  const subheading = subheadingMatch ? cleanInline(subheadingMatch[1]) : '';
+  const subheadingHtml = subheadingMatch ? cleanInlineRich(subheadingMatch[1]) : '';
   const code = extractCode(slide);
   const image = extractImage(slide);
   const table = extractTable(lines);
   const bullets = extractBullets(lines);
   const quote = lines.map(l => l.match(/^>\s+(.+)$/)).filter(Boolean).map(m => cleanInline(m[1])).join(' ');
+  const quoteHtml = lines.map(l => l.match(/^>\s+(.+)$/)).filter(Boolean).map(m => cleanInlineRich(m[1])).join(' ');
+  const bodyLines = lines.filter(l =>
+    !isStructuralLine(l) &&
+    !listMarker(l) &&
+    !/^\s+/.test(l)
+  ).map(l => cleanInline(l)).filter(Boolean);
+  const bodyLineHtmls = lines.filter(l =>
+    !isStructuralLine(l) &&
+    !listMarker(l) &&
+    !/^\s+/.test(l)
+  ).map(l => cleanInlineRich(l)).filter(Boolean);
   const body = cleanInline(lines.filter(l =>
-    !/^(#{1,3})\s+/.test(l) &&
-    !/^\s*(?:[-*]|\d+\.)\s+/.test(l) &&
-    !/^\s*\|.*\|\s*$/.test(l) &&
-    !/^>\s+/.test(l) &&
-    !/^```/.test(l)
+    !isStructuralLine(l) &&
+    !listMarker(l) &&
+    !/^\s+/.test(l)
   ).join(' '));
 
   if (lead || (heading && heading.level === 1 && !bullets.length && !image && !code)) {
-    return { type: 'title', title, subtitle: subheading || body || quote || '' };
+    return {
+      type: 'title',
+      theme: 'markdown',
+      title,
+      subtitle: [subheading, ...bodyLines, quote].filter(Boolean).join('\n'),
+      subtitleHtml: [subheadingHtml, ...bodyLineHtmls, quoteHtml].filter(Boolean).join('<br>'),
+    };
+  }
+  if (code) {
+    if (String(code.lang || '').toLowerCase() === 'mermaid') {
+      return {
+        type: 'mermaid',
+        title,
+        source: code.code,
+        ...(captionText(body, flattenBullets(bullets), quote) ? {
+          caption: captionText(body, flattenBullets(bullets), quote),
+        } : {}),
+      };
+    }
   }
   if (image) {
     return {
@@ -121,22 +273,50 @@ function slideToScene(slide, idx, inputPath, outputPath) {
       title,
       src: relativeFromOutput(inputPath, outputPath, image.src),
       alt: image.alt,
-      caption: quote || body || '',
+      caption: captionText(body, quote),
       fit: 'contain',
     };
   }
   if (code) {
-    return { type: 'code', variant: 'source', title, lang: code.lang, code: code.code };
+    return {
+      type: 'code',
+      variant: 'source',
+      title,
+      lang: code.lang,
+      code: code.code,
+      ...(captionText(body, flattenBullets(bullets), quote) ? {
+        caption: captionText(body, flattenBullets(bullets), quote),
+      } : {}),
+    };
   }
   if (table) {
-    return { type: 'table', variant: 'data', title, columns: table.columns.slice(0, 6), rows: table.rows.slice(0, 8) };
+    const caption = captionText(body, flattenBullets(bullets), quote);
+    return {
+      type: 'table',
+      variant: 'data',
+      title,
+      columns: table.columns.slice(0, 6),
+      rows: table.rows.slice(0, 8),
+      ...(caption ? { caption } : {}),
+    };
   }
   if (bullets.length) {
+    const visible = bullets.slice(0, 8);
+    const extra = flattenBullets(bullets.slice(8));
+    const extraHtml = flattenBulletsHtml(bullets.slice(8));
+    const intro = bodyLines.join('\n');
+    const introHtml = bodyLineHtmls.join('<br>');
+    const outro = captionText(quote, extra.length ? `Additional: ${extra.join('; ')}` : '');
+    const outroHtml = captionHtml(quoteHtml, extraHtml.length ? `Additional: ${extraHtml.join('; ')}` : '');
     return {
       type: 'cards',
-      variant: title.toLowerCase() === 'agenda' ? 'agenda' : 'list',
+      variant: 'markdown',
       title,
-      cards: bullets.slice(0, 8).map(label => ({ label })),
+      cards: visible,
+      ...(intro ? { intro } : {}),
+      ...(introHtml && introHtml !== intro ? { introHtml } : {}),
+      ...(outro ? { outro } : {}),
+      ...(outroHtml && outroHtml !== outro ? { outroHtml } : {}),
     };
   }
   return { type: 'narrative', eyebrow: title, body: body || quote || title };
@@ -151,6 +331,7 @@ function convertMarkdownFile(inputPath, outputPath, opts = {}) {
       title: meta.title || path.basename(inputPath, path.extname(inputPath)),
       mode: 'pitch',
       source: { kind: meta.marp === 'true' ? 'marp' : 'markdown' },
+      ...(meta.theme ? { theme: meta.theme } : {}),
     },
     scenes,
   };

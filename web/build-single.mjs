@@ -64,6 +64,10 @@ for (const sc of spec.scenes) {
     if (field === 'src' && sc.type !== 'image') continue;
     sc[field] = embedAsset(sc[field]);
   }
+  if (sc.type === 'image-compare') {
+    if (sc.left && sc.left.src) sc.left.src = embedAsset(sc.left.src, sc.left.src);
+    if (sc.right && sc.right.src) sc.right.src = embedAsset(sc.right.src, sc.right.src);
+  }
   if (sc.type === 'book' && Array.isArray(sc.books)) {
     for (const book of sc.books) {
       if (book && book.cover) book.cover = embedAsset(book.cover, book.cover);

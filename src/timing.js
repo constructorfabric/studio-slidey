@@ -63,6 +63,12 @@ const TIMING = {
   diagramsvg_caption:  30,
   diagramsvg_hold:    210,  // 7.0 s default dwell
 
+  // ── Mermaid scene ───────────────────────────────────────────────────────
+  mermaid_title:       20,
+  mermaid_frame:       30,
+  mermaid_caption:     30,
+  mermaid_hold:       210,
+
   // ── Trace scene ─────────────────────────────────────────────────
   trace_title:         20,
   trace_turn_0:        45,  // 1.5 s per turn — slow enough to read
@@ -131,6 +137,12 @@ const TIMING = {
   image_frame:         30,
   image_caption:       25,
   image_hold:         210,  // 7.0 s
+
+  // ── Image comparison scene ──────────────────────────────────────
+  imagecompare_title:   20,
+  imagecompare_frame:   30,
+  imagecompare_caption: 25,
+  imagecompare_hold:   210,  // 7.0 s
 
   // ── Book scene ─────────────────────────────────────────────────
   book_title:         20,
@@ -211,6 +223,7 @@ function estimateScene(scene, opts = {}) {
       case 'narrative':    return hold('narrative_hold',   scene.hold);
       case 'diagram':      return hold('diagram_hold',     scene.hold);
       case 'diagram-svg':  return hold('diagramsvg_hold',  scene.hold);
+      case 'mermaid':      return hold('mermaid_hold',     scene.hold);
       case 'terminal-gif': return hold('termgif_hold',     scene.hold);
       case 'trace':        return hold('trace_hold',       scene.hold);
       case 'transcript': {
@@ -224,6 +237,7 @@ function estimateScene(scene, opts = {}) {
       case 'table':        return scene.hold ?? T.table_hold ?? T.trace_hold;
       case 'chart':        return scene.hold ?? T.chart_hold ?? T.diagramsvg_hold;
       case 'image':        return scene.hold ?? T.image_hold ?? T.diagramsvg_hold;
+      case 'image-compare': return scene.hold ?? T.imagecompare_hold ?? T.image_hold ?? T.diagramsvg_hold;
       case 'book':         return scene.hold ?? T.book_hold ?? T.cards_hold;
       case 'stat':         return hold('stat_hold',        scene.hold);
       case 'cta':          return hold('cta_hold',         scene.hold);
@@ -261,6 +275,15 @@ function estimateScene(scene, opts = {}) {
       for (let i = 0; i < panels; i++) f += T[`diagramsvg_panel_${i}`] ?? 30;
       if (scene.caption) f += T.diagramsvg_caption;
       f += hold('diagramsvg_hold', scene.hold);
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'mermaid': {
+      let f = scene.title ? T.mermaid_title : 0;
+      f += T.mermaid_frame;
+      if (scene.caption) f += T.mermaid_caption;
+      f += hold('mermaid_hold', scene.hold);
       f += T.inter_scene;
       return f;
     }
@@ -349,6 +372,16 @@ function estimateScene(scene, opts = {}) {
       f += T.image_frame;
       if (scene.caption) f += T.image_caption;
       f += scene.hold ?? T.image_hold ?? T.diagramsvg_hold;
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'image-compare': {
+      let f = 0;
+      if (scene.title) f += T.imagecompare_title;
+      f += T.imagecompare_frame;
+      if (scene.caption) f += T.imagecompare_caption;
+      f += scene.hold ?? T.imagecompare_hold ?? T.image_hold ?? T.diagramsvg_hold;
       f += T.inter_scene;
       return f;
     }

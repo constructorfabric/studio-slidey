@@ -36,6 +36,7 @@ const path = require('path');
 const { resolveTarget } = require('./launch');
 const { runAction, waitSel, clickSel, absUrl, ACTION_TIMEOUT } = require('./capture');
 const { CHAPTER_TAG, chaptersFromEvents } = require('../rrweb-format');
+const { launchOptions } = require('../browser');
 
 /** Locate rrweb's self-contained record/replay UMD bundle for page injection. */
 function rrwebBundlePath() {
@@ -76,11 +77,11 @@ async function captureTourRrweb(tour, opts = {}) {
   let browser;
   let page;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
-        '--disable-gpu', `--window-size=${viewport.width},${viewport.height}`],
-    });
+    browser = await puppeteer.launch(launchOptions({
+      width: viewport.width,
+      height: viewport.height,
+      args: ['--disable-gpu'],
+    }));
     page = await browser.newPage();
     await page.setViewport({ width: viewport.width, height: viewport.height, deviceScaleFactor: dsf });
     page.setDefaultTimeout(ACTION_TIMEOUT);

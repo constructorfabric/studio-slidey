@@ -8,8 +8,18 @@
 import { reactive } from 'vue';
 import { stepsForScene, applyShow } from './sceneSteps.mjs';
 
+export function resolveAssetHref(src, specBaseUrl = '', fallbackUrl = '') {
+  if (!src) return '';
+  try {
+    return new URL(src, specBaseUrl || fallbackUrl || window.location.href).href;
+  } catch (_) {
+    return src;
+  }
+}
+
 export function createDeck(spec, specBaseUrl = '') {
   const scenes = spec.scenes || [];
+  let renderedSceneIndex = -1;
 
   // Flat positions: one entry per reveal step (title scenes get a single entry).
   const flat = [];
@@ -50,6 +60,35 @@ export function createDeck(spec, specBaseUrl = '') {
     }
   }
 
+  function imageHref(src) {
+    return resolveAssetHref(src, specBaseUrl, window.location.href);
+  }
+
+  const bookCoverCache = {};
+  async function ensureBookCover(src) {
+    if (!src) return '';
+    if (/^data:/i.test(src)) return src;
+    if (bookCoverCache[src]) return bookCoverCache[src];
+    try {
+      const blob = await (await fetch(imageHref(src))).blob();
+      const dataUri = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(blob);
+      });
+      bookCoverCache[src] = dataUri;
+      return dataUri;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  async function ensureBookCovers(sc) {
+    const books = Array.isArray(sc.books) ? sc.books.slice(0, 3) : [];
+    return Promise.all(books.map(book => ensureBookCover(book && book.cover)));
+  }
+
   // rrweb log loader for live `video` scenes (mirrors ensureGif): fetch the log
   // relative to the spec, parse to { events, chapters } for the RrwebPlayer.
   const rrwebCache = {};
@@ -73,15 +112,34 @@ export function createDeck(spec, specBaseUrl = '') {
     const cur = flat[state.pos];
     if (!cur) return;
     const sc = scenes[cur.sceneIndex];
+    const steps = stepsForScene(sc);
+    const appliedSteps = steps.slice(0, Math.min(cur.stepIndex + 1, steps.length));
+
+    if (renderedSceneIndex === cur.sceneIndex && sc.type !== 'request') {
+      window.slidey.setPitchSteps(appliedSteps);
+      state.sceneIndex = cur.sceneIndex;
+      state.stepIndex = cur.stepIndex;
+      state.stepsInScene = cur.stepsInScene;
+      return;
+    }
+
     const opts = {};
     if (sc.type === 'terminal-gif') opts.gifDataUri = await ensureGif(sc);
+    if (sc.type === 'image') opts.imageDataUri = imageHref(sc.src);
+    if (sc.type === 'image-compare') {
+      opts.leftImageDataUri = imageHref(sc.left && sc.left.src);
+      opts.rightImageDataUri = imageHref(sc.right && sc.right.src);
+    }
+    if (sc.type === 'book') opts.bookCoverDataUris = await ensureBookCovers(sc);
     if (sc.type === 'video' && sc.rrweb) opts.rrweb = await ensureRrweb(sc);
 
     applyShow(sc, opts); // resets reveal state + injects scene content
-    const steps = stepsForScene(sc);
-    for (let i = 0; i <= cur.stepIndex && i < steps.length; i++) {
-      window.slidey.setState(steps[i]);
+    if (sc.type === 'request') {
+      for (const step of appliedSteps) window.slidey.setState(step);
+    } else {
+      window.slidey.setPitchSteps(appliedSteps);
     }
+    renderedSceneIndex = cur.sceneIndex;
 
     state.sceneIndex = cur.sceneIndex;
     state.stepIndex = cur.stepIndex;

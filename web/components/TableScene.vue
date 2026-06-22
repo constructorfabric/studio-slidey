@@ -49,6 +49,14 @@ function alignClass(cell, colIndex) {
   if (colIndex === 0) return 'table-left';
   return 'table-center';
 }
+
+function headerAlignClass(colIndex) {
+  if (variant.value !== 'data') return colIndex === 0 ? 'table-left' : 'table-center';
+  const values = rows.value
+    .map(r => (r && Array.isArray(r.cells)) ? r.cells[colIndex] : undefined)
+    .filter(cell => String(cell ?? '').trim() !== '');
+  return values.length && values.every(isNumeric) ? 'table-right' : 'table-left';
+}
 </script>
 
 <template>
@@ -71,7 +79,7 @@ function alignClass(cell, colIndex) {
               v-for="(c, ci) in columns"
               :key="ci"
               :class="[
-                ci === 0 ? 'table-left' : (variant === 'data' ? 'table-th-data' : 'table-center'),
+                headerAlignClass(ci),
                 { 'table-col-win': colHighlighted(ci), 'table-th-crown': variant === 'scorecard' && ci === winner }
               ]"
             >
@@ -185,7 +193,6 @@ function alignClass(cell, colIndex) {
 .table-left   { text-align: left; }
 .table-right  { text-align: right; }
 .table-center { text-align: center; }
-.table-th-data { text-align: right; }
 
 /* comparison / scorecard glyphs */
 .table-yes { color: #3fb950; font-weight: bold; }
