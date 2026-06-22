@@ -114,7 +114,7 @@ if (args[0] === 'skill') {
 // positional resolves to a directory, or a spec file with no second positional.
 const VALUE_FLAGS = new Set([
   '--fps', '--frames-dir', '--capture-log', '--scenes', '--context',
-  '--pdf-raster-quality', '--pdf-raster-scale', '--port', '--pace',
+  '--pdf-raster-quality', '--pdf-raster-scale', '--port', '--pace', '--format',
 ]);
 function positionalArgs(argv) {
   const out = [];
@@ -251,6 +251,8 @@ const captureLogIdx = args.indexOf('--capture-log');
 const captureLogOpt = captureLogIdx !== -1 ? args[captureLogIdx + 1] : null;
 const paceIdx       = args.indexOf('--pace');
 const paceOpt       = paceIdx !== -1 ? parseFloat(args[paceIdx + 1]) : null;
+const formatIdx     = args.indexOf('--format');
+const formatOpt     = formatIdx !== -1 ? args[formatIdx + 1] : null;
 const scenesIdx     = args.indexOf('--scenes');
 const scenesOpt     = scenesIdx !== -1 ? args[scenesIdx + 1] : null;
 const noCompress    = args.includes('--no-compress');
@@ -378,9 +380,9 @@ function printSceneList(spec, fps, withAudio, opts = {}) {
 // `capture:` field. See src/tour/.
 async function runCapture() {
   const tourPath = args[1];
-  const outMp4   = args[2];
-  if (!tourPath || !outMp4) {
-    console.error('[slidey] usage: slidey capture <tour.json> <out.mp4> [--fps n] [--pace n] [--keep-frames]');
+  const outPath  = args[2];
+  if (!tourPath || !outPath) {
+    console.error('[slidey] usage: slidey capture <tour.json> <out.mp4|out.rrweb.json> [--format rrweb] [--fps n] [--pace n] [--keep-frames]');
     process.exit(1);
   }
   const absTour = path.resolve(tourPath);
@@ -398,22 +400,39 @@ async function runCapture() {
   // Record the spec path into chapter source_refs (relative to cwd if possible).
   if (!tour.specPath) tour.specPath = path.relative(process.cwd(), absTour);
 
-  const { captureToVideo } = require('./tour');
+  // Format: explicit --format wins, else inferred from the output extension.
+  const isRrweb = formatOpt === 'rrweb' || /\.rrweb\.json$/i.test(outPath);
+  const pace = paceOpt != null ? paceOpt : undefined;
   console.log(`[slidey] Capture: ${absTour}`);
-  console.log(`[slidey] Output : ${path.resolve(outMp4)}`);
+  console.log(`[slidey] Output : ${path.resolve(outPath)}  (${isRrweb ? 'rrweb' : 'mp4'})`);
   console.log(`[slidey] Steps  : ${(tour.steps || []).length}  pace ${paceOpt != null ? paceOpt : (tour.pace != null ? tour.pace : 1)}\n`);
+
   try {
-    const { mp4, sidecar, frameCount, chapters } = await captureToVideo(tour, outMp4, {
-      fps, pace: paceOpt != null ? paceOpt : undefined,
-      framesDir: framesDirOpt, keepFrames,
-      onProgress: (idx, label) => {
-        process.stdout.write(`\r[slidey] capture: ${String(label).padEnd(28)} frame ${idx}`);
-      },
-    });
-    process.stdout.write('\n');
-    const sizeMB = (fs.statSync(mp4).size / 1024 / 1024).toFixed(1);
-    console.log(`[slidey] Done → ${mp4}  (${(frameCount / fps).toFixed(1)}s, ${sizeMB} MB)`);
-    if (sidecar) console.log(`[slidey] Chapters → ${sidecar}  (${chapters.length})`);
+    if (isRrweb) {
+      const { captureToRrweb } = require('./tour');
+      const { rrweb, sidecar, eventCount, chapters, durationMs } = await captureToRrweb(tour, outPath, {
+        pace, mask: tour.mask,
+        onProgress: (idx, label) => {
+          process.stdout.write(`\r[slidey] capture: ${String(label).padEnd(28)} step ${idx}`);
+        },
+      });
+      process.stdout.write('\n');
+      const sizeKB = (fs.statSync(rrweb).size / 1024).toFixed(0);
+      console.log(`[slidey] Done → ${rrweb}  (${(durationMs / 1000).toFixed(1)}s, ${eventCount} events, ${sizeKB} KB)`);
+      if (sidecar) console.log(`[slidey] Chapters → ${sidecar}  (${chapters.length})`);
+    } else {
+      const { captureToVideo } = require('./tour');
+      const { mp4, sidecar, frameCount, chapters } = await captureToVideo(tour, outPath, {
+        fps, pace, framesDir: framesDirOpt, keepFrames,
+        onProgress: (idx, label) => {
+          process.stdout.write(`\r[slidey] capture: ${String(label).padEnd(28)} frame ${idx}`);
+        },
+      });
+      process.stdout.write('\n');
+      const sizeMB = (fs.statSync(mp4).size / 1024 / 1024).toFixed(1);
+      console.log(`[slidey] Done → ${mp4}  (${(frameCount / fps).toFixed(1)}s, ${sizeMB} MB)`);
+      if (sidecar) console.log(`[slidey] Chapters → ${sidecar}  (${chapters.length})`);
+    }
   } catch (err) {
     console.error(`\n[slidey] ERROR during capture: ${err.message}`);
     process.exit(1);
@@ -707,6 +726,11 @@ async function main() {
   const outStat = fs.statSync(path.resolve(outputPath));
   const sizeMB  = (outStat.size / 1024 / 1024).toFixed(1);
   console.log(`[slidey] Done → ${path.resolve(outputPath)}  (${sizeMB} MB)`);
+  // Exit explicitly: a render that launches more than one Puppeteer browser in
+  // the process (e.g. the main render loop + a `video` scene's rrweb rasterizer)
+  // can leave a lingering CDP transport socket that otherwise keeps the event
+  // loop alive after all work + output is flushed (everything above is sync).
+  process.exit(0);
 }
 
 main().catch(err => {

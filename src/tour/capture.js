@@ -197,4 +197,6 @@ async function captureTour(tour, framesDir, opts = {}) {
   return { frameCount: frameIndex - startFrame, chapters: chapterList, viewport, startFrame };
 }
 
-module.exports = { captureTour };
+// Shared step-driver helpers, reused by the rrweb capture path (rrweb-capture.js)
+// so both capture modes drive a tour with identical action/selector semantics.
+module.exports = { captureTour, runAction, waitSel, clickSel, absUrl, ACTION_TIMEOUT };

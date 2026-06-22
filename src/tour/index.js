@@ -18,7 +18,9 @@ const os   = require('os');
 const path = require('path');
 
 const { captureTour } = require('./capture');
+const { captureTourRrweb } = require('./rrweb-capture');
 const { writeChapters } = require('./chapters');
+const { buildEnvelope, writeEnvelope } = require('../rrweb-format');
 const { framesToVideo } = require('../assembler');
 
 /**
@@ -51,4 +53,30 @@ async function captureToVideo(tour, outMp4, opts = {}) {
   }
 }
 
-module.exports = { captureToVideo, captureTour };
+/**
+ * Capture a tour spec to an rrweb event log (`<base>.rrweb.json`) + chapter
+ * sidecar (`<base>.rrweb.json.chapters.json`). The log is the single source for
+ * both the live viewer player and the opt-in baked rasterizer.
+ *
+ * @param {object} tour    Parsed tour spec (see capture.js).
+ * @param {string} outPath Destination `.rrweb.json` path.
+ * @param {object} opts    { pace, mask?, onProgress? }
+ * @returns {Promise<{ rrweb, sidecar, eventCount, chapters, durationMs }>}
+ */
+async function captureToRrweb(tour, outPath, opts = {}) {
+  const { events, chapters, viewport } = await captureTourRrweb(tour, {
+    pace: opts.pace, mask: opts.mask, onProgress: opts.onProgress,
+  });
+  if (!events || events.length < 2) throw new Error('tour produced no rrweb events (no steps?)');
+
+  const out = path.resolve(outPath);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  const envelope = buildEnvelope(events, { viewport, source: 'slidey-capture' });
+  writeEnvelope(out, envelope);
+  // Sidecar mirrors the in-log chapters for the byte-compatible contract
+  // (`<source>.chapters.json`, same as the MP4 path).
+  const sidecar = writeChapters(out, chapters);
+  return { rrweb: out, sidecar, eventCount: events.length, chapters, durationMs: envelope.durationMs };
+}
+
+module.exports = { captureToVideo, captureToRrweb, captureTour, captureTourRrweb };
