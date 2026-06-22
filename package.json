@@ -34,7 +34,8 @@
     "dagre": "^0.8.5",
     "jsonpath-plus": "^10.4.0",
     "pdf-lib": "^1.17.1",
-    "puppeteer": "^21.11.0"
+    "puppeteer": "^21.11.0",
+    "rrweb": "^2.0.1"
   },
   "engines": {
     "node": ">=18.0.0"

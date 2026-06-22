@@ -522,10 +522,11 @@ const SCHEMA = {
           {
             type: 'object',
             required: ['type'],
-            description: 'Embed a demo MP4 (pre-rendered or captured on the fly) into the deck — fullscreen or inset in a slide, with auto chapter captions, hand-authored annotations, and time-keyed narration. Provide exactly one of "src" or "capture".',
+            description: 'Embed a demo into the deck — fullscreen or inset in a slide, with auto chapter captions, hand-authored annotations, and time-keyed narration. Provide exactly one source of "src" (MP4), "rrweb" (rrweb log), or "capture" (tour spec captured on the fly).',
             properties: {
               type: { const: 'video' },
               src: { type: 'string', description: 'Path to a pre-rendered demo MP4 (relative to the spec). A sibling <src>.chapters.json is used for auto captions when present.' },
+              rrweb: { type: 'string', description: 'Path to an rrweb event log (*.rrweb.json) relative to the spec. Baked output seek-rasterizes the log to frames; the web viewer mounts a live scrubbable player. Chapters come from in-log slidey.chapter custom events (or a sibling <rrweb>.chapters.json).' },
               capture: { type: 'string', description: 'Path to a tour spec (relative to the spec) captured on the fly via the slidey tour engine, then embedded.' },
               mode: { type: 'string', enum: ['fullscreen', 'embedded'], description: '"fullscreen" (default) fills the frame; "embedded" insets the video in a deck slide with title/caption chrome.' },
               fit: { type: 'string', enum: ['contain', 'cover'], description: '"contain" (default) letterboxes on the deck background; "cover" crops to fill.' },
