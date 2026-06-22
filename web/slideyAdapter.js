@@ -70,6 +70,12 @@ export function installAdapter() {
     showChart(scene) { store.showScene('chart', scene); },
     hideChart() { store.hidePitch(); },
 
+    showImage(scene, dataUri) {
+      store.showScene('image', scene);
+      store.imageDataUri = dataUri || '';
+    },
+    hideImage() { store.hidePitch(); store.imageDataUri = ''; },
+
     // video (interactive viewer only): mount the live rrweb player from the
     // loaded log. Headless render + PDF/PNG export handle video scenes natively.
     showVideo(scene, data) { store.showVideo(scene, data); },

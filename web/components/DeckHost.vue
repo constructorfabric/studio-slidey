@@ -19,6 +19,7 @@ import CardsScene from './CardsScene.vue';
 import CodeScene from './CodeScene.vue';
 import TableScene from './TableScene.vue';
 import ChartScene from './ChartScene.vue';
+import ImageScene from './ImageScene.vue';
 import VideoScene from './VideoScene.vue';
 
 const PITCH_COMPONENTS = {
@@ -35,6 +36,7 @@ const PITCH_COMPONENTS = {
   code: CodeScene,
   table: TableScene,
   chart: ChartScene,
+  image: ImageScene,
   video: VideoScene,
 };
 

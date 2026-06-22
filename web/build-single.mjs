@@ -40,22 +40,25 @@ if (!spec || !Array.isArray(spec.scenes) || !spec.scenes.length) {
   process.exit(1);
 }
 
-// Embed gif assets the spec references (resolved relative to the spec file) as
-// data URIs, so terminal-gif scenes render with no external file. Missing gifs
-// are left as-is — the viewer skips an unresolvable gif gracefully.
+// Embed local image/gif assets the spec references (resolved relative to the
+// spec file) as data URIs, so terminal-gif and image scenes render with no
+// external files. Missing assets are left as-is — the viewer degrades visibly.
 const specDir = dirname(specPath);
 const gifMime = { '.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
-let embeddedGifs = 0;
+let embeddedAssets = 0;
 for (const sc of spec.scenes) {
-  if (!sc.gif || /^data:/.test(sc.gif)) continue;
-  const gifPath = resolve(specDir, sc.gif);
-  if (!existsSync(gifPath)) {
-    console.warn(`[build-single] WARNING: gif not found, leaving reference as-is: ${sc.gif}`);
-    continue;
+  for (const field of ['gif', 'src']) {
+    if (!sc[field] || /^data:/.test(sc[field]) || /^https?:\/\//i.test(sc[field])) continue;
+    if (field === 'src' && sc.type !== 'image') continue;
+    const assetPath = resolve(specDir, sc[field]);
+    if (!existsSync(assetPath)) {
+      console.warn(`[build-single] WARNING: asset not found, leaving reference as-is: ${sc[field]}`);
+      continue;
+    }
+    const mime = gifMime[extname(assetPath).toLowerCase()] || 'application/octet-stream';
+    sc[field] = `data:${mime};base64,${readFileSync(assetPath).toString('base64')}`;
+    embeddedAssets++;
   }
-  const mime = gifMime[extname(gifPath).toLowerCase()] || 'application/octet-stream';
-  sc.gif = `data:${mime};base64,${readFileSync(gifPath).toString('base64')}`;
-  embeddedGifs++;
 }
 
 // 1. Build the single-chunk web bundle (inlineDynamicImports → one JS + one CSS).
@@ -87,7 +90,7 @@ html = html.replace(
   },
 );
 
-if (/\bsrc="|rel="stylesheet"/.test(html)) {
+if (/<script\b[^>]*\bsrc=|<link\b[^>]*\brel="stylesheet"/.test(html)) {
   throw new Error(
     '[build-single] unresolved external refs remain after inlining — the '
     + 'self-contained offline artifact would break. dist-web-single contents: '
@@ -111,6 +114,6 @@ writeFileSync(outPath, html);
 const sizeMB = (statSync(outPath).size / 1e6).toFixed(2);
 console.log(
   `[build-single] wrote ${outPath} (${sizeMB} MB, self-contained — ` +
-  `${spec.scenes.length} scenes, ${embeddedGifs} gif(s) embedded)`,
+  `${spec.scenes.length} scenes, ${embeddedAssets} asset(s) embedded)`,
 );
 console.log('[build-single] open it directly in a browser; no server needed.');

@@ -22,6 +22,7 @@ const puppeteer = require('puppeteer');
 const path      = require('path');
 const fs        = require('fs');
 const TIMING    = require('./timing');
+const { launchOptions } = require('./browser');
 
 // Self-contained Vue render harness (built by `npm run build:render` →
 // web/inline-render.mjs). Loaded via file://; exposes the same window.slidey.*
@@ -44,6 +45,7 @@ const SCENE_MODULES = {
   code:           require('./scenes/code'),
   table:          require('./scenes/table'),
   chart:          require('./scenes/chart'),
+  image:          require('./scenes/image'),
   video:          require('./scenes/video'),
 };
 
@@ -74,13 +76,7 @@ async function generateFrames(spec, framesDir, fps = 30, onProgress = null, capt
   // the current viewer renderer.
   require('./render-bundle').ensureRenderBundle();
 
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: [
-      '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
-      `--window-size=${width},${height}`,
-    ],
-  });
+  const browser = await puppeteer.launch(launchOptions({ width, height }));
 
   let frameIndex = 0;
   const captureLog = [];

@@ -107,6 +107,62 @@ if (args[0] === 'skill') {
   }
 }
 
+// ── `slidey convert <in.md> <out.json>` — Markdown/Marp to Slidey spec ─────
+// Conservative importer for slide decks that already use Markdown slide
+// separators. It preserves headings, bullets, tables, code fences, blockquotes,
+// and image slides as native Slidey scenes.
+if (args[0] === 'convert') {
+  const inPath = args[1];
+  const outPath = args[2];
+  if (!inPath || !outPath) {
+    console.error('[slidey] usage: slidey convert <input.md> <output.json>');
+    process.exit(1);
+  }
+  const absIn = path.resolve(inPath);
+  const absOut = path.resolve(outPath);
+  if (!fs.existsSync(absIn)) {
+    console.error(`[slidey] ERROR: input file not found: ${absIn}`);
+    process.exit(1);
+  }
+  try {
+    const { convertMarkdownFile } = require('./markdown');
+    const spec = convertMarkdownFile(absIn, absOut);
+    const { valid, errors, count } = validateSpec(spec);
+    if (!valid) {
+      console.error(`[slidey] ERROR: generated invalid spec: ${count} problem(s)`);
+      for (const line of errors) console.error(line);
+      process.exit(1);
+    }
+    const types = spec.scenes.reduce((m, s) => {
+      m[s.type] = (m[s.type] || 0) + 1;
+      return m;
+    }, {});
+    console.log(`[slidey] Converted ${absIn} → ${absOut}`);
+    console.log(`[slidey] Scenes: ${spec.scenes.length}  ${Object.entries(types).map(([k, v]) => `${k}:${v}`).join(' ')}`);
+    process.exit(0);
+  } catch (err) {
+    console.error(`[slidey] ERROR converting Markdown: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+// ── `slidey bundle <in.json> <out.html>` — single-file interactive deck ────
+if (args[0] === 'bundle') {
+  const inPath = args[1];
+  const outPath = args[2];
+  if (!inPath || !outPath) {
+    console.error('[slidey] usage: slidey bundle <input.json> <output.html>');
+    process.exit(1);
+  }
+  const script = path.join(__dirname, '..', 'web', 'build-single.mjs');
+  try {
+    require('child_process').execFileSync(process.execPath, [script, inPath, outPath], { stdio: 'inherit' });
+    process.exit(0);
+  } catch (err) {
+    process.exit(err.status || 1);
+  }
+}
+
 // ── Viewer mode ──────────────────────────────────────────────────────────
 // `slidey <dir>` or `slidey <file.json>` (no output path) opens the interactive
 // viewer in the browser instead of rendering — a file-tree sidebar (folder) +
@@ -169,6 +225,8 @@ if (((args.length < 2 && !wantsList && !wantsCheck && !wantsValidate) || args.le
     '    node index.js                                       open the viewer on the current folder',
     '    node index.js <folder>                              open the viewer (file-tree sidebar)',
     '    node index.js <input.json>                          open the viewer on one deck',
+    '    node index.js convert <input.md> <output.json>       convert Markdown/Marp slides to Slidey JSON',
+    '    node index.js bundle <input.json> <output.html>      build a self-contained interactive HTML deck',
     '    node index.js capture <tour.json> <out.mp4>         record a demo MP4 + chapter sidecar from a tour',
     '    slidey docs                                          print the authoring guide (for LLMs/agents)',
     '    slidey skill install [--user|--project]             install the slidey-authoring agent skill',

@@ -125,6 +125,12 @@ const TIMING = {
   chart_series_5:      30,
   chart_caption:       30,
   chart_hold:         210,  // 7.0 s
+
+  // ── Image scene ─────────────────────────────────────────────────
+  image_title:         20,
+  image_frame:         30,
+  image_caption:       25,
+  image_hold:         210,  // 7.0 s
 };
 
 const fs   = require('fs');
@@ -209,6 +215,7 @@ function estimateScene(scene, opts = {}) {
       case 'code':         return scene.hold ?? T.code_hold ?? T.narrative_hold;
       case 'table':        return scene.hold ?? T.table_hold ?? T.trace_hold;
       case 'chart':        return scene.hold ?? T.chart_hold ?? T.diagramsvg_hold;
+      case 'image':        return scene.hold ?? T.image_hold ?? T.diagramsvg_hold;
       case 'stat':         return hold('stat_hold',        scene.hold);
       case 'cta':          return hold('cta_hold',         scene.hold);
       case 'request':      return T.sending_ticks * T.sending_per_tick
@@ -323,6 +330,16 @@ function estimateScene(scene, opts = {}) {
       for (let i = 0; i < n; i++) f += T[`chart_series_${i}`] ?? 30;
       if (scene.caption) f += T.chart_caption;
       f += scene.hold ?? T.chart_hold ?? T.diagramsvg_hold;
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'image': {
+      let f = 0;
+      if (scene.title) f += T.image_title;
+      f += T.image_frame;
+      if (scene.caption) f += T.image_caption;
+      f += scene.hold ?? T.image_hold ?? T.diagramsvg_hold;
       f += T.inter_scene;
       return f;
     }

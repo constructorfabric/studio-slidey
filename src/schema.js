@@ -483,6 +483,21 @@ const SCHEMA = {
               ...COMMON,
             },
           },
+          // ── image ──────────────────────────────────────────────────────────
+          {
+            type: 'object',
+            required: ['type', 'src'],
+            description: 'Static image slide for screenshots, diagrams, and migrated Markdown/Marp image slides.',
+            properties: {
+              type: { const: 'image' },
+              title: { type: 'string' },
+              src: { type: 'string', description: 'Image path relative to the spec, absolute path, URL, or data URI' },
+              alt: { type: 'string' },
+              fit: { type: 'string', enum: ['contain', 'cover'], description: 'Object-fit mode; contain is default' },
+              caption: { type: 'string' },
+              ...COMMON,
+            },
+          },
           // ── request ────────────────────────────────────────────────────────
           {
             type: 'object',
