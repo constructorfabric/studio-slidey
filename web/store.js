@@ -94,6 +94,9 @@ export const store = reactive({
   scene: null,
   sceneType: null,
   gifDataUri: '',
+  // video (live rrweb) — populated by showVideo for VideoScene/RrwebPlayer.
+  rrwebEvents: [],
+  rrwebChapters: [],
   // Transcript: index of the turn card currently on screen (the scene shows one
   // card at a time; the renderers advance it via the transcript_card_<n> step).
   transcriptCard: 0,
@@ -240,6 +243,13 @@ export const store = reactive({
     this.scene = scene;
     this.sceneType = type;
     this.transcriptCard = 0;     // start a transcript at its first turn card
+  },
+  // video (live rrweb player in the interactive viewer): the loaded rrweb log
+  // (events + derived chapters) is held here for VideoScene → RrwebPlayer.
+  showVideo(scene, data) {
+    this.showScene('video', scene);
+    this.rrwebEvents = (data && data.events) || [];
+    this.rrwebChapters = (data && data.chapters) || [];
   },
   hidePitch() { this._resetPitch(); },
 

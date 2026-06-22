@@ -50,12 +50,32 @@ export function createDeck(spec, specBaseUrl = '') {
     }
   }
 
+  // rrweb log loader for live `video` scenes (mirrors ensureGif): fetch the log
+  // relative to the spec, parse to { events, chapters } for the RrwebPlayer.
+  const rrwebCache = {};
+  async function ensureRrweb(sc) {
+    if (!sc.rrweb) return null;
+    if (rrwebCache[sc.rrweb]) return rrwebCache[sc.rrweb];
+    try {
+      const { chaptersFromEvents } = await import('./rrweb/chapters.js');
+      const url = new URL(sc.rrweb, specBaseUrl || window.location.href).href;
+      const raw = await (await fetch(url)).json();
+      const events = Array.isArray(raw) ? raw : (raw.events || []);
+      const data = { events, chapters: chaptersFromEvents(events) };
+      rrwebCache[sc.rrweb] = data;
+      return data;
+    } catch (_) {
+      return null; // log unresolvable (e.g. spec via file picker) — player shows empty state
+    }
+  }
+
   async function render() {
     const cur = flat[state.pos];
     if (!cur) return;
     const sc = scenes[cur.sceneIndex];
     const opts = {};
     if (sc.type === 'terminal-gif') opts.gifDataUri = await ensureGif(sc);
+    if (sc.type === 'video' && sc.rrweb) opts.rrweb = await ensureRrweb(sc);
 
     applyShow(sc, opts); // resets reveal state + injects scene content
     const steps = stepsForScene(sc);

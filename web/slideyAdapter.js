@@ -69,6 +69,11 @@ export function installAdapter() {
 
     showChart(scene) { store.showScene('chart', scene); },
     hideChart() { store.hidePitch(); },
+
+    // video (interactive viewer only): mount the live rrweb player from the
+    // loaded log. Headless render + PDF/PNG export handle video scenes natively.
+    showVideo(scene, data) { store.showVideo(scene, data); },
+    hideVideo() { store.hidePitch(); store.rrwebEvents = []; store.rrwebChapters = []; },
   };
 
   // Settle barrier: flush Vue's async DOM patch before the renderer captures, so

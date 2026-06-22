@@ -121,5 +121,9 @@ export function applyShow(scene, opts) {
     case 'code':         slidey.showCode(scene); break;
     case 'table':        slidey.showTable(scene); break;
     case 'chart':        slidey.showChart(scene); break;
+    // video: only the interactive viewer renders it live (the headless render +
+    // PDF/PNG export handle video scenes natively). Guard so render adapters
+    // without showVideo (export contexts) don't throw.
+    case 'video':        if (slidey.showVideo) slidey.showVideo(scene, o.rrweb || null); break;
   }
 }

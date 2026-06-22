@@ -19,6 +19,7 @@ import CardsScene from './CardsScene.vue';
 import CodeScene from './CodeScene.vue';
 import TableScene from './TableScene.vue';
 import ChartScene from './ChartScene.vue';
+import VideoScene from './VideoScene.vue';
 
 const PITCH_COMPONENTS = {
   narrative: NarrativeScene,
@@ -34,6 +35,7 @@ const PITCH_COMPONENTS = {
   code: CodeScene,
   table: TableScene,
   chart: ChartScene,
+  video: VideoScene,
 };
 
 // Toggle body classes for mode, mirroring slidey.setMode. body.instant is owned
