@@ -1,0 +1,33 @@
+{
+  "_comment": "Demonstrates the `video` scene with an rrweb SOURCE (a captured DOM session, not an MP4). examples/demos/sample-tour.rrweb.json was produced by `slidey capture <tour.json> out.rrweb.json` (real-time rrweb recording of a tour). Baked output (mp4/pdf/png) seek-rasterizes the log via rrweb's Replayer; the interactive web viewer mounts a live, scrubbable, chapter-aware RrwebPlayer. Chapters come from in-log slidey.chapter custom events. Render: PUPPETEER_EXECUTABLE_PATH=... slidey examples/rrweb-demo.json out.mp4  (or .pdf / a dir for PNG posters).",
+  "meta": { "mode": "pitch", "narration": { "voice": "en-AU-NatashaNeural" } },
+  "scenes": [
+    { "type": "title", "title": "Captured, not filmed", "subtitle": "an rrweb DOM session, replayed in the deck" },
+
+    { "type": "video",
+      "rrweb": "demos/sample-tour.rrweb.json",
+      "mode": "fullscreen",
+      "fit": "contain",
+      "chapters": "auto",
+      "narration": [
+        { "at": 0, "text": "The app, captured as a DOM session." }
+      ] },
+
+    { "type": "narrative", "eyebrow": "One source, two engines",
+      "body": "The same rrweb log bakes to a deterministic MP4 and drives a live, scrubbable player in the web viewer.",
+      "lede": "And it's the same artifact a kitsoki bug report captures." },
+
+    { "type": "video",
+      "rrweb": "demos/sample-tour.rrweb.json",
+      "mode": "embedded",
+      "eyebrow": "Live demo",
+      "title": "The Test App",
+      "caption": "rrweb seek-rasterized into the deck chrome",
+      "chapters": false,
+      "annotations": [
+        { "chapter": "open", "until": 5, "text": "Real motion, not a freeze-frame", "sub": "deck-styled overlay" }
+      ] },
+
+    { "type": "cta", "wordmark": "slidey", "tagline": "decks + demos, one pipeline", "url": "" }
+  ]
+}

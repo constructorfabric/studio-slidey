@@ -142,20 +142,32 @@ trace used by `npm test`.
 ```
 node src/index.js <input.json> <output> [options]
 node src/index.js capture <tour.json> <out.mp4> [--fps N] [--pace N]
+node src/index.js capture <tour.json> <out.rrweb.json> --format rrweb [--pace N]
 ```
 
 The output **extension selects the format**: `.pdf` → slide deck (one page per
 reveal step; no frames, narration, or ffmpeg); anything else → MP4 video.
 
 The `capture` subcommand drives a live web app through a time-based tour
-storyboard and records a deterministic demo MP4 + `<out>.mp4.chapters.json`
-sidecar — app-agnostic, with deck-styled curtain/caption/spotlight overlays.
-Embed the result with a [`video`](#video--embed-a-demo-mp4) scene (or capture
-on the fly via that scene's `capture` field). See `examples/demos/`.
+storyboard. Two capture formats:
+
+- **MP4 (default)** — a deterministic freeze-frame demo MP4 +
+  `<out>.mp4.chapters.json` sidecar, with deck-styled curtain/caption/spotlight
+  overlays baked in.
+- **rrweb** (`--format rrweb`, or an `*.rrweb.json` output path) — a real-time
+  **DOM session log** (`*.rrweb.json` + `<out>.rrweb.json.chapters.json`).
+  Captures true motion as compact JSON, not pixels. The clean log (no baked
+  overlays) is the single source for both the baked seek-rasterizer and the live
+  web-viewer player, and is the same artifact a [kitsoki bug report](#rrweb-as-a-library-for-kitsoki)
+  captures.
+
+Embed either with a [`video`](#video--embed-a-demo-mp4-or-rrweb-log) scene (or
+capture on the fly via that scene's `capture` field). See `examples/demos/`.
 
 | Flag | Effect |
 |---|---|
 | `--fps N` | Frames per second (default 30) |
+| `--format rrweb` | `capture` only: record an rrweb DOM-session log instead of an MP4 |
 | `--pace N` | `capture` only: dwell multiplier (1 = watch-speed, 0 = 1 frame/step) |
 | `--context key=value` | Override a template variable; repeatable; takes precedence over `meta.context` |
 | `--scenes 0,3-5` | Render only the given scene indices (still combined into one MP4) |
@@ -479,7 +491,7 @@ Up to three panels (`thread_panel_0..2`). `system` selects the visual chrome
 
 The default `termgif_hold` is 12s — one loop of a typical [VHS](https://github.com/charmbracelet/vhs) recording.
 
-#### `video` — embed a demo MP4
+#### `video` — embed a demo MP4 or rrweb log
 
 ```json
 { "type": "video",
@@ -491,16 +503,47 @@ The default `termgif_hold` is 12s — one loop of a typical [VHS](https://github
                    { "chapter": "open", "text": "Now we open a project." } ] }
 ```
 
-Splices a recorded product demo into the deck. `src` is a pre-rendered MP4
-(a sibling `<src>.mp4.chapters.json` drives auto captions), or use `capture`
-to record a tour on the fly. `mode: "embedded"` insets the video in a slide
-with `eyebrow`/`title`/`caption` chrome instead of filling the frame
-(`fit: "contain"|"cover"`); `start`/`end`/`speed` trim and retime. Deck-styled
-lower-third captions come from the chapter sidecar (`chapters`), `annotations`
-add timed callouts, and `narration` may be a string or time-keyed cues
-(`{at|chapter, text}`) so the voiceover tracks demo moments. The scene's
-duration equals the (trimmed) video length; PNG/PDF export shows a poster frame.
-Produce the MP4 with [`slidey capture`](#cli). See `examples/demo-video.json`.
+Splices a recorded product demo into the deck. Pick **one** source:
+
+- `src` — a pre-rendered MP4 (a sibling `<src>.mp4.chapters.json` drives auto
+  captions);
+- `rrweb` — an rrweb DOM-session log (`*.rrweb.json`). Baked output (mp4/pdf/png)
+  seek-rasterizes the log via rrweb's `Replayer`; the **web viewer mounts a live,
+  scrubbable, chapter-aware player** you can grab to interact with. Chapters come
+  from in-log `slidey.chapter` custom events. See `examples/rrweb-demo.json`;
+- `capture` — record a tour on the fly via the tour engine.
+
+`mode: "embedded"` insets the video in a slide with `eyebrow`/`title`/`caption`
+chrome instead of filling the frame (`fit: "contain"|"cover"`);
+`start`/`end`/`speed` trim and retime. Deck-styled lower-third captions come from
+the chapter sidecar (`chapters`), `annotations` add timed callouts, and
+`narration` may be a string or time-keyed cues (`{at|chapter, text}`) so the
+voiceover tracks demo moments. The scene's duration equals the (trimmed) source
+length; PNG/PDF export shows a poster frame. Produce a source with
+[`slidey capture`](#cli). See `examples/demo-video.json` (MP4) and
+`examples/rrweb-demo.json` (rrweb).
+
+> **rrweb baked render is the slow path by design.** Each frame is a distinct
+> `Replayer.goto(t)` seek + screenshot (real motion), so it's far slower than the
+> freeze-frame MP4 path — freeze-frame stays the default; rrweb is opt-in per
+> scene. For interactive review, the web viewer plays the log with no render at
+> all.
+
+#### rrweb as a library (for kitsoki)
+
+slidey owns the canonical rrweb pieces and exposes them as subpath exports so
+another app (kitsoki) consumes them instead of maintaining its own:
+
+| Import | What |
+|---|---|
+| `slidey/rrweb-buffer` | App-agnostic rolling-buffer recorder (browser ESM) — the bug-report capture engine. `createSessionCapture(opts)` or the singleton `startSessionCapture` / `snapshotSessionEvents`. |
+| `slidey/rrweb-player` | `RrwebPlayer.vue` — themeable (CSS `--rrp-*` vars) scrubbable player with chapter markers + an interactive "grab" toggle. Ship-as-source SFC; the consumer's Vite compiles it. Powers both the deck viewer and kitsoki's bug-report modal. |
+| `slidey/rrweb-format` | Node-side `*.rrweb.json` envelope + `chaptersFromEvents()` (→ `source_ref.kind:"rrweb"` chapters). |
+| `slidey/rrweb-chapters` | Browser ESM chapter extractor (the fields the player needs). |
+
+A kitsoki bug-report session and a slidey demo recording are the **same artifact
+type**: drop a bug session's `*.rrweb.json` into a `video` scene to turn a repro
+into a narrated, annotated deck.
 
 #### `cards` — peer-set, contrast, or Q&A layouts
 

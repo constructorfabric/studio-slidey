@@ -1,0 +1,50 @@
+[
+  {
+    "index": 0,
+    "id": "home",
+    "label": "Welcome",
+    "start_ms": 56,
+    "end_ms": 1259,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "tour.json",
+      "step_id": "home"
+    }
+  },
+  {
+    "index": 1,
+    "id": "story",
+    "label": "Your story",
+    "start_ms": 1259,
+    "end_ms": 2462,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "tour.json",
+      "step_id": "story"
+    }
+  },
+  {
+    "index": 2,
+    "id": "open",
+    "label": "Open the panel",
+    "start_ms": 2462,
+    "end_ms": 3882,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "tour.json",
+      "step_id": "open"
+    }
+  },
+  {
+    "index": 3,
+    "id": "compose",
+    "label": "Drive it",
+    "start_ms": 3882,
+    "end_ms": 5085,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "tour.json",
+      "step_id": "compose"
+    }
+  }
+]
