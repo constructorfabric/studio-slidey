@@ -148,6 +148,16 @@ function videoSceneFrames(scene, opts = {}) {
     const dur = fs.existsSync(abs) ? require('./video').probeDuration(abs) : 0;
     if (dur) return videoFrameCount(dur, scene, fps);
   }
+  if (scene.rrweb) {
+    // No probe needed — the log carries its own duration (last - first event).
+    const abs = path.resolve(specDir, scene.rrweb);
+    if (fs.existsSync(abs)) {
+      try {
+        const { durationMs } = require('./rrweb-format').loadRrweb(abs);
+        if (durationMs) return videoFrameCount(durationMs / 1000, scene, fps);
+      } catch { /* fall through */ }
+    }
+  }
   if (scene.capture) {
     const tp = path.resolve(specDir, scene.capture);
     if (fs.existsSync(tp)) {

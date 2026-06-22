@@ -71,7 +71,7 @@ async function generatePngs(spec, outputDir, opts = {}) {
       const scene = scenes[i];
 
       // video scenes are not rendered through the Vue bundle — emit a poster
-      // frame (a representative still) straight from the source MP4 instead.
+      // frame (a representative still) straight from the source instead.
       if (scene.type === 'video' && scene.src) {
         const v = require('./video');
         const src = path.resolve(path.dirname(specPath || '.'), scene.src);
@@ -81,6 +81,20 @@ async function generatePngs(spec, outputDir, opts = {}) {
           const sceneStr = String(i).padStart(2, '0');
           const filePath = path.join(outputDir, `${sceneStr}-01.png`);
           v.extractPoster({ src, outPng: filePath, width, height, fit: scene.fit || 'contain', atSec: at });
+          files.push(filePath);
+          fileCount++;
+          if (onProgress) onProgress(fileCount, i, scene.type);
+          continue;
+        }
+      }
+      // rrweb-log video scenes: poster via a single Replayer seek + screenshot.
+      if (scene.type === 'video' && scene.rrweb) {
+        const rrwebPath = path.resolve(path.dirname(specPath || '.'), scene.rrweb);
+        if (fs.existsSync(rrwebPath)) {
+          const { extractRrwebPoster } = require('./rrweb-render');
+          const sceneStr = String(i).padStart(2, '0');
+          const filePath = path.join(outputDir, `${sceneStr}-01.png`);
+          await extractRrwebPoster(rrwebPath, filePath, { width, height, fit: scene.fit || 'contain', atSec: scene.start || undefined });
           files.push(filePath);
           fileCount++;
           if (onProgress) onProgress(fileCount, i, scene.type);

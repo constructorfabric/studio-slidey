@@ -44,6 +44,21 @@ async function resolveSource(scene, ctx) {
     if (!fs.existsSync(abs)) throw new Error(`video scene: src not found: ${abs}`);
     return { src: abs, captured: false, chapters: null };
   }
+  // rrweb log source: seek-rasterize to a temp MP4 (opt-in baked path), then
+  // flow through the same extractFrames pipeline. Chapters come from the log's
+  // in-band `slidey.chapter` custom events; the log is clean (no baked overlays)
+  // so chapters default to "auto" — captions composite on top like a clean src.
+  if (scene.rrweb) {
+    const rrwebPath = path.resolve(specDir, scene.rrweb);
+    if (!fs.existsSync(rrwebPath)) throw new Error(`video scene: rrweb log not found: ${rrwebPath}`);
+    const { loadRrweb, chaptersFromEvents } = require('../rrweb-format');
+    const { rasterizeRrwebToVideo } = require('../rrweb-render');
+    const { events } = loadRrweb(rrwebPath);
+    const chapters = chaptersFromEvents(events, { specPath: path.relative(process.cwd(), rrwebPath) });
+    const outMp4 = path.join(os.tmpdir(), `slidey-rrweb-${ctx.sceneIndex}-${process.pid}.mp4`);
+    const res = await rasterizeRrwebToVideo(rrwebPath, outMp4, { fps: ctx.fps });
+    return { src: res.mp4, captured: false, chapters };
+  }
   if (scene.capture) {
     const tourPath = path.resolve(specDir, scene.capture);
     if (!fs.existsSync(tourPath)) throw new Error(`video scene: capture tour not found: ${tourPath}`);

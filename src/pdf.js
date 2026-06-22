@@ -120,6 +120,33 @@ function resolveBin(name, probeArgs) {
  * @param {function} [opts.onProgress] callback(pageCount, sceneIndex, type)
  * @returns {Promise<{pageCount:number, scenePages:Array}>}
  */
+/**
+ * Render a video scene's poster still to a temp PNG (deck-sized), from an MP4
+ * `src` or an rrweb log. Returns the path, or null if the source is missing.
+ */
+async function videoPosterPng(scene, specPath, width, height) {
+  const os = require('os');
+  const specDir = path.dirname(specPath || '.');
+  const out = path.join(os.tmpdir(), `slidey-pdf-poster-${process.pid}-${Math.round(width)}x${Math.round(height)}-${scene.src ? 'src' : 'rrweb'}-${Date.now()}.png`);
+  if (scene.src) {
+    const src = path.resolve(specDir, scene.src);
+    if (!fs.existsSync(src)) return null;
+    const v = require('./video');
+    const dur = v.probeDuration(src);
+    const at = Math.max(0, scene.start || 0) + Math.min(1, dur * 0.1);
+    v.extractPoster({ src, outPng: out, width, height, fit: scene.fit || 'contain', atSec: at });
+    return out;
+  }
+  if (scene.rrweb) {
+    const rrwebPath = path.resolve(specDir, scene.rrweb);
+    if (!fs.existsSync(rrwebPath)) return null;
+    const { extractRrwebPoster } = require('./rrweb-render');
+    await extractRrwebPoster(rrwebPath, out, { width, height, fit: scene.fit || 'contain', atSec: scene.start || undefined });
+    return out;
+  }
+  return null;
+}
+
 async function generatePdf(spec, outputPath, opts = {}) {
   const {
     specPath = null, selectedScenes = null, onProgress = null,
@@ -179,6 +206,22 @@ async function generatePdf(spec, outputPath, opts = {}) {
     for (let i = 0; i < scenes.length; i++) {
       if (selectedScenes && !selectedScenes.has(i)) continue;
       const scene = scenes[i];
+
+      // Video scenes aren't rendered through the Vue bundle — embed a poster
+      // still (from the MP4 or the rrweb log) as a single full-page image.
+      if (scene.type === 'video' && (scene.src || scene.rrweb)) {
+        const poster = await videoPosterPng(scene, specPath, width, height);
+        if (poster) {
+          const img = await merged.embedPng(fs.readFileSync(poster));
+          const pg = merged.addPage([width, height]);
+          pg.drawImage(img, { x: 0, y: 0, width, height });
+          fs.rmSync(poster, { force: true });
+          pageCount++;
+          scenePages.push({ sceneIndex: i, type: scene.type, pages: 1 });
+          if (onProgress) onProgress(pageCount, i, scene.type);
+          continue;
+        }
+      }
 
       // Inline a terminal-gif's first frame as a data URI (a static GIF in a PDF
       // shows its first frame; that's the right still for a slide).
