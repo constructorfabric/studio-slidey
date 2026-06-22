@@ -15,6 +15,8 @@
 const puppeteer = require('puppeteer');
 const path      = require('path');
 const fs        = require('fs');
+const { launchOptions } = require('./browser');
+const { sceneShowOpts } = require('./assets');
 
 const RENDER_BUNDLE = path.resolve(__dirname, '..', 'dist-render', 'render.html');
 
@@ -41,11 +43,7 @@ async function generatePngs(spec, outputDir, opts = {}) {
   const { width = 1920, height = 1080 } = (spec.meta && spec.meta.resolution) || {};
   const mode = (spec.meta && spec.meta.mode) || 'api';
 
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
-      `--window-size=${width},${height}`],
-  });
+  const browser = await puppeteer.launch(launchOptions({ width, height }));
 
   const files = [];
   let fileCount = 0;
@@ -102,13 +100,7 @@ async function generatePngs(spec, outputDir, opts = {}) {
         }
       }
 
-      const showOpts = {};
-      if (scene.type === 'terminal-gif' && scene.gif) {
-        const gifPath = path.resolve(path.dirname(specPath || '.'), scene.gif);
-        if (fs.existsSync(gifPath)) {
-          showOpts.gifDataUri = `data:image/gif;base64,${fs.readFileSync(gifPath).toString('base64')}`;
-        }
-      }
+      const showOpts = sceneShowOpts(scene, specPath);
 
       await page.evaluate(applyShow, scene, showOpts);
 

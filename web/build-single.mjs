@@ -40,22 +40,30 @@ if (!spec || !Array.isArray(spec.scenes) || !spec.scenes.length) {
   process.exit(1);
 }
 
-// Embed gif assets the spec references (resolved relative to the spec file) as
-// data URIs, so terminal-gif scenes render with no external file. Missing gifs
-// are left as-is — the viewer skips an unresolvable gif gracefully.
+// Embed local assets the spec references (resolved relative to the spec file) as
+// data URIs, so portable single-file decks render with no external files.
+// Missing assets are left as-is; the viewer skips unresolved assets gracefully.
 const specDir = dirname(specPath);
-const gifMime = { '.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
-let embeddedGifs = 0;
-for (const sc of spec.scenes) {
-  if (!sc.gif || /^data:/.test(sc.gif)) continue;
-  const gifPath = resolve(specDir, sc.gif);
-  if (!existsSync(gifPath)) {
-    console.warn(`[build-single] WARNING: gif not found, leaving reference as-is: ${sc.gif}`);
-    continue;
+const assetMime = { '.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml' };
+let embeddedAssets = 0;
+function embedAsset(ref, label) {
+  if (!ref || /^data:/.test(ref) || /^https?:\/\//.test(ref)) return ref;
+  const assetPath = resolve(specDir, ref);
+  if (!existsSync(assetPath)) {
+    console.warn(`[build-single] WARNING: ${label} not found, leaving reference as-is: ${ref}`);
+    return ref;
   }
-  const mime = gifMime[extname(gifPath).toLowerCase()] || 'application/octet-stream';
-  sc.gif = `data:${mime};base64,${readFileSync(gifPath).toString('base64')}`;
-  embeddedGifs++;
+  const mime = assetMime[extname(assetPath).toLowerCase()] || 'application/octet-stream';
+  embeddedAssets++;
+  return `data:${mime};base64,${readFileSync(assetPath).toString('base64')}`;
+}
+for (const sc of spec.scenes) {
+  if (sc.gif) sc.gif = embedAsset(sc.gif, 'gif');
+  if (sc.type === 'book' && Array.isArray(sc.books)) {
+    for (const book of sc.books) {
+      if (book && book.cover) book.cover = embedAsset(book.cover, 'book cover');
+    }
+  }
 }
 
 // 1. Build the single-chunk web bundle (inlineDynamicImports → one JS + one CSS).
@@ -111,6 +119,6 @@ writeFileSync(outPath, html);
 const sizeMB = (statSync(outPath).size / 1e6).toFixed(2);
 console.log(
   `[build-single] wrote ${outPath} (${sizeMB} MB, self-contained — ` +
-  `${spec.scenes.length} scenes, ${embeddedGifs} gif(s) embedded)`,
+  `${spec.scenes.length} scenes, ${embeddedAssets} asset(s) embedded)`,
 );
 console.log('[build-single] open it directly in a browser; no server needed.');

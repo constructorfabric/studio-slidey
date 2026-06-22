@@ -1,10 +1,13 @@
 'use strict';
 
+const fs = require('fs');
 const { SCHEMA } = require('./schema');
+const { resolveAsset } = require('./assets');
 
 const VALID_TYPES = [
   'title', 'narrative', 'diagram', 'diagram-svg', 'trace', 'transcript',
-  'thread', 'stat', 'cta', 'terminal-gif', 'cards', 'code', 'table', 'chart', 'request',
+  'thread', 'stat', 'cta', 'terminal-gif', 'cards', 'code', 'table', 'chart',
+  'book', 'request',
 ];
 
 let _validate;
@@ -22,12 +25,97 @@ function getValidate() {
  * Returns { valid: boolean, errors: string[], count: number }
  * where errors are human-readable lines and count is the number of distinct problems.
  */
-function validateSpec(spec) {
+function validateSpec(spec, opts = {}) {
   const validate = getValidate();
   const valid = validate(spec);
-  if (valid) return { valid: true, errors: [], count: 0 };
+  const semantic = validateSemantics(spec, opts);
+  if (valid && semantic.errors.length === 0) {
+    return { valid: true, errors: [], warnings: semantic.warnings, count: 0 };
+  }
   const { lines, count } = formatErrors(validate.errors, spec);
-  return { valid: false, errors: lines, count };
+  return {
+    valid: false,
+    errors: [...lines, ...semantic.errors],
+    warnings: semantic.warnings,
+    count: count + semantic.errors.length,
+  };
+}
+
+function validateSemantics(spec, opts = {}) {
+  const specPath = opts.specPath || null;
+  const errors = [];
+  const warnings = [];
+  const scenes = Array.isArray(spec && spec.scenes) ? spec.scenes : [];
+
+  scenes.forEach((scene, sceneIdx) => {
+    if (!scene || scene.type !== 'book') return;
+    const books = Array.isArray(scene.books) ? scene.books.slice(0, 3) : [];
+    books.forEach((book, bookIdx) => {
+      const prefix = `  Scene ${sceneIdx} — book ${bookIdx}:`;
+      if (!book || !book.cover) return;
+      const ref = book.cover;
+      if (/^data:/i.test(ref) || /^https?:\/\//i.test(ref)) return;
+      const abs = resolveAsset(specPath, ref);
+      if (!fs.existsSync(abs)) {
+        errors.push(`${prefix} cover not found: ${ref}`);
+        return;
+      }
+      const dims = imageSize(abs);
+      if (!dims) {
+        warnings.push(`${prefix} could not read cover dimensions: ${ref}`);
+        return;
+      }
+      if (dims.width < 240 || dims.height < 320) {
+        warnings.push(`${prefix} cover is low resolution (${dims.width}x${dims.height}); use at least 240x320 for rendered book slides`);
+      }
+    });
+  });
+
+  validateRequiredScenes(spec, errors);
+  return { errors, warnings };
+}
+
+function validateRequiredScenes(spec, errors) {
+  const requirements = (spec && spec.meta && (spec.meta.required_scenes || spec.meta.requiredScenes)) || [];
+  if (!Array.isArray(requirements)) return;
+  const scenes = Array.isArray(spec.scenes) ? spec.scenes : [];
+  requirements.forEach((req, i) => {
+    if (!req || !req.type) {
+      errors.push(`  meta.required_scenes[${i}]: missing required field "type"`);
+      return;
+    }
+    let matches = scenes.filter(s => s && s.type === req.type);
+    if (Number.isInteger(req.first)) matches = matches.slice(0, Math.max(0, req.first));
+    const count = matches.length;
+    if (Number.isInteger(req.min) && count < req.min) {
+      errors.push(`  meta.required_scenes[${i}]: requires at least ${req.min} scene(s) of type "${req.type}" (found ${count})`);
+    }
+    if (Number.isInteger(req.max) && count > req.max) {
+      errors.push(`  meta.required_scenes[${i}]: allows at most ${req.max} scene(s) of type "${req.type}" (found ${count})`);
+    }
+  });
+}
+
+function imageSize(file) {
+  const buf = fs.readFileSync(file);
+  if (buf.length >= 24 && buf[0] === 0x89 && buf.toString('ascii', 1, 4) === 'PNG') {
+    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  }
+  if (buf.length >= 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+    let off = 2;
+    while (off + 9 < buf.length) {
+      if (buf[off] !== 0xff) break;
+      const marker = buf[off + 1];
+      const len = buf.readUInt16BE(off + 2);
+      if (len < 2) break;
+      if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) ||
+          (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
+        return { height: buf.readUInt16BE(off + 5), width: buf.readUInt16BE(off + 7) };
+      }
+      off += 2 + len;
+    }
+  }
+  return null;
 }
 
 // ── Error formatting ────────────────────────────────────────────────────────
@@ -37,7 +125,7 @@ function formatErrors(rawErrors, spec) {
   const byScene = {};
   const global = [];
 
-  for (const err of rawErrors) {
+  for (const err of rawErrors || []) {
     const m = err.instancePath.match(/^\/scenes\/(\d+)(.*)/);
     if (m) {
       const idx = parseInt(m[1], 10);

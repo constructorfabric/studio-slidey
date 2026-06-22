@@ -77,6 +77,12 @@ export const PITCH_REVEALS = {
   chart_series_4:  ['chart-series-4'],
   chart_series_5:  ['chart-series-5'],
   chart_caption:   ['chart-caption'],
+  // ── Book ──
+  book_title:   ['book-title'],
+  book_item_0:  ['book-item-0'],
+  book_item_1:  ['book-item-1'],
+  book_item_2:  ['book-item-2'],
+  book_caption: ['book-caption'],
 };
 
 // API/request-mode ids cleared on a scene reset (verbatim from _resetScene).
@@ -94,6 +100,7 @@ export const store = reactive({
   scene: null,
   sceneType: null,
   gifDataUri: '',
+  bookCoverDataUris: [],
   // video (live rrweb) — populated by showVideo for VideoScene/RrwebPlayer.
   rrwebEvents: [],
   rrwebChapters: [],
@@ -235,7 +242,12 @@ export const store = reactive({
   },
 
   // ── Pitch scenes ──────────────────────────────────────────────────────────
-  _resetPitch() { this.revealed = new Set(); this.revealAll = false; },
+  _resetPitch() {
+    this.revealed = new Set();
+    this.revealAll = false;
+    this.gifDataUri = '';
+    this.bookCoverDataUris = [];
+  },
 
   showScene(type, scene) {
     this._resetScene();

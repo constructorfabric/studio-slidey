@@ -166,11 +166,34 @@ function runCheck(spec) {
         const n = nodes.find((x) => x.id === id);
         return n && ['x', 'y', 'w', 'h'].every((k) => Number.isFinite(n[k])) ? n : null;
       };
-      for (const e of panel.edges || []) {
-        if (e.elbow || e.arch !== undefined) continue; // intentionally bent routes
+      const edges = panel.edges || [];
+      const pathLength = (fromId, toId, skipEdge) => {
+        const queue = [{ id: fromId, depth: 0 }];
+        const seen = new Set([fromId]);
+        while (queue.length) {
+          const cur = queue.shift();
+          if (cur.id === toId) return cur.depth;
+          for (const edge of edges) {
+            if (edge === skipEdge || edge.from !== cur.id || seen.has(edge.to)) continue;
+            seen.add(edge.to);
+            queue.push({ id: edge.to, depth: cur.depth + 1 });
+          }
+        }
+        return -1;
+      };
+      for (const e of edges) {
         const from = placed(e.from);
         const to = placed(e.to);
         if (!from || !to) continue;
+
+        const closesMultiHopCycle = pathLength(e.to, e.from, e) > 1;
+        if (e.bus === undefined && closesMultiHopCycle && to.y + to.h / 2 < from.y + from.h / 2) {
+          sceneViolations.push(
+            `  panel ${pi}, edge "${e.from}"→"${e.to}": cycle-closing feedback edge should use a return bus (set "bus" plus style "back" or "recycle") so it does not cut through the layout`
+          );
+        }
+
+        if (e.elbow || e.arch !== undefined || e.bus !== undefined) continue; // intentionally bent routes
 
         const fcx = from.x + from.w / 2, fcy = from.y + from.h / 2;
         const tcx = to.x + to.w / 2, tcy = to.y + to.h / 2;

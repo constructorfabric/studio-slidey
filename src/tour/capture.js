@@ -51,6 +51,7 @@ const path = require('path');
 const { resolveTarget } = require('./launch');
 const { ChapterRecorder } = require('./chapters');
 const overlays = require('./overlays');
+const { launchOptions } = require('../browser');
 
 const ACTION_TIMEOUT = 15000;   // never let a missing/covered element hang forever
 
@@ -136,11 +137,11 @@ async function captureTour(tour, framesDir, opts = {}) {
   let browser;
   let page;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
-        '--disable-gpu', `--window-size=${viewport.width},${viewport.height}`],
-    });
+    browser = await puppeteer.launch(launchOptions({
+      width: viewport.width,
+      height: viewport.height,
+      args: ['--disable-gpu'],
+    }));
     page = await browser.newPage();
     await page.setViewport({ width: viewport.width, height: viewport.height, deviceScaleFactor: dsf });
     page.setDefaultTimeout(ACTION_TIMEOUT);

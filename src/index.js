@@ -79,6 +79,23 @@ if (args[0] === 'docs') {
   }
 }
 
+// ── `slidey doctor` — verify the headless browser can launch and screenshot ─
+if (args[0] === 'doctor') {
+  (async () => {
+    const { doctor } = require('./browser');
+    const result = await doctor();
+    console.log(`[slidey] Browser: ${result.executablePath}`);
+    if (result.ok) {
+      console.log('[slidey] ✓ browser launch and screenshot succeeded');
+      process.exit(0);
+    }
+    console.error('[slidey] ERROR: browser launch failed');
+    console.error(result.error || 'unknown error');
+    process.exit(1);
+  })();
+  return;
+}
+
 // ── `slidey skill install [--user|--project]` — install the authoring skill ──
 // Copies the bundled slidey-authoring skill into a .claude/skills/ directory so
 // Claude Code (or any agent that reads that convention) loads it automatically.
@@ -170,6 +187,7 @@ if (((args.length < 2 && !wantsList && !wantsCheck && !wantsValidate) || args.le
     '    node index.js <folder>                              open the viewer (file-tree sidebar)',
     '    node index.js <input.json>                          open the viewer on one deck',
     '    node index.js capture <tour.json> <out.mp4>         record a demo MP4 + chapter sidecar from a tour',
+    '    node index.js doctor                                verify headless Chrome launch + screenshot',
     '    slidey docs                                          print the authoring guide (for LLMs/agents)',
     '    slidey skill install [--user|--project]             install the slidey-authoring agent skill',
     '',
@@ -482,7 +500,10 @@ async function main() {
 
   // ── JSON Schema validation (always; exits on failure) ─────────────────────
   {
-    const { valid, errors, count } = validateSpec(spec);
+    const { valid, errors, warnings, count } = validateSpec(spec, { specPath: absInput });
+    if (warnings && warnings.length) {
+      for (const line of warnings) console.error(`[slidey] VALIDATION WARNING: ${line.trim()}`);
+    }
     if (!valid) {
       console.error(`[slidey] VALIDATION ERROR: ${count} problem(s) found in ${path.basename(absInput)}\n`);
       for (const line of errors) console.error(line);

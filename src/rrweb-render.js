@@ -21,6 +21,7 @@ const path = require('path');
 const { loadRrweb } = require('./rrweb-format');
 const { rrwebBundlePath } = require('./tour/rrweb-capture');
 const { framesToVideo } = require('./assembler');
+const { launchOptions } = require('./browser');
 
 /** Locate rrweb's replay stylesheet (sits alongside the UMD bundle). */
 function rrwebStylePath() {
@@ -54,11 +55,11 @@ async function rasterizeRrweb(rrwebPath, framesDir, opts = {}) {
 
   let browser;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
-        '--disable-gpu', `--window-size=${viewport.width},${viewport.height}`],
-    });
+    browser = await puppeteer.launch(launchOptions({
+      width: viewport.width,
+      height: viewport.height,
+      args: ['--disable-gpu'],
+    }));
     const page = await browser.newPage();
     await page.setViewport({
       width: viewport.width, height: viewport.height,
@@ -158,10 +159,11 @@ async function extractRrwebPoster(rrwebPath, outPng, opts = {}) {
   const tmpPng = outPng + '.native.png';
   let browser;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-    });
+    browser = await puppeteer.launch(launchOptions({
+      width: viewport.width,
+      height: viewport.height,
+      args: ['--disable-gpu'],
+    }));
     const page = await browser.newPage();
     await page.setViewport({ width: viewport.width, height: viewport.height, deviceScaleFactor: viewport.deviceScaleFactor || 1 });
     await page.setContent(

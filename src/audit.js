@@ -32,6 +32,8 @@
 'use strict';
 
 const puppeteer = require('puppeteer');
+const { launchOptions } = require('./browser');
+const { sceneShowOpts } = require('./assets');
 const path      = require('path');
 const fs        = require('fs');
 
@@ -193,6 +195,21 @@ function auditDom(W, H, cfg) {
     // broken-image — a rendered <img> whose source failed to decode
     if (el.tagName === 'IMG' && (el.getAttribute('src') || el.currentSrc) && el.complete && el.naturalWidth === 0) {
       add('missing-or-broken', 'error', 'image failed to load (naturalWidth 0)', el.getAttribute('src') || el.currentSrc || '', label(el));
+    }
+
+    // book-cover-scale — the book cover exists but renders as a small thumbnail
+    // inside its cover well. This catches low-effort layouts that pass schema
+    // but visually bury the asset.
+    if (el.tagName === 'IMG' && el.classList.contains('book-cover')) {
+      const wrap = el.closest('.book-cover-wrap');
+      if (wrap) {
+        const wr = wrap.getBoundingClientRect();
+        if (r.width < wr.width * 0.55 || r.height < wr.height * 0.75) {
+          add('book-cover-scale', 'error',
+            `cover renders too small for its frame (${Math.round(r.width)}x${Math.round(r.height)}px in ${Math.round(wr.width)}x${Math.round(wr.height)}px)`,
+            el.getAttribute('alt') || '', label(el));
+        }
+      }
     }
 
     // off-page — only meaningful for leaf-ish content (has own text, or is an img)
@@ -372,10 +389,7 @@ async function auditSpec(spec, opts = {}) {
   const { width = 1920, height = 1080 } = (spec.meta && spec.meta.resolution) || {};
   const mode = (spec.meta && spec.meta.mode) || 'api';
 
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', `--window-size=${width},${height}`],
-  });
+  const browser = await puppeteer.launch(launchOptions({ width, height }));
 
   const frames = [];
   try {
@@ -395,13 +409,7 @@ async function auditSpec(spec, opts = {}) {
       if (selectedScenes && !selectedScenes.has(i)) continue;
       const scene = scenes[i];
 
-      const showOpts = {};
-      if (scene.type === 'terminal-gif' && scene.gif) {
-        const gifPath = path.resolve(path.dirname(specPath || '.'), scene.gif);
-        if (fs.existsSync(gifPath)) {
-          showOpts.gifDataUri = `data:image/gif;base64,${fs.readFileSync(gifPath).toString('base64')}`;
-        }
-      }
+      const showOpts = sceneShowOpts(scene, specPath);
       await page.evaluate(applyShow, scene, showOpts);
 
       const steps = stepsForScene(scene);

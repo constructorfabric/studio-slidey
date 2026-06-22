@@ -23,6 +23,8 @@ const path      = require('path');
 const fs        = require('fs');
 const { execFileSync, spawnSync } = require('child_process');
 const { PDFDocument } = require('pdf-lib');
+const { launchOptions } = require('./browser');
+const { sceneShowOpts } = require('./assets');
 
 const RENDER_BUNDLE = path.resolve(__dirname, '..', 'dist-render', 'render.html');
 
@@ -167,11 +169,7 @@ async function generatePdf(spec, outputPath, opts = {}) {
   const { width = 1920, height = 1080 } = (spec.meta && spec.meta.resolution) || {};
   const mode = (spec.meta && spec.meta.mode) || 'api';
 
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
-      `--window-size=${width},${height}`],
-  });
+  const browser = await puppeteer.launch(launchOptions({ width, height }));
 
   const scenePages = [];
   let pageCount = 0;
@@ -223,15 +221,8 @@ async function generatePdf(spec, outputPath, opts = {}) {
         }
       }
 
-      // Inline a terminal-gif's first frame as a data URI (a static GIF in a PDF
-      // shows its first frame; that's the right still for a slide).
-      const showOpts = {};
-      if (scene.type === 'terminal-gif' && scene.gif) {
-        const gifPath = path.resolve(path.dirname(specPath || '.'), scene.gif);
-        if (fs.existsSync(gifPath)) {
-          showOpts.gifDataUri = `data:image/gif;base64,${fs.readFileSync(gifPath).toString('base64')}`;
-        }
-      }
+      // Inline local assets as data URIs so file:// renders are self-contained.
+      const showOpts = sceneShowOpts(scene, specPath);
 
       await page.evaluate(applyShow, scene, showOpts);
 
