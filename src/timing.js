@@ -131,6 +131,14 @@ const TIMING = {
   image_frame:         30,
   image_caption:       25,
   image_hold:         210,  // 7.0 s
+
+  // ── Book scene ─────────────────────────────────────────────────
+  book_title:         20,
+  book_item_0:        30,
+  book_item_1:        30,
+  book_item_2:        30,
+  book_caption:       30,
+  book_hold:         240,  // 8.0 s
 };
 
 const fs   = require('fs');
@@ -216,6 +224,7 @@ function estimateScene(scene, opts = {}) {
       case 'table':        return scene.hold ?? T.table_hold ?? T.trace_hold;
       case 'chart':        return scene.hold ?? T.chart_hold ?? T.diagramsvg_hold;
       case 'image':        return scene.hold ?? T.image_hold ?? T.diagramsvg_hold;
+      case 'book':         return scene.hold ?? T.book_hold ?? T.cards_hold;
       case 'stat':         return hold('stat_hold',        scene.hold);
       case 'cta':          return hold('cta_hold',         scene.hold);
       case 'request':      return T.sending_ticks * T.sending_per_tick
@@ -340,6 +349,17 @@ function estimateScene(scene, opts = {}) {
       f += T.image_frame;
       if (scene.caption) f += T.image_caption;
       f += scene.hold ?? T.image_hold ?? T.diagramsvg_hold;
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'book': {
+      let f = 0;
+      if (scene.title) f += T.book_title;
+      const n = Math.min(3, Math.max(0, (scene.books || []).length));
+      for (let i = 0; i < n; i++) f += T[`book_item_${i}`] ?? 30;
+      if (scene.caption) f += T.book_caption;
+      f += scene.hold ?? T.book_hold ?? T.cards_hold;
       f += T.inter_scene;
       return f;
     }

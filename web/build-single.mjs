@@ -46,18 +46,28 @@ if (!spec || !Array.isArray(spec.scenes) || !spec.scenes.length) {
 const specDir = dirname(specPath);
 const gifMime = { '.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
 let embeddedAssets = 0;
+function embedAsset(ref, label) {
+  if (!ref || /^data:/.test(ref) || /^https?:\/\//i.test(ref)) return ref;
+  const assetPath = resolve(specDir, ref);
+  if (!existsSync(assetPath)) {
+    console.warn(`[build-single] WARNING: asset not found, leaving reference as-is: ${label || ref}`);
+    return ref;
+  }
+  const mime = gifMime[extname(assetPath).toLowerCase()] || 'application/octet-stream';
+  embeddedAssets++;
+  return `data:${mime};base64,${readFileSync(assetPath).toString('base64')}`;
+}
+
 for (const sc of spec.scenes) {
   for (const field of ['gif', 'src']) {
     if (!sc[field] || /^data:/.test(sc[field]) || /^https?:\/\//i.test(sc[field])) continue;
     if (field === 'src' && sc.type !== 'image') continue;
-    const assetPath = resolve(specDir, sc[field]);
-    if (!existsSync(assetPath)) {
-      console.warn(`[build-single] WARNING: asset not found, leaving reference as-is: ${sc[field]}`);
-      continue;
+    sc[field] = embedAsset(sc[field]);
+  }
+  if (sc.type === 'book' && Array.isArray(sc.books)) {
+    for (const book of sc.books) {
+      if (book && book.cover) book.cover = embedAsset(book.cover, book.cover);
     }
-    const mime = gifMime[extname(assetPath).toLowerCase()] || 'application/octet-stream';
-    sc[field] = `data:${mime};base64,${readFileSync(assetPath).toString('base64')}`;
-    embeddedAssets++;
   }
 }
 

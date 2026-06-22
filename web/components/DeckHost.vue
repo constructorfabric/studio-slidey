@@ -20,6 +20,7 @@ import CodeScene from './CodeScene.vue';
 import TableScene from './TableScene.vue';
 import ChartScene from './ChartScene.vue';
 import ImageScene from './ImageScene.vue';
+import BookScene from './BookScene.vue';
 import VideoScene from './VideoScene.vue';
 
 const PITCH_COMPONENTS = {
@@ -37,6 +38,7 @@ const PITCH_COMPONENTS = {
   table: TableScene,
   chart: ChartScene,
   image: ImageScene,
+  book: BookScene,
   video: VideoScene,
 };
 

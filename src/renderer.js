@@ -46,6 +46,7 @@ const SCENE_MODULES = {
   table:          require('./scenes/table'),
   chart:          require('./scenes/chart'),
   image:          require('./scenes/image'),
+  book:           require('./scenes/book'),
   video:          require('./scenes/video'),
 };
 

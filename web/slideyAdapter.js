@@ -76,6 +76,12 @@ export function installAdapter() {
     },
     hideImage() { store.hidePitch(); store.imageDataUri = ''; },
 
+    showBook(scene, coverDataUris) {
+      store.showScene('book', scene);
+      store.bookCoverDataUris = Array.isArray(coverDataUris) ? coverDataUris : [];
+    },
+    hideBook() { store.hidePitch(); store.bookCoverDataUris = []; },
+
     // video (interactive viewer only): mount the live rrweb player from the
     // loaded log. Headless render + PDF/PNG export handle video scenes natively.
     showVideo(scene, data) { store.showVideo(scene, data); },

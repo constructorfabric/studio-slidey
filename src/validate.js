@@ -5,7 +5,7 @@ const { SCHEMA } = require('./schema');
 const VALID_TYPES = [
   'title', 'narrative', 'diagram', 'diagram-svg', 'trace', 'transcript',
   'thread', 'stat', 'cta', 'terminal-gif', 'cards', 'code', 'table', 'chart',
-  'image', 'request',
+  'image', 'book', 'request',
 ];
 
 let _validate;

@@ -36,6 +36,11 @@ function sceneShowOpts(scene, specPath) {
   if (scene.type === 'image' && scene.src) {
     opts.imageDataUri = assetDataUri(specPath, scene.src);
   }
+  if (scene.type === 'book' && Array.isArray(scene.books)) {
+    opts.bookCoverDataUris = scene.books
+      .slice(0, 3)
+      .map(book => assetDataUri(specPath, book && book.cover));
+  }
   return opts;
 }
 

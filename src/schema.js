@@ -498,6 +498,39 @@ const SCHEMA = {
               ...COMMON,
             },
           },
+          // ── book ──────────────────────────────────────────────────────────
+          {
+            type: 'object',
+            required: ['type', 'books'],
+            description: 'Book-cover bibliography slide for one to three books, with local cover assets and a one-line takeaway per book.',
+            properties: {
+              type: { const: 'book' },
+              title: { type: 'string' },
+              books: {
+                type: 'array',
+                minItems: 1,
+                maxItems: 3,
+                items: {
+                  type: 'object',
+                  required: ['title'],
+                  additionalProperties: false,
+                  properties: {
+                    title: { type: 'string' },
+                    subtitle: { type: 'string' },
+                    authors: { type: 'string' },
+                    publisher: { type: 'string' },
+                    year: { type: 'string' },
+                    isbn: { type: 'string' },
+                    cover: { type: 'string', description: 'Cover image path relative to the spec, absolute path, URL, or data URI' },
+                    alt: { type: 'string' },
+                    takeaway: { type: 'string' },
+                  },
+                },
+              },
+              caption: { type: 'string' },
+              ...COMMON,
+            },
+          },
           // ── request ────────────────────────────────────────────────────────
           {
             type: 'object',

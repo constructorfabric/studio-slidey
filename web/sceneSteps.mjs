@@ -84,6 +84,12 @@ export function stepsForScene(scene) {
     case 'image':
       return [...(s.title ? ['image_title'] : []), 'image_frame',
         ...(s.caption ? ['image_caption'] : [])];
+    case 'book':
+      return [
+        ...(s.title ? ['book_title'] : []),
+        ...range(Math.min(3, Math.max(0, (s.books || []).length)), 'book_item_'),
+        ...(s.caption ? ['book_caption'] : []),
+      ];
     case 'request': {
       const r = s.request || {}, res = s.response || {};
       const steps = ['scene_header', 'request_url'];
@@ -125,6 +131,7 @@ export function applyShow(scene, opts) {
     case 'table':        slidey.showTable(scene); break;
     case 'chart':        slidey.showChart(scene); break;
     case 'image':        slidey.showImage(scene, o.imageDataUri || ''); break;
+    case 'book':         slidey.showBook(scene, o.bookCoverDataUris || []); break;
     // video: only the interactive viewer renders it live (the headless render +
     // PDF/PNG export handle video scenes natively). Guard so render adapters
     // without showVideo (export contexts) don't throw.
