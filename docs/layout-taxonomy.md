@@ -70,6 +70,7 @@ parameterised by a semantic `variant`:
 | `code` *(new)* | **new** | Demonstrate: source, diff, function I/O, file tree, config, logs |
 | `chart` *(new)* | **new** | Quantify: bar, line, area, pie/donut, scatter |
 | `table` *(new)* | **new** | Quantify + Compare: data tables, comparison matrices, scorecards |
+| `image` *(new)* | **new** | Demonstrate: screenshots, diagrams, Marp image slides |
 | `statement` *(new, or extend `narrative`)* | **extend** | Frame, Assert (text-forward layouts, quote, definition) |
 | `metrics` *(new, or extend `stat`)* | **extend** | Assert: multi-KPI row |
 | existing: `narrative` `stat` `cta` `title` `terminal-gif` `trace` `transcript` `thread` `request` | **exists** | Frame, Assert, Demonstrate |
@@ -228,6 +229,7 @@ comparison or trend; bar for category comparison; line for time trend. (Abela.)
 | Chat / conversation | show an LLM/agent conversation | `transcript` | ✅ |
 | Lookup / trace cascade | show a multi-layer lookup with HIT/MISS | `trace` | ✅ |
 | Review / issue thread | show a mocked PR/issue comment thread | `thread` | ✅ |
+| Static image / diagram | show a screenshot or existing diagram asset | `image` | ✅ |
 | Q & A / FAQ | stage a question and its answer | `cards` (`variant:"qa"`) | 🆕 |
 
 > Note on **Q&A**: it straddles Frame and Demonstrate. It is filed here because
@@ -362,6 +364,39 @@ the GitHub-dark tokens at `web/styles/template.css`).
 - `scorecard` adds a highlighted winning column; `comparison` supports ✓/✗ cell
   glyphs (plain Unicode — headless Chrome has no colour emoji, per the gotcha in
   `template.css` notes).
+
+### `image` — Demonstrate (screenshots and existing diagrams)
+
+```jsonc
+{
+  "type": "image",
+  "title": "Gear architecture",
+  "src": "../img/gear_architecture.drawio.png",
+  "alt": "Architecture diagram",
+  "fit": "contain",
+  "caption": "Local assets are inlined for headless exports."
+}
+```
+
+- Use this when migrating Marp decks that already contain rendered diagrams,
+  screenshots, or other canonical visual assets.
+- Reveal: optional title → image frame → optional caption.
+- Local `src` paths are resolved relative to the spec for MP4/PDF/PNG outputs.
+
+## Marp → Slidey feature matrix
+
+| Presentation concern | Marp behavior | Slidey replacement |
+|---|---|---|
+| Source authoring | CommonMark plus Marp directives and `---` page breaks | Declarative JSON; `slidey convert` imports Marp-style Markdown |
+| Lead/title slides | `_class: lead` and heading styles | `title` scene |
+| Agenda and bullet slides | Markdown lists | `cards` variants |
+| Image slides | Marp image syntax and dimensions | `image` scene with asset inlining |
+| Tables | Markdown table HTML | `table` scene |
+| Code fences | Markdown fenced blocks | `code` scene |
+| Browser deck | HTML export | Interactive web viewer or single-file HTML |
+| PDF/images | CLI export via browser | PDF and PNG exports from the same Vue renderer |
+| Narrated video | External toolchain | Native MP4 render with narration and demo scenes |
+| QA | Manual review or custom tests | Reusable `tools/visual-qa` pipeline plus `--audit` |
 
 ### `statement` / `metrics` (extensions)
 

@@ -36,7 +36,7 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  gap: 24px;
 }
 
 #title-card-eyebrow {
@@ -63,12 +63,49 @@ html, body {
 }
 
 #title-card-subtitle {
-  font-size: 32px;
+  font-size: 28px;
   color: #8b949e;
   text-align: center;
-  max-width: 1200px;
-  max-height: 100px;
-  overflow: hidden;
+  max-width: 1500px;
+  line-height: 1.38;
+  padding: 0 64px;
+  white-space: pre-line;
+}
+
+#title-card.title-card-markdown {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  gap: 34px;
+}
+
+#title-card.title-card-markdown #title-card-title {
+  font-family: inherit;
+  font-size: 90px;
+  letter-spacing: 0;
+  max-width: 1660px;
+  line-height: 1.08;
+}
+
+#title-card.title-card-markdown #title-card-subtitle {
+  font-family: inherit;
+  font-size: 36px;
+  line-height: 1.42;
+  color: #a7b1bd;
+  max-width: 1660px;
+}
+#title-card.title-card-markdown strong {
+  font-weight: 800;
+  color: #e6edf3;
+}
+#title-card.title-card-markdown em {
+  font-style: italic;
+}
+#title-card.title-card-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+  color: #a5d6ff;
+  background: rgba(88, 166, 255, 0.12);
+  border-radius: 6px;
+  padding: 0 0.16em;
 }
 
 /* ── Header Bar ───────────────────────────────────────────────────────────── */
@@ -486,6 +523,10 @@ body.mode-pitch #main   { display: none; }
   overflow: hidden;
 }
 body.mode-pitch #pitch-stage { display: flex; }
+body.mode-pitch #pitch-stage:has(#cards-region.active) { padding: 60px 96px; }
+body.mode-pitch #pitch-stage:has(#cards-region.cards-variant-markdown.active) { padding: 44px 64px; }
+body.mode-pitch #pitch-stage:has(#code-region.active) { padding: 64px 96px; }
+body.mode-pitch #pitch-stage:has(#imagecompare-region.active) { padding: 24px 32px; }
 /* The transcript is a full-bleed chat: trim the stage padding so the status row
    sits high and the conversation column runs nearly the full frame width. */
 body.mode-pitch #pitch-stage:has(#transcript-region.active) { padding: 40px 64px; }

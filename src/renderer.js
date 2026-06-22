@@ -35,6 +35,7 @@ const SCENE_MODULES = {
   narrative:      require('./scenes/narrative'),
   diagram:        require('./scenes/diagram'),
   'diagram-svg':  require('./scenes/diagram-svg'),
+  mermaid:        require('./scenes/mermaid'),
   'terminal-gif': require('./scenes/terminal-gif'),
   trace:          require('./scenes/trace'),
   transcript:     require('./scenes/transcript'),
@@ -45,9 +46,16 @@ const SCENE_MODULES = {
   code:           require('./scenes/code'),
   table:          require('./scenes/table'),
   chart:          require('./scenes/chart'),
+  image:          require('./scenes/image'),
+  'image-compare': require('./scenes/image-compare'),
   book:           require('./scenes/book'),
   video:          require('./scenes/video'),
 };
+
+function inferMode(spec) {
+  if (spec.meta && spec.meta.mode) return spec.meta.mode;
+  return (spec.scenes || []).some(scene => scene && scene.type === 'request') ? 'api' : 'pitch';
+}
 
 /**
  * Render every scene in `spec` to PNG frames inside `framesDir`.
@@ -67,7 +75,7 @@ const SCENE_MODULES = {
  */
 async function generateFrames(spec, framesDir, fps = 30, onProgress = null, captureLogPath = null, specPath = null, selectedScenes = null, noGaps = false) {
   const { width = 1920, height = 1080 } = (spec.meta && spec.meta.resolution) || {};
-  const mode = (spec.meta && spec.meta.mode) || 'api';  // 'api' | 'pitch'
+  const mode = inferMode(spec);  // 'api' | 'pitch'
 
   // Shared HTTP context (mutated by request-scene captures across scenes)
   const requestContext = Object.assign({}, (spec.meta && spec.meta.context) || {});

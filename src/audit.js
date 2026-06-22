@@ -35,7 +35,8 @@ const puppeteer = require('puppeteer');
 const { launchOptions } = require('./browser');
 const { sceneShowOpts } = require('./assets');
 const path      = require('path');
-const fs        = require('fs');
+const { launchOptions } = require('./browser');
+const { sceneShowOpts } = require('./assets');
 
 const RENDER_BUNDLE = path.resolve(__dirname, '..', 'dist-render', 'render.html');
 

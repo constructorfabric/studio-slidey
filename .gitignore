@@ -21,3 +21,6 @@ audio/
 .DS_Store
 *.swp
 *~
+
+.context
+.worktrees

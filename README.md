@@ -141,12 +141,25 @@ trace used by `npm test`.
 
 ```
 node src/index.js <input.json> <output> [options]
+node src/index.js convert <input.md> <output.json>
 node src/index.js capture <tour.json> <out.mp4> [--fps N] [--pace N]
 node src/index.js capture <tour.json> <out.rrweb.json> --format rrweb [--pace N]
 ```
 
 The output **extension selects the format**: `.pdf` → slide deck (one page per
 reveal step; no frames, narration, or ffmpeg); anything else → MP4 video.
+
+`convert` imports Markdown slide decks, including Marp-style decks with
+front-matter and `---` slide separators, into native Slidey JSON:
+
+```sh
+node src/index.js convert docs/slides/1_OVERVIEW.md docs/slides/1_OVERVIEW.slidey.json
+node src/index.js docs/slides/1_OVERVIEW.slidey.json docs/slides/1_OVERVIEW.pdf
+```
+
+The importer is conservative and deterministic. It maps lead slides to `title`,
+bullets to `cards`, Markdown tables to `table`, fenced blocks to `code`, and
+image slides to `image`; the generated JSON is validated before it is written.
 
 The `capture` subcommand drives a live web app through a time-based tour
 storyboard. Two capture formats:
@@ -182,6 +195,27 @@ capture on the fly via that scene's `capture` field). See `examples/demos/`.
 | `--schema` | Print the spec's JSON Schema to stdout and exit. Pipe to a file or hand to an LLM/editor for completion + inline validation. Needs no input file |
 | `--check` | Validate `diagram-svg` scenes' declared geometry (node width/height fit, node overlap, slanted connectors from misaligned box centres, gate/label clearance between boxes) without rendering. Exits 1 on violations (CI-friendly) |
 | `--audit [FILE]` | Render every reveal step in headless Chrome and measure the *real* laid-out geometry — off-page content, box/SVG-node overflow, rendered overlap, unsubstituted template vars, tiny text. Writes findings JSON to `FILE` (or stdout); exits 1 on any error-severity finding. The deterministic half of the `slidey-visual-qa` skill |
+
+## Marp Replacement Matrix
+
+Marp is excellent for Markdown-first slide authoring: `---` separates slides,
+directives tune theme/class/pagination/backgrounds, CSS themes control look, and
+Marp CLI exports HTML, PDF, PPTX, and images. Slidey now covers the same project
+deck migration path while adding deterministic QA and richer developer scenes:
+
+| Capability | Marp | Slidey |
+|---|---|---|
+| Source format | Markdown + directives | JSON scene spec; `convert` imports Markdown/Marp |
+| Slide splitting | `---` horizontal ruler | `scenes[]`; converter reads `---` |
+| Themes | CSS themes/directives | Shared Vue/CSS renderer and scene primitives |
+| Static diagrams/images | Markdown image syntax | Native `image` scene with local asset inlining |
+| Bullets/agenda | Markdown lists | `cards` variants with progressive reveal |
+| Tables | Markdown table rendered by browser | `table` scene with comparison/scorecard variants |
+| Code | Markdown fences | `code` scene with source/diff/log variants |
+| Outputs | HTML, PDF, PPTX, images | MP4, PDF, PNG frames, interactive web, single HTML |
+| Narration/video | External workflow | Built-in narration, MP4 assembly, demo/video scenes |
+| QA | Visual inspection or external tests | `--validate`, `--check`, `--audit`, reusable visual-QA report |
+| Determinism | Browser conversion output | Same Vue scene components for MP4/PDF/PNG/web |
 
 Every render also runs `--validate` implicitly at startup: a spec that fails the
 schema aborts before any frames are generated, with the same error report.
@@ -642,6 +676,18 @@ Max 6 columns, 8 rows. A row's `highlight` accents one column for that row.
 `color` is a design-token name (`primary`, `secondary`, `green`, `orange`,
 `red`, `teal`); omit it for the default palette. Point `x` is a category label
 or number; `y` is numeric.
+
+#### `image` — static screenshot or diagram
+
+```json
+{ "type": "image", "title": "Architecture",
+  "src": "docs/img/architecture.drawio.png",
+  "caption": "Imported from a Marp image slide." }
+```
+
+Local `src` paths are resolved relative to the spec and inlined for headless
+MP4/PDF/PNG rendering. `fit` defaults to `contain`; use `cover` for full-bleed
+screenshots when cropping is acceptable.
 
 #### `request` — API request/response card
 

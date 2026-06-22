@@ -13,8 +13,11 @@ const CARDS_ITEM = {
   type: 'object',
   properties: {
     label: { type: 'string' },
+    labelHtml: { type: 'string', description: 'Sanitized inline HTML for imported Markdown emphasis' },
     sub: { type: 'string', description: 'Secondary line under the label' },
+    subHtml: { type: 'string', description: 'Sanitized inline HTML for imported Markdown emphasis' },
     lines: { type: 'array', items: { type: 'string' }, description: 'Bullet lines' },
+    linesHtml: { type: 'array', items: { type: 'string' }, description: 'Sanitized inline HTML for imported Markdown bullet lines' },
     icon: { type: 'string', description: 'Icon prefix (icon-row variant)' },
     style: { type: 'string', enum: ['primary', 'secondary', 'default'], description: 'Accent tint' },
   },
@@ -95,6 +98,28 @@ const SCHEMA = {
           enum: ['api', 'pitch'],
           description: '"api" enables request scenes with live/mock/playback HTTP; "pitch" is default slides mode',
         },
+        theme: {
+          oneOf: [
+            { type: 'string', description: 'Built-in theme name, e.g. "rose-pine-moon"' },
+            {
+              type: 'object',
+              description: 'Presentation theme override: built-in name plus optional colors, background, and CSS',
+              additionalProperties: false,
+              properties: {
+                name: { type: 'string', description: 'Built-in theme name to extend, e.g. "rose-pine-moon"' },
+                background: { type: 'string', description: 'CSS background value for the root deck surface' },
+                fontFamily: { type: 'string', description: 'CSS font-family value for the root deck surface' },
+                colors: {
+                  type: 'object',
+                  description: 'Named color tokens exposed as --slidey-<token>',
+                  additionalProperties: { type: 'string' },
+                },
+                css: { type: 'string', description: 'Raw CSS appended after Slidey styles for advanced deck theming' },
+              },
+            },
+          ],
+          description: 'Optional deck theme; imported Marp themes are preserved here when supported',
+        },
       },
     },
     scenes: {
@@ -115,7 +140,9 @@ const SCHEMA = {
               type: { const: 'title' },
               title: { type: 'string', description: 'Main heading' },
               subtitle: { type: 'string', description: 'Secondary heading below the title' },
+              subtitleHtml: { type: 'string', description: 'Sanitized inline HTML for imported Markdown subtitle emphasis' },
               eyebrow: { type: 'string', description: 'Small label displayed above the title' },
+              theme: { type: 'string', enum: ['markdown'], description: 'Optional presentation typography theme for imported Markdown decks' },
               ...COMMON,
             },
           },
@@ -176,6 +203,21 @@ const SCHEMA = {
                   },
                 },
               },
+              caption: { type: 'string' },
+              ...COMMON,
+            },
+          },
+          // ── mermaid ───────────────────────────────────────────────────────
+          {
+            type: 'object',
+            required: ['type', 'source'],
+            description: 'Mermaid diagram source rendered directly in the Slidey viewer with the active deck theme.',
+            properties: {
+              type: { const: 'mermaid' },
+              title: { type: 'string' },
+              source: { type: 'string', description: 'Mermaid diagram text, e.g. flowchart, sequenceDiagram, stateDiagram-v2' },
+              sourceFile: { type: 'string', description: 'Optional path to the checked-in Mermaid source copied into source during bundling/import workflows' },
+              scale: { type: 'number', minimum: 0.1, description: 'Visual scale factor for dense imported diagrams; default 1' },
               caption: { type: 'string' },
               ...COMMON,
             },
@@ -324,13 +366,15 @@ const SCHEMA = {
               variant: {
                 type: 'string',
                 enum: [
-                  'grid', 'list', 'numbered', 'agenda', 'icon-row',
+                  'grid', 'list', 'numbered', 'agenda', 'icon-row', 'markdown',
                   'before-after', 'versus', 'point-counterpoint', 'pros-cons',
                   'qa',
                 ],
-                description: 'Layout mode: peer variants (grid/list/numbered/agenda/icon-row), contrast variants (before-after/versus/point-counterpoint/pros-cons), or qa',
+                description: 'Layout mode: peer variants (grid/list/numbered/agenda/icon-row/markdown), contrast variants (before-after/versus/point-counterpoint/pros-cons), or qa',
               },
               title: { type: 'string', description: 'Optional eyebrow header' },
+              intro: { type: 'string', description: 'Optional prose above peer items, used by imported Markdown decks' },
+              introHtml: { type: 'string', description: 'Sanitized inline HTML for imported Markdown intro emphasis' },
               columns: { type: 'integer', minimum: 1, description: 'Column count override for peer variants' },
               cards: {
                 type: 'array',
@@ -348,6 +392,8 @@ const SCHEMA = {
                 description: 'Answer text or bullet lines (qa variant)',
               },
               caption: { type: 'string' },
+              outro: { type: 'string', description: 'Optional prose below peer items, used by imported Markdown decks' },
+              outroHtml: { type: 'string', description: 'Sanitized inline HTML for imported Markdown outro emphasis' },
               ...COMMON,
             },
           },
@@ -483,6 +529,58 @@ const SCHEMA = {
               ...COMMON,
             },
           },
+          // ── image ──────────────────────────────────────────────────────────
+          {
+            type: 'object',
+            required: ['type', 'src'],
+            description: 'Static image slide for screenshots, diagrams, and migrated Markdown/Marp image slides.',
+            properties: {
+              type: { const: 'image' },
+              title: { type: 'string' },
+              src: { type: 'string', description: 'Image path relative to the spec, absolute path, URL, or data URI' },
+              alt: { type: 'string' },
+              fit: { type: 'string', enum: ['contain', 'cover'], description: 'Object-fit mode; contain is default' },
+              frameHeight: { type: 'string', description: 'Optional CSS height for the image frame, e.g. 820px for dense diagrams' },
+              mediaBackground: { type: 'string', description: 'Optional CSS background for the image media element; useful for transparent SVG diagrams' },
+              mediaPadding: { type: 'string', description: 'Optional CSS padding for the image media element' },
+              caption: { type: 'string' },
+              ...COMMON,
+            },
+          },
+          // ── image-compare ─────────────────────────────────────────────────
+          {
+            type: 'object',
+            required: ['type', 'left', 'right'],
+            description: 'Side-by-side image comparison slide for old/new screenshots.',
+            properties: {
+              type: { const: 'image-compare' },
+              title: { type: 'string' },
+              left: {
+                type: 'object',
+                required: ['src'],
+                additionalProperties: false,
+                properties: {
+                  label: { type: 'string' },
+                  src: { type: 'string', description: 'Image path relative to the spec, absolute path, URL, or data URI' },
+                  alt: { type: 'string' },
+                },
+              },
+              right: {
+                type: 'object',
+                required: ['src'],
+                additionalProperties: false,
+                properties: {
+                  label: { type: 'string' },
+                  src: { type: 'string', description: 'Image path relative to the spec, absolute path, URL, or data URI' },
+                  alt: { type: 'string' },
+                },
+              },
+              fit: { type: 'string', enum: ['contain', 'cover'], description: 'Object-fit mode; contain is default' },
+              variant: { type: 'string', enum: ['qa'], description: 'Compact QA comparison layout with minimal chrome and larger slide previews.' },
+              caption: { type: 'string' },
+              ...COMMON,
+            },
+          },
           // ── book ──────────────────────────────────────────────────────────
           {
             type: 'object',
@@ -505,7 +603,7 @@ const SCHEMA = {
                     publisher: { type: 'string' },
                     year: { type: 'string' },
                     isbn: { type: 'string' },
-                    cover: { type: 'string', description: 'Local cover image path relative to the spec, or a data URI' },
+                    cover: { type: 'string', description: 'Cover image path relative to the spec, absolute path, URL, or data URI' },
                     alt: { type: 'string' },
                     takeaway: { type: 'string' },
                   },

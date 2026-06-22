@@ -41,12 +41,17 @@ let pollTimer = null;
 let errTimer = null;
 const POLL_MS = 1500;
 
+function inferMode(spec) {
+  if (spec.meta && spec.meta.mode) return spec.meta.mode;
+  return (spec.scenes || []).some(scene => scene && scene.type === 'request') ? 'api' : 'pitch';
+}
+
 async function loadSpec(spec, baseUrl, restore) {
   if (!spec || !Array.isArray(spec.scenes) || !spec.scenes.length) {
     throw new Error('spec must have a non-empty "scenes" array');
   }
   store.setMeta(spec.meta || {});
-  store.setMode((spec.meta && spec.meta.mode) || 'api');
+  store.setMode(inferMode(spec));
   currentSpec.value = spec;
   dirty.value = false;
   saveError.value = '';

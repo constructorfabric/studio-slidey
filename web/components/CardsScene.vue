@@ -17,6 +17,7 @@
 // the RIGHT side. For qa, item 0 is the question and item 1 is the answer.
 import { computed } from 'vue';
 import { store } from '../store.js';
+import { escapeHTML } from '../format.js';
 
 const sc = computed(() => store.scene || {});
 const variant = computed(() => sc.value.variant || 'grid');
@@ -26,8 +27,25 @@ const TWO_COL = ['before-after', 'versus', 'point-counterpoint', 'pros-cons'];
 const isTwoCol = computed(() => TWO_COL.includes(variant.value));
 const isQa     = computed(() => variant.value === 'qa');
 const isPeers  = computed(() => !isTwoCol.value && !isQa.value);
+const isMarkdown = computed(() => variant.value === 'markdown');
+const isMarkdownAgenda = computed(() =>
+  isMarkdown.value && /^agenda$/i.test(String(sc.value.title || '').trim()));
 
 const cards = computed(() => sc.value.cards || []);
+const markdownDensity = computed(() => {
+  if (!isMarkdown.value) return '';
+  const itemCount = cards.value.length;
+  const lineCount = cards.value.reduce((n, c) => n + 1 + ((c.lines || []).length), 0);
+  const textLen = [
+    sc.value.title || '',
+    sc.value.intro || '',
+    sc.value.outro || '',
+    ...cards.value.flatMap(c => [c.label || '', ...((c.lines || []))]),
+  ].join(' ').length;
+  if (itemCount >= 8 || lineCount >= 11 || textLen > 760) return 'markdown-density-dense';
+  if (itemCount >= 6 || lineCount >= 8 || textLen > 520) return 'markdown-density-medium';
+  return 'markdown-density-roomy';
+});
 
 // Sensible default column count for the peer grid when none is given.
 function defaultColumns(n) {
@@ -41,7 +59,7 @@ function defaultColumns(n) {
 // list / numbered / agenda always stack in a single column; grid / icon-row use
 // a multi-column grid (scene.columns overrides the default).
 const columns = computed(() => {
-  if (variant.value === 'list' || variant.value === 'numbered' || variant.value === 'agenda') return 1;
+  if (variant.value === 'list' || variant.value === 'numbered' || variant.value === 'agenda' || isMarkdown.value) return 1;
   return sc.value.columns || defaultColumns(cards.value.length);
 });
 const gridStyle = computed(() => ({
@@ -84,16 +102,41 @@ const answerLines = computed(() => {
 });
 
 const shown = name => store.isRevealed(name);
+
+function inlineHTML(html, text = '') {
+  return html || escapeHTML(String(text || '')).replace(/\n/g, '<br>');
+}
+
+function lineHTML(card, i) {
+  const html = Array.isArray(card.linesHtml) ? card.linesHtml[i] : '';
+  const text = Array.isArray(card.lines) ? card.lines[i] : '';
+  return inlineHTML(html, text);
+}
 </script>
 
 <template>
-  <div id="cards-region" class="scene-region active" :class="`cards-variant-${variant}`">
+  <div
+    id="cards-region"
+    class="scene-region active"
+    :class="[
+      `cards-variant-${variant}`,
+      markdownDensity,
+      { 'cards-markdown-agenda': isMarkdownAgenda },
+    ]"
+  >
     <div
       id="cards-title"
       class="cards-title reveal"
       :class="{ shown: shown('cards-title') }"
       v-if="sc.title"
     >{{ sc.title }}</div>
+
+    <div
+      v-if="isMarkdown && sc.intro"
+      class="cards-markdown-intro reveal"
+      :class="{ shown: shown('cards-title') || shown('cards-item-0') }"
+      v-html="inlineHTML(sc.introHtml, sc.intro)"
+    ></div>
 
     <!-- PEER ITEMS: grid / list / numbered / agenda / icon-row -->
     <div v-if="isPeers" class="cards-grid" :style="gridStyle">
@@ -108,16 +151,37 @@ const shown = name => store.isRevealed(name);
           <span v-if="variant === 'numbered'" class="cards-num">{{ i + 1 }}</span>
           <span v-else-if="variant === 'icon-row' && c.icon" class="cards-icon">{{ c.icon }}</span>
           <span v-else-if="variant === 'agenda'" class="cards-bullet">▸</span>
+          <span v-else-if="variant === 'markdown'" class="cards-bullet">•</span>
           <div class="cards-card-titles">
-            <div class="cards-label">{{ c.label || '' }}</div>
-            <div v-if="c.sub" class="cards-sub">{{ c.sub }}</div>
+            <div
+              v-if="isMarkdown"
+              class="cards-label"
+              v-html="inlineHTML(c.labelHtml, c.label)"
+            ></div>
+            <div v-else class="cards-label">{{ c.label || '' }}</div>
+            <div
+              v-if="isMarkdown && c.sub"
+              class="cards-sub"
+              v-html="inlineHTML(c.subHtml, c.sub)"
+            ></div>
+            <div v-else-if="c.sub" class="cards-sub">{{ c.sub }}</div>
           </div>
         </div>
         <ul v-if="(c.lines || []).length" class="cards-lines">
-          <li v-for="(ln, j) in c.lines" :key="j">{{ ln }}</li>
+          <li v-for="(ln, j) in c.lines" :key="j">
+            <span v-if="isMarkdown" v-html="lineHTML(c, j)"></span>
+            <template v-else>{{ ln }}</template>
+          </li>
         </ul>
       </div>
     </div>
+
+    <div
+      v-if="isMarkdown && sc.outro"
+      class="cards-markdown-outro reveal"
+      :class="{ shown: shown('cards-caption') || shown('cards-item-' + Math.max(0, cards.length - 1)) }"
+      v-html="inlineHTML(sc.outroHtml, sc.outro)"
+    ></div>
 
     <!-- TWO-COLUMN CONTRAST: before-after / versus / point-counterpoint / pros-cons -->
     <div v-else-if="isTwoCol" class="cards-contrast">
@@ -175,7 +239,7 @@ const shown = name => store.isRevealed(name);
    shared .reveal / .shown transition comes from template.css; only layout and
    card chrome live here. Mono font matches the rest of the deck. */
 #cards-region {
-  gap: 44px;
+  gap: 24px;
   width: 100%;
   max-width: 1640px;
   margin: 0 auto;
@@ -183,7 +247,7 @@ const shown = name => store.isRevealed(name);
 }
 
 .cards-title {
-  font-size: 36px;
+  font-size: 30px;
   font-weight: bold;
   letter-spacing: 0.32em;
   text-transform: uppercase;
@@ -192,18 +256,18 @@ const shown = name => store.isRevealed(name);
 }
 
 .cards-caption {
-  font-size: 28px;
+  font-size: 22px;
   color: #cdd9e5;
   text-align: center;
   max-width: 1400px;
-  line-height: 1.5;
+  line-height: 1.35;
   margin: 0 auto;
 }
 
 /* ── Peer grid / list / numbered / agenda / icon-row ───────────────────────── */
 .cards-grid {
   display: grid;
-  gap: 28px;
+  gap: 18px;
   width: 100%;
   align-items: stretch;
 }
@@ -211,7 +275,7 @@ const shown = name => store.isRevealed(name);
   background: #161b22;
   border: 1px solid #30363d;
   border-radius: 14px;
-  padding: 28px 32px;
+  padding: 20px 28px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -236,7 +300,7 @@ const shown = name => store.isRevealed(name);
 .cards-bullet { flex-shrink: 0; font-size: 32px; line-height: 1.2; color: #58a6ff; }
 
 .cards-label {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: bold;
   color: #e6edf3;
   line-height: 1.25;
@@ -259,8 +323,8 @@ const shown = name => store.isRevealed(name);
   gap: 10px;
 }
 .cards-lines li {
-  font-size: 24px;
-  line-height: 1.45;
+  font-size: 21px;
+  line-height: 1.35;
   color: #cdd9e5;
   display: flex;
   align-items: baseline;
@@ -271,10 +335,149 @@ const shown = name => store.isRevealed(name);
 .cards-variant-numbered .cards-card,
 .cards-variant-list .cards-card,
 .cards-variant-agenda .cards-card {
-  padding: 22px 32px;
+  padding: 16px 26px;
 }
 .cards-variant-agenda .cards-label,
-.cards-variant-list .cards-label { font-size: 30px; }
+.cards-variant-list .cards-label { font-size: 26px; }
+
+/* Imported Markdown/Marp decks should read like slides, not UI cards. */
+#cards-region.cards-variant-markdown {
+  max-width: 1760px;
+  gap: 34px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  align-items: flex-start;
+  justify-content: center;
+}
+.cards-variant-markdown .cards-title {
+  font-family: inherit;
+  font-size: 62px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #e6edf3;
+  text-align: left;
+  width: 100%;
+  line-height: 1.15;
+}
+.cards-markdown-intro,
+.cards-markdown-outro {
+  width: 100%;
+  font-family: inherit;
+  font-size: 42px;
+  line-height: 1.34;
+  color: #cdd9e5;
+  white-space: pre-line;
+}
+.cards-markdown-outro {
+  color: #8b949e;
+  border-left: 4px solid #58a6ff;
+  padding-left: 28px;
+}
+.cards-variant-markdown .cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.cards-variant-markdown .cards-card {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 8px;
+}
+.cards-variant-markdown .cards-card-head {
+  gap: 24px;
+}
+.cards-variant-markdown .cards-bullet {
+  font-size: 46px;
+  line-height: 1.18;
+  color: #58a6ff;
+  min-width: 30px;
+}
+.cards-variant-markdown .cards-label {
+  font-family: inherit;
+  font-size: 46px;
+  font-weight: normal;
+  color: #e6edf3;
+  line-height: 1.2;
+}
+.cards-variant-markdown :deep(strong) {
+  font-weight: 800;
+}
+.cards-variant-markdown :deep(em) {
+  font-style: italic;
+}
+.cards-variant-markdown :deep(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+  color: #a5d6ff;
+  background: rgba(88, 166, 255, 0.12);
+  border-radius: 6px;
+  margin: 0 0.04em;
+  padding: 0 0.16em;
+}
+.cards-variant-markdown .cards-lines {
+  margin-left: 64px;
+  gap: 10px;
+}
+.cards-variant-markdown .cards-lines li {
+  font-family: inherit;
+  font-size: 36px;
+  line-height: 1.25;
+  color: #8b949e;
+}
+.cards-variant-markdown .cards-lines li::before {
+  content: "–";
+  color: #58a6ff;
+  flex: none;
+}
+
+#cards-region.cards-variant-markdown.markdown-density-medium {
+  gap: 30px;
+}
+.cards-variant-markdown.markdown-density-medium .cards-title { font-size: 52px; }
+.cards-variant-markdown.markdown-density-medium .cards-markdown-intro,
+.cards-variant-markdown.markdown-density-medium .cards-markdown-outro {
+  font-size: 38px;
+  line-height: 1.32;
+}
+.cards-variant-markdown.markdown-density-medium .cards-grid { gap: 20px; }
+.cards-variant-markdown.markdown-density-medium .cards-bullet { font-size: 42px; }
+.cards-variant-markdown.markdown-density-medium .cards-label {
+  font-size: 40px;
+  line-height: 1.22;
+}
+.cards-variant-markdown.markdown-density-medium .cards-lines li { font-size: 34px; }
+
+#cards-region.cards-variant-markdown.markdown-density-dense {
+  max-width: 1780px;
+  gap: 28px;
+}
+.cards-variant-markdown.markdown-density-dense .cards-title { font-size: 62px; }
+.cards-variant-markdown.markdown-density-dense .cards-markdown-intro,
+.cards-variant-markdown.markdown-density-dense .cards-markdown-outro {
+  font-size: 38px;
+  line-height: 1.28;
+}
+.cards-variant-markdown.markdown-density-dense .cards-grid { gap: 18px; }
+.cards-variant-markdown.markdown-density-dense .cards-card { gap: 6px; }
+.cards-variant-markdown.markdown-density-dense .cards-card-head { gap: 18px; }
+.cards-variant-markdown.markdown-density-dense .cards-bullet {
+  font-size: 42px;
+  line-height: 1.16;
+  min-width: 26px;
+}
+.cards-variant-markdown.markdown-density-dense .cards-label {
+  font-size: 42px;
+  line-height: 1.2;
+}
+.cards-variant-markdown.markdown-density-dense .cards-lines {
+  margin-left: 48px;
+  gap: 6px;
+}
+.cards-variant-markdown.markdown-density-dense .cards-lines li {
+  font-size: 34px;
+  line-height: 1.22;
+}
 
 /* ── Two-column contrast ──────────────────────────────────────────────────── */
 .cards-contrast {

@@ -181,8 +181,8 @@ const logLines = computed(() => {
 
 <style scoped>
 #code-region {
-  gap: 28px;
-  max-width: 1500px;
+  gap: 18px;
+  max-width: 1760px;
   margin: 0 auto;
   width: 100%;
   text-align: left;
@@ -194,12 +194,12 @@ const logLines = computed(() => {
   align-items: center;
   gap: 16px;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1700px;
   background: #161b22;
   border: 1px solid #30363d;
   border-bottom: none;
   border-radius: 12px 12px 0 0;
-  padding: 16px 24px;
+  padding: 12px 22px;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
 }
 .code-chrome-dots { display: inline-flex; gap: 8px; }
@@ -207,9 +207,9 @@ const logLines = computed(() => {
   width: 13px; height: 13px; border-radius: 50%;
   background: #30363d; display: inline-block;
 }
-.code-filename { font-size: 26px; color: #e6edf3; letter-spacing: 0.01em; }
+.code-filename { font-size: 28px; color: #e6edf3; letter-spacing: 0.01em; }
 .code-lang {
-  margin-left: auto; font-size: 18px; color: #8b949e;
+  margin-left: auto; font-size: 20px; color: #8b949e;
   text-transform: uppercase; letter-spacing: 0.14em;
 }
 
@@ -220,7 +220,7 @@ const logLines = computed(() => {
 /* Body -------------------------------------------------------------------- */
 .code-body {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1700px;
   background: #0d1117;
   border: 1px solid #30363d;
   border-radius: 0 0 12px 12px;
@@ -228,20 +228,21 @@ const logLines = computed(() => {
 }
 .code-pre {
   margin: 0;
-  padding: 28px 32px;
+  padding: 18px 24px;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 26px;
-  line-height: 1.55;
+  font-size: 28px;
+  line-height: 1.28;
   color: #e6edf3;
-  white-space: pre;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: hidden;
 }
 
 /* source lines + gutter + highlight */
-.code-line { display: flex; gap: 24px; padding: 0 8px; border-radius: 4px; }
+.code-line { display: flex; gap: 14px; padding: 0 8px; border-radius: 4px; }
 .code-line-hl { background: rgba(88, 166, 255, 0.12); box-shadow: inset 3px 0 0 #58a6ff; }
 .code-gutter { color: #484f58; text-align: right; min-width: 2.2em; user-select: none; }
-.code-text { color: #e6edf3; }
+.code-text { color: #e6edf3; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* diff */
 .code-diff-line { padding: 0 12px; border-radius: 3px; }

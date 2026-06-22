@@ -35,6 +35,9 @@ export function stepsForScene(scene) {
       return [...(s.skipTitle ? [] : ['diagramsvg_title']),
         ...range((s.panels || []).length, 'diagramsvg_panel_'),
         ...(s.caption ? ['diagramsvg_caption'] : [])];
+    case 'mermaid':
+      return [...(s.title ? ['mermaid_title'] : []), 'mermaid_frame',
+        ...(s.caption ? ['mermaid_caption'] : [])];
     case 'terminal-gif':
       return ['termgif_frame', ...(s.caption ? ['termgif_caption'] : [])];
     case 'stat':
@@ -81,6 +84,13 @@ export function stepsForScene(scene) {
         ...range(n, 'chart_series_'),
         ...(s.caption ? ['chart_caption'] : [])];
     }
+    case 'image':
+      return [...(s.title ? ['image_title'] : []), 'image_frame',
+        ...(s.caption ? ['image_caption'] : [])];
+    case 'image-compare':
+      if (s.variant === 'qa') return ['reveal_all'];
+      return [...(s.title ? ['imagecompare_title'] : []), 'imagecompare_frame',
+        ...(s.caption ? ['imagecompare_caption'] : [])];
     case 'book':
       return [
         ...(s.title ? ['book_title'] : []),
@@ -117,6 +127,7 @@ export function applyShow(scene, opts) {
     case 'narrative':    slidey.showNarrative(scene); break;
     case 'diagram':      slidey.showDiagram(scene); break;
     case 'diagram-svg':  slidey.showDiagramSvg(scene); break;
+    case 'mermaid':      slidey.showMermaid(scene); break;
     case 'terminal-gif': slidey.showTerminalGif(scene, o.gifDataUri || ''); break;
     case 'stat':         slidey.showStat(scene); break;
     case 'cta':          slidey.showCta(scene); break;
@@ -127,6 +138,8 @@ export function applyShow(scene, opts) {
     case 'code':         slidey.showCode(scene); break;
     case 'table':        slidey.showTable(scene); break;
     case 'chart':        slidey.showChart(scene); break;
+    case 'image':        slidey.showImage(scene, o.imageDataUri || ''); break;
+    case 'image-compare': slidey.showImageCompare(scene, o.leftImageDataUri || '', o.rightImageDataUri || ''); break;
     case 'book':         slidey.showBook(scene, o.bookCoverDataUris || []); break;
     // video: only the interactive viewer renders it live (the headless render +
     // PDF/PNG export handle video scenes natively). Guard so render adapters

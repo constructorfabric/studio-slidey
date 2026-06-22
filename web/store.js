@@ -32,6 +32,9 @@ export const PITCH_REVEALS = {
   diagramsvg_panel_1:  ['diagramsvg-panel-1'],
   diagramsvg_panel_2:  ['diagramsvg-panel-2'],
   diagramsvg_caption:  ['diagramsvg-caption'],
+  mermaid_title:       ['mermaid-title'],
+  mermaid_frame:       ['mermaid-frame'],
+  mermaid_caption:     ['mermaid-caption'],
   trace_title:         ['trace-title'],
   trace_turn_0:        ['trace-turn-0'],
   trace_turn_1:        ['trace-turn-1'],
@@ -50,6 +53,8 @@ export const PITCH_REVEALS = {
   cards_item_3:   ['cards-item-3'],
   cards_item_4:   ['cards-item-4'],
   cards_item_5:   ['cards-item-5'],
+  cards_item_6:   ['cards-item-6'],
+  cards_item_7:   ['cards-item-7'],
   cards_caption:  ['cards-caption'],
   // ── Code ──
   code_header: ['code-header'],
@@ -77,6 +82,14 @@ export const PITCH_REVEALS = {
   chart_series_4:  ['chart-series-4'],
   chart_series_5:  ['chart-series-5'],
   chart_caption:   ['chart-caption'],
+  // ── Image ──
+  image_title:   ['image-title'],
+  image_frame:   ['image-frame'],
+  image_caption: ['image-caption'],
+  // ── Image comparison ──
+  imagecompare_title:   ['imagecompare-title'],
+  imagecompare_frame:   ['imagecompare-frame'],
+  imagecompare_caption: ['imagecompare-caption'],
   // ── Book ──
   book_title:   ['book-title'],
   book_item_0:  ['book-item-0'],
@@ -100,6 +113,9 @@ export const store = reactive({
   scene: null,
   sceneType: null,
   gifDataUri: '',
+  imageDataUri: '',
+  leftImageDataUri: '',
+  rightImageDataUri: '',
   bookCoverDataUris: [],
   // video (live rrweb) — populated by showVideo for VideoScene/RrwebPlayer.
   rrwebEvents: [],
@@ -246,7 +262,29 @@ export const store = reactive({
     this.revealed = new Set();
     this.revealAll = false;
     this.gifDataUri = '';
+    this.imageDataUri = '';
+    this.leftImageDataUri = '';
+    this.rightImageDataUri = '';
     this.bookCoverDataUris = [];
+  },
+
+  setPitchSteps(steps) {
+    this.revealed = new Set();
+    this.revealAll = false;
+    this.transcriptCard = 0;
+    for (const step of steps || []) {
+      const m = /^transcript_card_(\d+)$/.exec(step);
+      if (m) {
+        this.transcriptCard = parseInt(m[1], 10);
+        continue;
+      }
+      if (step === 'reveal_all') {
+        this.revealAll = true;
+        continue;
+      }
+      const ids = PITCH_REVEALS[step];
+      if (ids) ids.forEach(id => this.revealed.add(id));
+    }
   },
 
   showScene(type, scene) {

@@ -5,9 +5,9 @@ const { SCHEMA } = require('./schema');
 const { resolveAsset } = require('./assets');
 
 const VALID_TYPES = [
-  'title', 'narrative', 'diagram', 'diagram-svg', 'trace', 'transcript',
+  'title', 'narrative', 'diagram', 'diagram-svg', 'mermaid', 'trace', 'transcript',
   'thread', 'stat', 'cta', 'terminal-gif', 'cards', 'code', 'table', 'chart',
-  'book', 'request',
+  'image', 'image-compare', 'book', 'request',
 ];
 
 let _validate;

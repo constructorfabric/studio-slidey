@@ -40,28 +40,37 @@ if (!spec || !Array.isArray(spec.scenes) || !spec.scenes.length) {
   process.exit(1);
 }
 
-// Embed local assets the spec references (resolved relative to the spec file) as
-// data URIs, so portable single-file decks render with no external files.
-// Missing assets are left as-is; the viewer skips unresolved assets gracefully.
+// Embed local image/gif assets the spec references (resolved relative to the
+// spec file) as data URIs, so portable single-file decks render with no
+// external files. Missing assets are left as-is — the viewer degrades visibly.
 const specDir = dirname(specPath);
 const assetMime = { '.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml' };
 let embeddedAssets = 0;
 function embedAsset(ref, label) {
-  if (!ref || /^data:/.test(ref) || /^https?:\/\//.test(ref)) return ref;
+  if (!ref || /^data:/.test(ref) || /^https?:\/\//i.test(ref)) return ref;
   const assetPath = resolve(specDir, ref);
   if (!existsSync(assetPath)) {
-    console.warn(`[build-single] WARNING: ${label} not found, leaving reference as-is: ${ref}`);
+    console.warn(`[build-single] WARNING: asset not found, leaving reference as-is: ${label || ref}`);
     return ref;
   }
   const mime = assetMime[extname(assetPath).toLowerCase()] || 'application/octet-stream';
   embeddedAssets++;
   return `data:${mime};base64,${readFileSync(assetPath).toString('base64')}`;
 }
+
 for (const sc of spec.scenes) {
-  if (sc.gif) sc.gif = embedAsset(sc.gif, 'gif');
+  for (const field of ['gif', 'src']) {
+    if (!sc[field] || /^data:/.test(sc[field]) || /^https?:\/\//i.test(sc[field])) continue;
+    if (field === 'src' && sc.type !== 'image') continue;
+    sc[field] = embedAsset(sc[field]);
+  }
+  if (sc.type === 'image-compare') {
+    if (sc.left && sc.left.src) sc.left.src = embedAsset(sc.left.src, sc.left.src);
+    if (sc.right && sc.right.src) sc.right.src = embedAsset(sc.right.src, sc.right.src);
+  }
   if (sc.type === 'book' && Array.isArray(sc.books)) {
     for (const book of sc.books) {
-      if (book && book.cover) book.cover = embedAsset(book.cover, 'book cover');
+      if (book && book.cover) book.cover = embedAsset(book.cover, book.cover);
     }
   }
 }
@@ -95,7 +104,7 @@ html = html.replace(
   },
 );
 
-if (/\bsrc="|rel="stylesheet"/.test(html)) {
+if (/<script\b[^>]*\bsrc=|<link\b[^>]*\brel="stylesheet"/.test(html)) {
   throw new Error(
     '[build-single] unresolved external refs remain after inlining — the '
     + 'self-contained offline artifact would break. dist-web-single contents: '

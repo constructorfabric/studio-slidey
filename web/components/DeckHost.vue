@@ -5,10 +5,12 @@
 import { computed, watchEffect } from 'vue';
 import { store } from '../store.js';
 import { renderBody, renderHeadersHTML, statusClass, escapeHTML } from '../format.js';
+import { themeConfig } from '../theme.js';
 
 import NarrativeScene from './NarrativeScene.vue';
 import DiagramScene from './DiagramScene.vue';
 import DiagramSvgScene from './DiagramSvgScene.vue';
+import MermaidScene from './MermaidScene.vue';
 import TerminalGifScene from './TerminalGifScene.vue';
 import StatScene from './StatScene.vue';
 import CtaScene from './CtaScene.vue';
@@ -19,6 +21,8 @@ import CardsScene from './CardsScene.vue';
 import CodeScene from './CodeScene.vue';
 import TableScene from './TableScene.vue';
 import ChartScene from './ChartScene.vue';
+import ImageScene from './ImageScene.vue';
+import ImageCompareScene from './ImageCompareScene.vue';
 import BookScene from './BookScene.vue';
 import VideoScene from './VideoScene.vue';
 
@@ -26,6 +30,7 @@ const PITCH_COMPONENTS = {
   narrative: NarrativeScene,
   diagram: DiagramScene,
   'diagram-svg': DiagramSvgScene,
+  mermaid: MermaidScene,
   'terminal-gif': TerminalGifScene,
   stat: StatScene,
   cta: CtaScene,
@@ -36,6 +41,8 @@ const PITCH_COMPONENTS = {
   code: CodeScene,
   table: TableScene,
   chart: ChartScene,
+  image: ImageScene,
+  'image-compare': ImageCompareScene,
   book: BookScene,
   video: VideoScene,
 };
@@ -46,6 +53,33 @@ watchEffect(() => {
   const pitch = store.mode === 'pitch';
   document.body.classList.toggle('mode-pitch', pitch);
   document.body.classList.toggle('mode-api', !pitch);
+});
+
+const activeTheme = computed(() => themeConfig(store.meta && store.meta.theme));
+
+watchEffect(() => {
+  const id = 'slidey-runtime-theme';
+  let el = document.getElementById(id);
+  const css = activeTheme.value.css || '';
+  const style = activeTheme.value.style || {};
+
+  for (const [name, value] of Object.entries(style)) {
+    document.documentElement.style.setProperty(name, value);
+    document.body.style.setProperty(name, value);
+  }
+  document.documentElement.style.background = style['--slidey-background'] || '';
+  document.body.style.background = style['--slidey-background'] || '';
+
+  if (!css) {
+    if (el) el.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement('style');
+    el.id = id;
+    document.head.appendChild(el);
+  }
+  el.textContent = css;
 });
 
 const activePitch = computed(() =>
@@ -91,16 +125,21 @@ const annotIcon = computed(() => ({ error: '✗', warning: '⚠', success: '✓'
 
 // ── Title card ──────────────────────────────────────────────────────────────
 const title = computed(() => store.sceneType === 'title' ? sc.value : {});
+const titleSubtitleHTML = computed(() =>
+  title.value.subtitleHtml || escapeHTML(String(title.value.subtitle || '')).replace(/\n/g, '<br>'));
 </script>
 
 <template>
-  <div id="root">
+  <div id="root" :class="activeTheme.className" :style="activeTheme.style">
     <!-- TITLE CARD -->
-    <div id="title-card" :class="{ hidden: hidden('title-card') }">
+    <div
+      id="title-card"
+      :class="[{ hidden: hidden('title-card') }, title.theme === 'markdown' ? 'title-card-markdown' : '']"
+    >
       <div id="title-card-eyebrow">{{ title.eyebrow || '' }}</div>
       <div id="title-card-rule"></div>
       <div id="title-card-title">{{ title.title || '' }}</div>
-      <div id="title-card-subtitle">{{ title.subtitle || '' }}</div>
+      <div id="title-card-subtitle" v-html="titleSubtitleHTML"></div>
     </div>
 
     <!-- HEADER BAR -->
