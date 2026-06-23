@@ -18,8 +18,8 @@
   },
   "scripts": {
     "test": "node --test",
-    "estimate": "node src/index.js examples/hello.json --estimate",
-    "hello": "node src/index.js examples/hello.json hello.mp4",
+    "estimate": "node src/index.js examples/hello.slidey.json --estimate",
+    "hello": "node src/index.js examples/hello.slidey.json hello.mp4",
     "build:render": "SLIDEY_TARGET=render vite build && node web/inline-render.mjs",
     "build:web": "SLIDEY_TARGET=web vite build",
     "build:single": "node web/build-single.mjs",

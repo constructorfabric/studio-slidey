@@ -16,6 +16,12 @@ const { estimateBoundaries } = require('./timing');
 const ROOT_DIR = path.resolve(__dirname, '..');
 const RENDER_BUNDLE = path.join(ROOT_DIR, 'dist-render', 'render.html');
 const SPEC_EXT = new Set(['.json', '.jsonl']);
+
+// Auto-discovery (workspace_tree) lists specs that follow the `.slidey.json`
+// convention plus generated `.jsonl` traces. Explicit reads stay permissive.
+function isDiscoverableSpec(name) {
+  return /\.slidey\.json$/i.test(name) || /\.jsonl$/i.test(name);
+}
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'dist-render', 'dist-web-single', '.git', '.worktrees']);
 
 // MCP uses stdout for framed JSON-RPC. Keep every existing Slidey diagnostic off
@@ -120,7 +126,7 @@ function buildTree(absDir, relDir = '') {
       if (SKIP_DIRS.has(entry.name)) continue;
       const children = buildTree(childAbs, childRel);
       if (children.length) dirs.push({ name: entry.name, type: 'dir', path: childRel, children });
-    } else if (entry.isFile() && SPEC_EXT.has(path.extname(entry.name).toLowerCase())) {
+    } else if (entry.isFile() && isDiscoverableSpec(entry.name)) {
       files.push({ name: entry.name, type: 'file', path: childRel, editable: /\.json$/i.test(entry.name) });
     }
   }
@@ -340,27 +346,27 @@ function toolInputSchema(properties, required = []) {
 const TOOLS = [
   {
     name: 'slidey_workspace_tree',
-    description: 'List editable Slidey .json specs and generated .jsonl trace specs under the MCP workspace root.',
+    description: 'List editable Slidey .slidey.json specs and generated .jsonl trace specs under the MCP workspace root.',
     inputSchema: toolInputSchema({}),
   },
   {
     name: 'slidey_read_spec',
     description: 'Read a Slidey spec. .jsonl traces are converted to generated specs and returned read-only.',
     inputSchema: toolInputSchema({
-      path: { type: 'string', description: 'Workspace-relative .json or .jsonl path.' },
+      path: { type: 'string', description: 'Workspace-relative .slidey.json or .jsonl path.' },
     }, ['path']),
   },
   {
     name: 'slidey_write_spec',
-    description: 'Replace an editable .json Slidey spec with a full JSON object.',
+    description: 'Replace an editable Slidey spec with a full JSON object. New decks should use the .slidey.json extension (e.g. my-deck.slidey.json).',
     inputSchema: toolInputSchema({
-      path: { type: 'string' },
+      path: { type: 'string', description: 'Workspace-relative path; use the .slidey.json extension for new decks.' },
       spec: { type: 'object' },
     }, ['path', 'spec']),
   },
   {
     name: 'slidey_patch_spec',
-    description: 'Edit an editable .json spec with JSON Patch operations: add, replace, remove, and test.',
+    description: 'Edit an editable .slidey.json spec with JSON Patch operations: add, replace, remove, and test.',
     inputSchema: toolInputSchema({
       path: { type: 'string' },
       operations: {

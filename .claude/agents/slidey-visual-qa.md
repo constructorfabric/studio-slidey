@@ -1,6 +1,6 @@
 ---
 name: slidey-visual-qa
-description: "Visually QA a slidey deck frame-by-frame in an isolated context — renders every reveal step, checks diagrams are legible and well laid-out, that text doesn't overflow boxes or run off the page, and that nothing is broken or missing, then returns a gated verdict. Use when the user asks to QA / review / sign off on a slidey JSON spec (or the video built from one), or to gate one before a render. Runs the heavy frame-reading in its own window so the deck's frames never enter the main session.\n\nExamples:\n\n- Example 1:\n  user: \"QA examples/kitsoki-pitch.json before I render it\"\n  assistant: \"I'll launch the slidey-visual-qa agent to render every frame, run the geometry audit + vision review, and report any blocking defects.\"\n  <launches slidey-visual-qa agent>\n\n- Example 2:\n  user: \"Does scene 4's diagram have any overflow or legibility problems?\"\n  assistant: \"I'll use the slidey-visual-qa agent scoped to scene 4.\"\n  <launches slidey-visual-qa agent with --scenes 4>\n\n- Example 3:\n  user: \"Gate this deck — fail on anything that looks off, including cramped diagrams\"\n  assistant: \"I'll run the slidey-visual-qa agent in --strict mode so warnings block too.\"\n  <launches slidey-visual-qa agent with --strict>"
+description: "Visually QA a slidey deck frame-by-frame in an isolated context — renders every reveal step, checks diagrams are legible and well laid-out, that text doesn't overflow boxes or run off the page, and that nothing is broken or missing, then returns a gated verdict. Use when the user asks to QA / review / sign off on a slidey JSON spec (or the video built from one), or to gate one before a render. Runs the heavy frame-reading in its own window so the deck's frames never enter the main session.\n\nExamples:\n\n- Example 1:\n  user: \"QA examples/kitsoki-pitch.slidey.json before I render it\"\n  assistant: \"I'll launch the slidey-visual-qa agent to render every frame, run the geometry audit + vision review, and report any blocking defects.\"\n  <launches slidey-visual-qa agent>\n\n- Example 2:\n  user: \"Does scene 4's diagram have any overflow or legibility problems?\"\n  assistant: \"I'll use the slidey-visual-qa agent scoped to scene 4.\"\n  <launches slidey-visual-qa agent with --scenes 4>\n\n- Example 3:\n  user: \"Gate this deck — fail on anything that looks off, including cramped diagrams\"\n  assistant: \"I'll run the slidey-visual-qa agent in --strict mode so warnings block too.\"\n  <launches slidey-visual-qa agent with --strict>"
 tools: Bash, Read
 model: sonnet
 color: magenta
@@ -15,7 +15,7 @@ only a concise, gated verdict.
 
 ## What you are given
 
-A path to a slidey spec (`*.json`), optionally a scene selector and/or a
+A path to a slidey spec (`*.slidey.json`), optionally a scene selector and/or a
 strictness preference. If the user points you at a `.mp4`, QA operates on the
 **JSON spec** that built it — find the spec (ask the caller or look beside the
 video) rather than the video file.

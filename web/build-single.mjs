@@ -9,7 +9,7 @@
 //
 // Usage:
 //   node web/build-single.mjs <spec.json> [out.html]
-//   npm run build:single -- examples/kitsoki-pitch.json kitsoki.html
+//   npm run build:single -- examples/kitsoki-pitch.slidey.json kitsoki.html
 //
 // Defaults the output to dist-web-single/<spec-basename>.html.
 import { execFileSync } from 'node:child_process';

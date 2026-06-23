@@ -1,5 +1,5 @@
 {
-  "_comment": "Demonstrates the `video` scene with an rrweb SOURCE (a captured DOM session, not an MP4). examples/demos/sample-tour.rrweb.json was produced by `slidey capture <tour.json> out.rrweb.json` (real-time rrweb recording of a tour). Baked output (mp4/pdf/png) seek-rasterizes the log via rrweb's Replayer; the interactive web viewer mounts a live, scrubbable, chapter-aware RrwebPlayer. Chapters come from in-log slidey.chapter custom events. Render: PUPPETEER_EXECUTABLE_PATH=... slidey examples/rrweb-demo.json out.mp4  (or .pdf / a dir for PNG posters).",
+  "_comment": "Demonstrates the `video` scene with an rrweb SOURCE (a captured DOM session, not an MP4). examples/demos/sample-tour.rrweb.json was produced by `slidey capture <tour.json> out.rrweb.json` (real-time rrweb recording of a tour). Baked output (mp4/pdf/png) seek-rasterizes the log via rrweb's Replayer; the interactive web viewer mounts a live, scrubbable, chapter-aware RrwebPlayer. Chapters come from in-log slidey.chapter custom events. Render: PUPPETEER_EXECUTABLE_PATH=... slidey examples/rrweb-demo.slidey.json out.mp4  (or .pdf / a dir for PNG posters).",
   "meta": { "mode": "pitch", "narration": { "voice": "en-AU-NatashaNeural" } },
   "scenes": [
     { "type": "title", "title": "Captured, not filmed", "subtitle": "an rrweb DOM session, replayed in the deck" },

@@ -4,7 +4,7 @@
 // slidey-visual-qa skill. Drives the real render bundle in headless Chrome
 // against two committed specs:
 //   - examples/fixtures/broken-deck.json  (must FLAG known defects)
-//   - examples/hello.json                 (must stay CLEAN — no false positives)
+//   - examples/hello.slidey.json          (must stay CLEAN — no false positives)
 //
 // Browser-driven, so slower than the pure-data tests; still no LLM and fully
 // deterministic. Requires dist-render/render.html (npm run build:render).
@@ -45,8 +45,8 @@ test('audit flags the known defects in the broken fixture', { skip: !haveBundle 
 });
 
 test('audit stays clean on a polished deck (no false positives)', { skip: !haveBundle && 'run npm run build:render first' }, async () => {
-  const spec = load('examples/hello.json');
-  const { summary } = await auditSpec(spec, { specPath: path.join(ROOT, 'examples/hello.json') });
-  assert.equal(summary.errors, 0, 'hello.json must not trip any error-severity finding');
-  assert.equal(summary.warnings, 0, 'hello.json must not trip any warning either');
+  const spec = load('examples/hello.slidey.json');
+  const { summary } = await auditSpec(spec, { specPath: path.join(ROOT, 'examples/hello.slidey.json') });
+  assert.equal(summary.errors, 0, 'hello.slidey.json must not trip any error-severity finding');
+  assert.equal(summary.warnings, 0, 'hello.slidey.json must not trip any warning either');
 });

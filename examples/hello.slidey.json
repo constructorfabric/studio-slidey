@@ -1,5 +1,5 @@
 {
-  "_comment": "Minimal Slidey example — title -> narrative -> stat -> cta, with narration. Render: node index.js examples/hello.json hello.mp4",
+  "_comment": "Minimal Slidey example — title -> narrative -> stat -> cta, with narration. Render: node index.js examples/hello.slidey.json hello.mp4",
   "meta": {
     "title": "Hello, Slidey",
     "resolution": { "width": 1920, "height": 1080 },

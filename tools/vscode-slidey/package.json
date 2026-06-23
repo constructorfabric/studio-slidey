@@ -33,14 +33,14 @@
       "explorer/context": [
         {
           "command": "slidey.preview",
-          "when": "resourceExtname == .json || resourceExtname == .jsonl",
+          "when": "resourceFilename =~ /\\.slidey\\.json$/ || resourceExtname == .jsonl",
           "group": "navigation@30"
         }
       ],
       "editor/title": [
         {
           "command": "slidey.preview",
-          "when": "resourceExtname == .json || resourceExtname == .jsonl",
+          "when": "resourceFilename =~ /\\.slidey\\.json$/ || resourceExtname == .jsonl",
           "group": "navigation@30"
         }
       ]

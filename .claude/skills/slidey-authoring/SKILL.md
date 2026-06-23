@@ -7,11 +7,11 @@ description: Author and iterate on declarative videos using the slidey pipeline 
 
 **Slidey** is a deterministic spec-driven Puppeteer + ffmpeg pipeline at the repo root. You describe a video as a JSON array of scenes; slidey renders each scene to PNG frames via headless Chrome, generates narration via edge-tts, and muxes everything into an MP4. Output is reproducible: same JSON spec + same template = byte-identical frames.
 
-Specs live in `examples/` alongside their output MP4s. The minimal starting point is `examples/hello.json`; `examples/kitsoki-pitch.json` is a full real-world sample of the legacy scene types, and `examples/layout-gallery.json` exercises every variant of the `cards`/`code`/`table`/`chart` content primitives (copy variants straight from it).
+Slidey specs use the **`.slidey.json`** extension — this is what the file-tree sidebar, the VS Code preview extension, and the MCP workspace tree auto-discover. Specs live in `examples/` alongside their output MP4s. The minimal starting point is `examples/hello.slidey.json`; `examples/kitsoki-pitch.slidey.json` is a full real-world sample of the legacy scene types, and `examples/layout-gallery.slidey.json` exercises every variant of the `cards`/`code`/`table`/`chart` content primitives (copy variants straight from it).
 
 ## Starting a new video
 
-Create a JSON file in `examples/` (or anywhere) with this shape:
+Create a `.slidey.json` file in `examples/` (or anywhere) with this shape:
 
 ```json
 {
@@ -50,29 +50,29 @@ Don't run two Puppeteer renders at once — concurrent headless Chrome instances
 npm run build:render                                 # (re)build the Vue bundle after editing web/
 
 # 1. Sanity-check — no render, ~50ms (no bundle needed)
-slidey examples/my-video.json --estimate
+slidey examples/my-video.slidey.json --estimate
 
 # 1b. Validate diagram-svg sizing/overlap — console only, ~instant, no Chrome (no bundle needed)
-slidey examples/my-video.json out.mp4 --check     # or: node src/index.js my-video.json out.mp4 --check
+slidey examples/my-video.slidey.json out.mp4 --check     # or: node src/index.js my-video.slidey.json out.mp4 --check
 # Checks every diagram-svg node's w/h against its text and flags node overlaps.
 # Exits non-zero on violations — safe to run anytime, and usable as a CI gate.
 
 # 2. PNG spot-check one scene — ~1-3s, LLM-readable
-slidey examples/my-video.json .artifacts/check --scenes 5
+slidey examples/my-video.slidey.json .artifacts/check --scenes 5
 # Produces: .artifacts/check/05-01.png, 05-02.png, 05-03.png (one per reveal step)
 # Then: Read .artifacts/check/05-02.png  ← vision model checks layout directly
 
 # 3. Full deck as PDF — ~3s, good for a complete pass before MP4 render
-slidey examples/my-video.json .artifacts/deck.pdf
+slidey examples/my-video.slidey.json .artifacts/deck.pdf
 
 # 4. Iterate on narration text only — ~10s (reuses cached MP4 frames)
-slidey examples/my-video.json .artifacts/out.mp4 \
+slidey examples/my-video.slidey.json .artifacts/out.mp4 \
   --frames-dir .artifacts/frames \
   --keep-frames \
   --skip-render
 
 # 5. Final full render — 7–12 min, only when layout and narration are confirmed
-slidey examples/my-video.json examples/my-video.mp4
+slidey examples/my-video.slidey.json examples/my-video.mp4
 ```
 
 **Always run `--estimate` first.** It catches narration overruns (the #1 cause of wasted full renders) and prints scene start times so you don't have to count.
@@ -265,7 +265,7 @@ exports below).
   log via `Replayer.goto(t)` (real motion, but **much slower** — opt-in; freeze
   frame stays default); the web viewer mounts a live, scrubbable, chapter-aware
   player you can grab to interact with. Chapters come from in-log custom events
-  (or a sibling sidecar). See `examples/rrweb-demo.json`.
+  (or a sibling sidecar). See `examples/rrweb-demo.slidey.json`.
 
 > Kitsoki demos already emit this exact chapter-sidecar shape, so an existing
 > `…-demo.mp4` + `.chapters.json` drops straight into a `video` scene with
@@ -316,7 +316,7 @@ When narration overruns, two fixes:
 
 If you only change narration text:
 ```sh
-node src/index.js spec.json .artifacts/out.mp4 --frames-dir .artifacts/frames --keep-frames --skip-render
+node src/index.js spec.slidey.json .artifacts/out.mp4 --frames-dir .artifacts/frames --keep-frames --skip-render
 ```
 This regenerates audio + remuxes onto cached frames — ~10s instead of 7min.
 
@@ -358,8 +358,8 @@ Without `"mode": "pitch"`, the template keeps `#pitch-stage` hidden (`display: n
 `--scenes 4` scopes any output format to only scene 4. Works for PNG, PDF, and MP4. When spot-checking, prefer PNG (not MP4):
 
 ```sh
-slidey spec.json .artifacts/check --scenes 4     # PNG, ~2s, LLM-readable
-slidey spec.json .artifacts/check.pdf --scenes 4 # PDF, ~2s, viewer-friendly
+slidey spec.slidey.json .artifacts/check --scenes 4     # PNG, ~2s, LLM-readable
+slidey spec.slidey.json .artifacts/check.pdf --scenes 4 # PDF, ~2s, viewer-friendly
 # MP4 is ~30s and produces audio you don't need during layout iteration
 ```
 
@@ -419,11 +419,11 @@ slidey/
 │   ├── RrwebPlayer.vue       #   themeable scrubbable player (→ slidey/rrweb-player)
 │   └── chapters.js           #   browser chapter extractor (→ slidey/rrweb-chapters)
 └── examples/
-    ├── hello.json            # Minimal starting spec
-    ├── kitsoki-pitch.json    # Full real-world sample (every legacy scene type; safe to delete)
-    ├── layout-gallery.json   # Exercises every cards/code/table/chart variant — copy from here
-    ├── rrweb-demo.json       # `video` scene with an rrweb source (live player + baked)
-    └── <name>.json           # Additional specs live here
+    ├── hello.slidey.json          # Minimal starting spec
+    ├── kitsoki-pitch.slidey.json  # Full real-world sample (every legacy scene type; safe to delete)
+    ├── layout-gallery.slidey.json # Exercises every cards/code/table/chart variant — copy from here
+    ├── rrweb-demo.slidey.json     # `video` scene with an rrweb source (live player + baked)
+    └── <name>.slidey.json         # Additional specs live here
 ```
 
 > The reveal-driven visuals are Vue components in `web/components/<Name>Scene.vue`,
@@ -449,19 +449,19 @@ viewer and every headless export share):
 
 ## Render pipeline (one-line summary)
 
-`spec.json → renderer.js (Puppeteer screenshots) → frames/*.png → [narration.js (edge-tts) → audio/*.mp3] → assembler.js (ffmpeg) → output.mp4`
+`spec.slidey.json → renderer.js (Puppeteer screenshots) → frames/*.png → [narration.js (edge-tts) → audio/*.mp3] → assembler.js (ffmpeg) → output.mp4`
 
 Determinism comes from: (1) viewport size fixed at 1920×1080, (2) timing in frame counts not seconds, (3) JSON spec — no LLM in the rendering loop, ever.
 
 ## Iteration workflow
 
-1. `slidey examples/my-video.json --list` — see what scenes exist and page counts.
+1. `slidey examples/my-video.slidey.json --list` — see what scenes exist and page counts.
 2. Edit the spec JSON.
-3. `slidey examples/my-video.json --estimate` — verify no narration overrun.
-4. `slidey examples/my-video.json out.mp4 --check` — validate diagram-svg sizing/overlap (~instant, no render; exits non-zero on violations, so it doubles as a CI gate).
-5. `slidey examples/my-video.json .artifacts/check --scenes N` — PNG spot-check (~1-3s). Read the output files directly to review layout with vision.
+3. `slidey examples/my-video.slidey.json --estimate` — verify no narration overrun.
+4. `slidey examples/my-video.slidey.json out.mp4 --check` — validate diagram-svg sizing/overlap (~instant, no render; exits non-zero on violations, so it doubles as a CI gate).
+5. `slidey examples/my-video.slidey.json .artifacts/check --scenes N` — PNG spot-check (~1-3s). Read the output files directly to review layout with vision.
 6. Repeat 2–5 until the scene looks right.
-7. `slidey examples/my-video.json .artifacts/deck.pdf` — full pass as PDF (~3s) to review the whole deck in sequence.
-8. `slidey examples/my-video.json examples/my-video.mp4` — final MP4 render only when layout and narration are confirmed.
+7. `slidey examples/my-video.slidey.json .artifacts/deck.pdf` — full pass as PDF (~3s) to review the whole deck in sequence.
+8. `slidey examples/my-video.slidey.json examples/my-video.mp4` — final MP4 render only when layout and narration are confirmed.
 
 **Never render MP4 to "see if it works."** PNG or PDF first.

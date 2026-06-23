@@ -130,10 +130,18 @@ if (args[0] === 'skill') {
 // and image slides as native Slidey scenes.
 if (args[0] === 'convert') {
   const inPath = args[1];
-  const outPath = args[2];
-  if (!inPath || !outPath) {
-    console.error('[slidey] usage: slidey convert <input.md> <output.json>');
+  if (!inPath) {
+    console.error('[slidey] usage: slidey convert <input.md> [output.slidey.json]');
     process.exit(1);
+  }
+  // Default the output alongside the input as a `.slidey.json` spec — the
+  // standard Slidey extension that the viewers and MCP tools auto-discover.
+  const outPath = args[2] || path.join(
+    path.dirname(inPath),
+    path.basename(inPath, path.extname(inPath)) + '.slidey.json',
+  );
+  if (args[2] && !/\.slidey\.json$/i.test(outPath)) {
+    console.warn(`[slidey] note: Slidey specs conventionally use the .slidey.json extension (got ${path.basename(outPath)}).`);
   }
   const absIn = path.resolve(inPath);
   const absOut = path.resolve(outPath);
@@ -286,7 +294,7 @@ if (((args.length < 2 && !wantsList && !wantsCheck && !wantsValidate) || args.le
     '    node index.js                                       open the viewer on the current folder',
     '    node index.js <folder>                              open the viewer (file-tree sidebar)',
     '    node index.js <input.json>                          open the viewer on one deck',
-    '    node index.js convert <input.md> <output.json>       convert Markdown/Marp slides to Slidey JSON',
+    '    node index.js convert <input.md> [output.slidey.json]  convert Markdown/Marp slides to Slidey JSON',
     '    node index.js bundle <input.json> <output.html>      build a self-contained interactive HTML deck',
     '    node index.js drawio <input...> --out-dir <dir>       convert Draw.io PNG/XML to themed SVG',
     '    node index.js capture <tour.json> <out.mp4>         record a demo MP4 + chapter sidecar from a tour',
@@ -353,10 +361,10 @@ if (((args.length < 2 && !wantsList && !wantsCheck && !wantsValidate) || args.le
     '                               deterministic half of the slidey-visual-qa skill.',
     '',
     '  Examples:',
-    '    node index.js examples/hello.json out.mp4',
-    '    node index.js examples/hello.json out.mp4 --estimate',
-    '    node index.js examples/hello.json out.mp4 --scenes 0,2-3 --no-gaps',
-    '    node index.js spec.json out.mp4 --context host=stand.example.com',
+    '    node index.js examples/hello.slidey.json out.mp4',
+    '    node index.js examples/hello.slidey.json out.mp4 --estimate',
+    '    node index.js examples/hello.slidey.json out.mp4 --scenes 0,2-3 --no-gaps',
+    '    node index.js spec.slidey.json out.mp4 --context host=stand.example.com',
     '',
     '  request-scene modes:',
     '  Live mode     (mock/playback omitted): real HTTP request made, response rendered.',

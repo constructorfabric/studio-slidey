@@ -15,7 +15,7 @@ const {
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const DIST = path.join(ROOT, 'dist');
-const EXAMPLE = path.join(ROOT, 'examples', 'hello.json');
+const EXAMPLE = path.join(ROOT, 'examples', 'hello.slidey.json');
 const MIME = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',

@@ -16,6 +16,13 @@ const RUNTIME_SRC_DIR = fs.existsSync(path.join(PACKAGED_RUNTIME_DIR, 'schema.js
 const SPEC_EXT = new Set(['.json', '.jsonl']);
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'dist-render', 'dist-web-single', '.slidey-dist', '.slidey-runtime', '.git']);
 
+// The sidebar tree only auto-lists specs that follow the `.slidey.json`
+// convention (plus generated `.jsonl` traces). Plain `.json` files still
+// preview when opened explicitly, they just don't clutter the picker.
+function isDiscoverableSpec(name) {
+  return /\.slidey\.json$/i.test(name) || /\.jsonl$/i.test(name);
+}
+
 function safeResolve(root, rel) {
   const abs = path.resolve(root, '.' + path.sep + (rel || ''));
   const rootWithSep = root.endsWith(path.sep) ? root : root + path.sep;
@@ -43,7 +50,7 @@ function buildTree(absDir, root, relDir = '') {
       const childRel = relDir ? `${relDir}/${e.name}` : e.name;
       const children = buildTree(path.join(absDir, e.name), root, childRel);
       if (children.length) dirs.push({ name: e.name, type: 'dir', path: childRel, children });
-    } else if (e.isFile() && SPEC_EXT.has(path.extname(e.name).toLowerCase())) {
+    } else if (e.isFile() && isDiscoverableSpec(e.name)) {
       const rel = relDir ? `${relDir}/${e.name}` : e.name;
       files.push({ name: e.name, type: 'file', path: rel });
     }

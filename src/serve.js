@@ -12,7 +12,7 @@
  *
  * Routes:
  *   GET /api/config            → { root, openFile }  (App.vue → workspace mode)
- *   GET /api/tree              → nested tree of *.json / *.jsonl under root
+ *   GET /api/tree              → nested tree of *.slidey.json / *.jsonl under root
  *   GET /api/schema            → Slidey JSON Schema for editor metadata
  *   GET /api/spec?path=<rel>   → { spec, dir, mtimeMs }  (.jsonl built via src/trace.js)
  *   POST /api/spec?path=<rel>  → save a JSON spec back to disk
@@ -33,6 +33,13 @@ const DIST_DIR = path.join(ROOT_DIR, 'dist');         // `npm run build:web` out
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'dist-render', 'dist-web-single', '.git']);
 
 const SPEC_EXT = new Set(['.json', '.jsonl']);
+
+// Specs are auto-discovered in the sidebar tree only when they use the
+// `.slidey.json` convention (or are generated `.jsonl` traces). Plain `.json`
+// files are still readable when opened explicitly, just not listed.
+function isDiscoverableSpec(name) {
+  return /\.slidey\.json$/i.test(name) || /\.jsonl$/i.test(name);
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -97,7 +104,7 @@ function buildTree(absDir, root, relDir = '') {
       const childRel = relDir ? `${relDir}/${e.name}` : e.name;
       const children = buildTree(path.join(absDir, e.name), root, childRel);
       if (children.length) dirs.push({ name: e.name, type: 'dir', path: childRel, children });
-    } else if (e.isFile() && SPEC_EXT.has(path.extname(e.name).toLowerCase())) {
+    } else if (e.isFile() && isDiscoverableSpec(e.name)) {
       const rel = relDir ? `${relDir}/${e.name}` : e.name;
       files.push({ name: e.name, type: 'file', path: rel });
     }

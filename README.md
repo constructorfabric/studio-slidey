@@ -66,18 +66,20 @@ Notes:
 npm install
 npm run build:render                                  # build the Vue render bundle (required before video/PDF)
 
-node src/index.js examples/hello.json --validate           # check the spec is well-formed (no render, no deps)
-node src/index.js examples/hello.json --estimate           # scene/duration table, no render (~50ms)
-node src/index.js examples/hello.json out.mp4              # video  (needs ffmpeg; + edge-tts/network if narrated)
-node src/index.js examples/hello.json out.pdf             # slides — one page per reveal step (no ffmpeg/edge-tts)
+node src/index.js examples/hello.slidey.json --validate     # check the spec is well-formed (no render, no deps)
+node src/index.js examples/hello.slidey.json --estimate     # scene/duration table, no render (~50ms)
+node src/index.js examples/hello.slidey.json out.mp4        # video  (needs ffmpeg; + edge-tts/network if narrated)
+node src/index.js examples/hello.slidey.json out.pdf       # slides — one page per reveal step (no ffmpeg/edge-tts)
 
 npm run dev                                           # interactive web app (Vite); open ?spec=<url> or drop a spec
 
-npm run build:single -- examples/hello.json hello.html   # one self-contained .html — open it straight off disk
+npm run build:single -- examples/hello.slidey.json hello.html   # one self-contained .html — open it straight off disk
 ```
 
-`examples/hello.json` is the smallest starting point; `examples/kitsoki-pitch.json`
-and `examples/layout-gallery.json` exercise every scene type. All are safe to
+Slidey specs use the `.slidey.json` extension (this is what the file-tree sidebar
+and the VS Code extension auto-discover). `examples/hello.slidey.json` is the
+smallest starting point; `examples/kitsoki-pitch.slidey.json` and
+`examples/layout-gallery.slidey.json` exercise every scene type. All are safe to
 delete or copy as templates.
 
 ### Install as a CLI & open a folder/file
@@ -87,11 +89,11 @@ npm run build:web          # build the viewer bundle once (auto-built on first o
 npm link                   # or: npm install -g .   → puts `slidey` on your PATH
 
 slidey ./examples          # open a folder → VS-Code-style file-tree sidebar + click-through deck
-slidey examples/hello.json # open a single deck (sidebar rooted at its folder, file pre-selected)
+slidey examples/hello.slidey.json # open a single deck (sidebar rooted at its folder, file pre-selected)
 slidey ./examples --port 5000 --no-open   # choose the port; don't auto-launch the browser
 ```
 
-`slidey <folder>` / `slidey <file.json>` (no output path) start a small local
+`slidey <folder>` / `slidey <file.slidey.json>` (no output path) start a small local
 server and open the interactive viewer in your browser: pick any `.json` /
 `.jsonl` spec from the sidebar, arrow keys / click to step through it.
 `slidey in.json out.mp4` (two paths) still renders, unchanged.
@@ -141,7 +143,7 @@ trace used by `npm test`.
 
 ```
 node src/index.js <input.json> <output> [options]
-node src/index.js convert <input.md> <output.json>
+node src/index.js convert <input.md> [output.slidey.json]
 node src/index.js capture <tour.json> <out.mp4> [--fps N] [--pace N]
 node src/index.js capture <tour.json> <out.rrweb.json> --format rrweb [--pace N]
 ```
@@ -574,7 +576,7 @@ Splices a recorded product demo into the deck. Pick **one** source:
 - `rrweb` — an rrweb DOM-session log (`*.rrweb.json`). Baked output (mp4/pdf/png)
   seek-rasterizes the log via rrweb's `Replayer`; the **web viewer mounts a live,
   scrubbable, chapter-aware player** you can grab to interact with. Chapters come
-  from in-log `slidey.chapter` custom events. See `examples/rrweb-demo.json`;
+  from in-log `slidey.chapter` custom events. See `examples/rrweb-demo.slidey.json`;
 - `capture` — record a tour on the fly via the tour engine.
 
 `mode: "embedded"` insets the video in a slide with `eyebrow`/`title`/`caption`
@@ -584,8 +586,8 @@ the chapter sidecar (`chapters`), `annotations` add timed callouts, and
 `narration` may be a string or time-keyed cues (`{at|chapter, text}`) so the
 voiceover tracks demo moments. The scene's duration equals the (trimmed) source
 length; PNG/PDF export shows a poster frame. Produce a source with
-[`slidey capture`](#cli). See `examples/demo-video.json` (MP4) and
-`examples/rrweb-demo.json` (rrweb).
+[`slidey capture`](#cli). See `examples/demo-video.slidey.json` (MP4) and
+`examples/rrweb-demo.slidey.json` (rrweb).
 
 > **rrweb baked render is the slow path by design.** Each frame is a distinct
 > `Replayer.goto(t)` seek + screenshot (real motion), so it's far slower than the
