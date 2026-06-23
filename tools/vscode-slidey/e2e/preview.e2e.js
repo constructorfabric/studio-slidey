@@ -121,7 +121,8 @@ test('VS Code preview webview opens the real Slidey viewer and selected deck', a
   await page.setViewport({ width: 1440, height: 900 });
   await page.goto(url, { waitUntil: 'networkidle0' });
   try {
-    await page.waitForSelector('.slidey-sidebar', { timeout: 15000 });
+    // The embedded preview renders the deck plus the floating reload button…
+    await page.waitForSelector('.slidey-embedded-reload', { timeout: 15000 });
     await page.waitForSelector('.slidey-hud', { timeout: 15000 });
   } catch (err) {
     const html = await page.evaluate(() => document.body.innerText);
@@ -132,10 +133,15 @@ test('VS Code preview webview opens the real Slidey viewer and selected deck', a
     hasAdapter: !!window.slidey,
     title: document.body.innerText,
     deckVisible: !!document.querySelector('.slidey-hud'),
+    // …and never the file-tree sidebar (it's a single-file preview).
+    hasSidebar: !!document.querySelector('.slidey-sidebar'),
+    hasReload: !!document.querySelector('.slidey-embedded-reload'),
   }));
 
   assert.equal(state.hasAdapter, true);
   assert.equal(state.deckVisible, true);
+  assert.equal(state.hasSidebar, false, 'embedded preview must not show the file-tree sidebar');
+  assert.equal(state.hasReload, true, 'embedded preview must show the reload button');
   assert.match(state.title, /Hello, Slidey|Slidey/);
   assert.match(state.title, /Declarative videos from a JSON spec/);
 });

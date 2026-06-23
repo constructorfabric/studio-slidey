@@ -19,6 +19,9 @@ const loading = ref(true);
 
 // Workspace (CLI viewer) state.
 const workspace = ref(false);
+// Embedded single-file preview (VS Code webview): no file-tree sidebar, and the
+// deck auto-reloads when its spec changes on disk.
+const embedded = ref(false);
 const tree = shallowRef(null);       // { name, children: [...] }
 const activePath = ref('');
 const sidebarWidth = ref(300);
@@ -123,7 +126,11 @@ async function pollMtime() {
     const { mtimeMs } = await r.json();
     if (!mtimeMs) return;
     latestMtime = mtimeMs;
-    if (loadedMtime && mtimeMs !== loadedMtime) stale.value = true;
+    if (loadedMtime && mtimeMs !== loadedMtime) {
+      stale.value = true;
+      // Embedded preview: there's no sidebar reload pill, so refresh in place.
+      if (embedded.value) reloadActive();
+    }
   } catch (_) { /* server gone / transient — try again next tick */ }
 }
 
@@ -169,8 +176,8 @@ async function onFile(e) {
 }
 
 function fitScale() {
-  const sw = workspace.value ? sidebarWidth.value : 0;
-  const ew = workspace.value && deck.value && editMode.value ? editorWidth.value : 0;
+  const sw = workspace.value && !embedded.value ? sidebarWidth.value : 0;
+  const ew = workspace.value && !embedded.value && deck.value && editMode.value ? editorWidth.value : 0;
   const availableW = Math.max(320, window.innerWidth - sw - ew);
   const scale = Math.min(availableW / 1920, window.innerHeight / 1080);
   document.documentElement.style.setProperty('--slidey-scale', String(scale));
@@ -253,10 +260,15 @@ onMounted(async () => {
     } catch (_) { /* not the CLI viewer — fall through */ }
     if (cfg && cfg.root) {
       workspace.value = true;
+      embedded.value = !!cfg.embedded;
       document.body.classList.add('slidey-workspace');
+      if (embedded.value) document.body.classList.add('slidey-embedded');
       fitScale();
-      try { tree.value = await (await fetch('/api/tree')).json(); } catch (_) { tree.value = null; }
-      await loadSchema();
+      // The file tree and scene editor only exist outside the embedded preview.
+      if (!embedded.value) {
+        try { tree.value = await (await fetch('/api/tree')).json(); } catch (_) { tree.value = null; }
+        await loadSchema();
+      }
       if (cfg.openFile) await openPath(cfg.openFile);
       fitScale();
       // Watch the open spec for on-disk edits (CLI viewer only).
@@ -281,8 +293,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Workspace sidebar (CLI viewer only) -->
-  <aside v-if="workspace" class="slidey-sidebar" :style="{ width: sidebarWidth + 'px' }">
+  <!-- Workspace sidebar (CLI viewer only — hidden in the embedded preview) -->
+  <aside v-if="workspace && !embedded" class="slidey-sidebar" :style="{ width: sidebarWidth + 'px' }">
     <div class="slidey-sidebar-head">
       <span class="slidey-sidebar-mark">slidey</span>
       <span class="slidey-sidebar-root" :title="tree && tree.name">{{ tree ? tree.name : '' }}</span>
@@ -324,6 +336,17 @@ onUnmounted(() => {
     <div class="slidey-sidebar-resize" @mousedown="startResize"></div>
   </aside>
 
+  <!-- Embedded preview: floating manual-reload button (deck also auto-reloads). -->
+  <button
+    v-if="embedded && deck"
+    class="slidey-embedded-reload"
+    :class="{ spinning: reloading }"
+    :disabled="reloading"
+    title="Reload this deck from disk"
+    aria-label="Reload deck"
+    @click.stop="reloadActive"
+  >⟳</button>
+
   <!-- Reload-failure toast: the previous deck stays on screen; this just informs. -->
   <div v-if="reloadError" class="slidey-reload-toast" @click="clearReloadError">
     <span class="slidey-reload-toast-icon">⚠</span>
@@ -350,7 +373,7 @@ onUnmounted(() => {
   <div v-if="workspace && !deck" class="slidey-stage-empty">
     <p v-if="loading">Loading…</p>
     <template v-else>
-      <p>Select a deck from the sidebar.</p>
+      <p v-if="!embedded">Select a deck from the sidebar.</p>
       <p v-if="error" class="slidey-loader-error">{{ error }}</p>
     </template>
   </div>
@@ -396,6 +419,35 @@ onUnmounted(() => {
 }
 .slidey-loader-tip { color: #484f58; margin-top: 20px; font-size: 15px; }
 .slidey-loader-tip code { color: #79c0ff; }
+
+/* Embedded preview reload button — floats over the deck, upper-right. */
+.slidey-embedded-reload {
+  position: fixed;
+  top: 14px; right: 14px;
+  z-index: 2100;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #30363d;
+  border-radius: 50%;
+  background: #161b22cc;
+  color: #79c0ff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.slidey-embedded-reload:hover { opacity: 1; background: #1f6feb33; }
+.slidey-embedded-reload:disabled { cursor: default; }
+.slidey-embedded-reload.spinning {
+  opacity: 1;
+  animation: slidey-embedded-spin 0.8s linear infinite;
+}
+@keyframes slidey-embedded-spin {
+  to { transform: rotate(360deg); }
+}
 
 /* Reload-failure toast — non-blocking; the previous deck stays interactive. */
 .slidey-reload-toast {

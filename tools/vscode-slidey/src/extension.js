@@ -84,7 +84,9 @@ function handleApiRequest({ root, openFile, webview, vscode }, request) {
   const workspaceRoot = path.resolve(root);
 
   if (pathname === '/api/config') {
-    return response(200, { root: workspaceRoot, openFile });
+    // `embedded` tells the web app it's the single-file VS Code preview: no
+    // file-tree sidebar, auto-reload on disk changes (see App.vue).
+    return response(200, { root: workspaceRoot, openFile, embedded: true });
   }
 
   if (pathname === '/api/tree') {
