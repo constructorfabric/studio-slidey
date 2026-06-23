@@ -4,9 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
-const puppeteer = require('puppeteer');
 
-const { launchOptions, doctor } = require('./browser');
+const { browserExecutableError, closeBrowser, launchOptions, doctor } = require('./browser');
 const { validateSpec } = require('./validate');
 const { SCHEMA } = require('./schema');
 const { sceneShowOpts } = require('./assets');
@@ -47,6 +46,8 @@ function parseArgs(argv) {
 }
 
 const CONFIG = parseArgs(process.argv.slice(2));
+const BROWSER_TOOL_TIMEOUT_MS = Number(process.env.SLIDEY_MCP_BROWSER_TIMEOUT_MS || 30000);
+const BROWSER_TOOLS = new Set(['slidey_render_png', 'slidey_render_html', 'slidey_audit', 'slidey_doctor']);
 
 function jsonText(value) {
   return [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }];
@@ -213,6 +214,9 @@ function applyJsonPatch(doc, operations) {
 }
 
 async function loadRenderPage(spec, specPath, sceneIndex, stepIndex) {
+  const executableError = browserExecutableError();
+  if (executableError) throw new Error(executableError);
+  const puppeteer = require('puppeteer');
   require('./render-bundle').ensureRenderBundle();
   const { stepsForScene, applyShow } = await import(pathToFileURL(path.join(ROOT_DIR, 'web', 'sceneSteps.mjs')).href);
   const scenes = Array.isArray(spec.scenes) ? spec.scenes : [];
@@ -247,7 +251,7 @@ async function loadRenderPage(spec, specPath, sceneIndex, stepIndex) {
     await page.evaluate('window.__slideySettle && window.__slideySettle()');
     return { browser, page, scene, step, steps: pageSteps, width, height, sceneIndex, stepIndex: resolvedStepIndex };
   } catch (err) {
-    await browser.close().catch(() => {});
+    await closeBrowser(browser);
     throw err;
   }
 }
@@ -275,7 +279,7 @@ async function renderPng(args) {
       ],
     };
   } finally {
-    await session.browser.close();
+    await closeBrowser(session.browser);
   }
 }
 
@@ -310,7 +314,7 @@ async function renderHtml(args) {
       html,
     });
   } finally {
-    await session.browser.close();
+    await closeBrowser(session.browser);
   }
 }
 
@@ -535,6 +539,23 @@ async function callTool(name, args = {}) {
   }
 }
 
+async function callToolWithTimeout(name, args = {}) {
+  if (!BROWSER_TOOLS.has(name)) return await callTool(name, args);
+  let timer;
+  try {
+    return await Promise.race([
+      callTool(name, args),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(`${name} timed out after ${BROWSER_TOOL_TIMEOUT_MS}ms while launching or driving Chrome`));
+        }, BROWSER_TOOL_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function listResources() {
   return [
     {
@@ -584,7 +605,7 @@ async function handleRequest(message) {
       result = { tools: TOOLS };
     } else if (method === 'tools/call') {
       try {
-        result = await callTool(params.name, params.arguments || {});
+        result = await callToolWithTimeout(params.name, params.arguments || {});
       } catch (err) {
         result = errorResult(err && err.message ? err.message : String(err));
       }
@@ -609,38 +630,53 @@ async function handleRequest(message) {
 }
 
 function writeMessage(message) {
-  const body = Buffer.from(JSON.stringify(message), 'utf8');
-  process.stdout.write(`Content-Length: ${body.length}\r\n\r\n`);
-  process.stdout.write(body);
+  process.stdout.write(JSON.stringify(message) + '\n');
 }
 
 let buffer = Buffer.alloc(0);
+async function dispatchRawMessage(raw) {
+  if (!raw.trim()) return;
+  let message;
+  try {
+    message = JSON.parse(raw);
+  } catch (err) {
+    writeMessage({ jsonrpc: '2.0', id: null, error: { code: -32700, message: err.message } });
+    return;
+  }
+  if (message.id === undefined || message.id === null) return;
+  const response = await handleRequest(message);
+  if (response) writeMessage(response);
+}
+
 process.stdin.on('data', async (chunk) => {
   buffer = Buffer.concat([buffer, chunk]);
   while (true) {
-    const headerEnd = buffer.indexOf('\r\n\r\n');
-    if (headerEnd === -1) return;
-    const header = buffer.slice(0, headerEnd).toString('utf8');
-    const match = header.match(/content-length:\s*(\d+)/i);
-    if (!match) {
-      process.stderr.write('[slidey-mcp] missing Content-Length header\n');
-      process.exit(1);
-    }
-    const length = Number(match[1]);
-    const bodyStart = headerEnd + 4;
-    if (buffer.length < bodyStart + length) return;
-    const raw = buffer.slice(bodyStart, bodyStart + length).toString('utf8');
-    buffer = buffer.slice(bodyStart + length);
-    let message;
-    try {
-      message = JSON.parse(raw);
-    } catch (err) {
-      writeMessage({ jsonrpc: '2.0', id: null, error: { code: -32700, message: err.message } });
+    if (buffer.length === 0) return;
+
+    if (/^content-length:/i.test(buffer.slice(0, Math.min(buffer.length, 32)).toString('utf8'))) {
+      const headerEnd = buffer.indexOf('\r\n\r\n');
+      if (headerEnd === -1) return;
+      const header = buffer.slice(0, headerEnd).toString('utf8');
+      const match = header.match(/content-length:\s*(\d+)/i);
+      if (!match) {
+        process.stderr.write('[slidey-mcp] malformed Content-Length header\n');
+        buffer = Buffer.alloc(0);
+        return;
+      }
+      const length = Number(match[1]);
+      const bodyStart = headerEnd + 4;
+      if (buffer.length < bodyStart + length) return;
+      const raw = buffer.slice(bodyStart, bodyStart + length).toString('utf8');
+      buffer = buffer.slice(bodyStart + length);
+      await dispatchRawMessage(raw);
       continue;
     }
-    if (message.id === undefined || message.id === null) continue;
-    const response = await handleRequest(message);
-    if (response) writeMessage(response);
+
+    const lineEnd = buffer.indexOf('\n');
+    if (lineEnd === -1) return;
+    const raw = buffer.slice(0, lineEnd).toString('utf8').trimEnd();
+    buffer = buffer.slice(lineEnd + 1);
+    await dispatchRawMessage(raw);
   }
 });
 
