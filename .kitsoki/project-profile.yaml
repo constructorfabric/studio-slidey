@@ -2,9 +2,9 @@ schema: project-profile/v1
 id: slidey
 title: Slidey
 summary: |
-  Deterministic, spec-driven declarative video generator. Slidey renders JSON
-  scene specs to MP4, PDF, and an interactive Vue viewer using Node, Vue, Vite,
-  Puppeteer, and ffmpeg for narrated video output.
+  Deterministic, spec-driven declarative deck engine. Slidey renders JSON scene
+  specs through the same Vue components as an interactive web player, a
+  self-contained HTML deck, PDF, and optional deterministic MP4 video export.
 
 generated:
   by: "kitsoki dev-story project onboarding"
@@ -63,10 +63,35 @@ commands:
   install: "npm install"
   build: "npm run build"
   dev: "node src/index.js examples/hello.slidey.json --port 5000 --no-open"
+  viewer: "node src/index.js examples/hello.slidey.json --port 5000 --no-open"
+  html_bundle: "node src/index.js bundle examples/hello.slidey.json .artifacts/hello.html"
+  validate_deck: "node src/index.js examples/hello.slidey.json --validate"
+  render_pdf: "node src/index.js examples/hello.slidey.json .artifacts/hello.pdf"
+  render_mp4: "node src/index.js examples/hello.slidey.json .artifacts/hello.mp4"
   test: "npm test"
   e2e: "npm run test:vscode"
   lint: ""
   typecheck: ""
+
+output_workflows:
+  primary_review:
+    format: web-player
+    command: "node src/index.js examples/hello.slidey.json --port 5000 --no-open"
+    url: "http://127.0.0.1:5000/"
+    use_when: "Inspecting, editing, navigating, or reviewing a deck interactively."
+    notes: "This is the default human review path; it serves the real Vue viewer and workspace assets."
+  shareable_review:
+    format: single-file-html
+    command: "node src/index.js bundle examples/hello.slidey.json .artifacts/hello.html"
+    output: ".artifacts/hello.html"
+    use_when: "Sending or archiving a deck review artifact that should open without a local server."
+    notes: "The HTML bundle inlines the viewer, CSS, spec, and local image/gif assets."
+  export:
+    format: mp4
+    command: "node src/index.js examples/hello.slidey.json .artifacts/hello.mp4"
+    output: ".artifacts/hello.mp4"
+    use_when: "Producing fixed video evidence, narrated playback, or a video scene source for another deck."
+    notes: "MP4 is not the primary review surface; use it only when a baked video artifact is needed."
 
 testing:
   frameworks: [node-test]
@@ -87,14 +112,17 @@ testing:
 golden_path:
   applicable: true
   kind: ui
-  name: "Open a Slidey spec in the CLI viewer"
+  name: "Open a Slidey spec in the web player"
   description: |
     Start the Slidey CLI workspace server on a known example deck and confirm
-    the viewer responds without using any LLM or network-dependent narration.
+    the interactive web player responds without using any LLM or
+    network-dependent narration. Use single-file HTML for portable review and
+    MP4 only for baked video evidence or narration output.
   steps:
     - "Run node src/index.js examples/hello.slidey.json --port 5000 --no-open"
     - "Open http://127.0.0.1:5000/"
     - "Confirm the selected example deck renders."
+    - "For shareable deck review, run node src/index.js bundle examples/hello.slidey.json .artifacts/hello.html"
   verify:
     harness: command
     spec: "node src/index.js examples/hello.slidey.json --validate"
@@ -117,11 +145,16 @@ conventions:
   rules_files: []
 
 rules:
-  - id: cli-viewer-smoke
+  - id: web-player-first
     scope: testing
     source: operator
     ref: "README.md#install-as-a-cli--open-a-folderfile"
-    text: "Validate workspace viewer behavior through node src/index.js <spec> rather than plain npm run dev."
+    text: "Use the Slidey web player as the primary deck review surface; reserve MP4 for fixed video evidence or narration export."
+  - id: html-for-shareable-review
+    scope: artifacts
+    source: operator
+    ref: "README.md#install-as-a-cli--open-a-folderfile"
+    text: "When a reviewable deck artifact is needed, prefer a single-file HTML bundle over an embedded MP4 unless motion/narration is the goal."
   - id: no-real-llm-in-tests
     scope: tests
     source: kitsoki
@@ -187,6 +220,14 @@ setup_plan:
       kind: golden-path
       command: "node src/index.js examples/hello.slidey.json --validate"
       gate: required
+    - id: html-bundle
+      kind: artifact
+      command: "node src/index.js bundle examples/hello.slidey.json .artifacts/hello.html"
+      gate: recommended
+    - id: web-player
+      kind: ui
+      command: "node src/index.js examples/hello.slidey.json --port 5000 --no-open"
+      gate: recommended
 
 readiness:
   status: not-run

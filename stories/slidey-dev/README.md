@@ -16,6 +16,12 @@ Useful first checks:
 
 ```sh
 node src/index.js examples/hello.slidey.json --validate
+node src/index.js examples/hello.slidey.json --port 5000 --no-open
+node src/index.js bundle examples/hello.slidey.json .artifacts/hello.html
 npm test
 npm run build
 ```
+
+Use the web player for normal deck review. Use the single-file HTML bundle when
+you need a portable review artifact. Render MP4 only when you need fixed video
+evidence, narration, or a source for a `video` scene.
