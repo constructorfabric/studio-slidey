@@ -1,0 +1,4 @@
+[mcp_servers.slidey]
+command = "node"
+args = ["src/mcp.js", "--root", "."]
+cwd = "/Users/brad/code/slidey"
