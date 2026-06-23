@@ -2,8 +2,34 @@ VSCODE_DIR     := tools/vscode-slidey
 VSCODE_DIST    := $(VSCODE_DIR)/.slidey-dist
 VSCODE_RUNTIME := $(VSCODE_DIR)/.slidey-runtime/src
 
-.PHONY: build-web vscode-stage vscode-package vscode-install-local vscode-clean
+.PHONY: test test-render test-vscode test-all ci \
+        build-web vscode-stage vscode-package vscode-install-local vscode-clean
 
+# ── Testing ───────────────────────────────────────────────────────────────────
+# `make test` is the everyday target: the fast Node unit suite (no browser, no
+# build). The browser-backed audit test self-skips unless dist-render exists, so
+# `make test-render` builds that bundle first to exercise it. `make test-all`
+# (a.k.a. `make ci`) runs everything CI runs.
+
+# Fast unit suite. The injected-audit browser test skips without dist-render.
+test:
+	npm test
+
+# Full Node suite including the Puppeteer-backed injected-audit test.
+test-render:
+	npm run build:render
+	npm test
+
+# VS Code extension end-to-end suite (builds the web viewer it loads).
+test-vscode:
+	npm run test:vscode
+
+# Everything CI runs: full Node suite + VS Code e2e.
+test-all: test-render test-vscode
+
+ci: test-all
+
+# ── Web / VS Code packaging ──────────────────────────────────────────────────
 build-web:
 	npm run build:web
 
