@@ -1,0 +1,49 @@
+{
+  "name": "slidey-vscode",
+  "displayName": "Slidey",
+  "description": "Preview Slidey presentations in a VS Code editor tab.",
+  "version": "1.0.0",
+  "publisher": "slidey",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "files": [
+    ".slidey-dist",
+    ".slidey-runtime",
+    "src",
+    "README.md",
+    "package.json"
+  ],
+  "activationEvents": [
+    "onCommand:slidey.preview"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "slidey.preview",
+        "title": "Slidey: Preview Presentation",
+        "category": "Slidey"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "slidey.preview",
+          "when": "resourceExtname == .json || resourceExtname == .jsonl",
+          "group": "navigation@30"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "slidey.preview",
+          "when": "resourceExtname == .json || resourceExtname == .jsonl",
+          "group": "navigation@30"
+        }
+      ]
+    }
+  }
+}

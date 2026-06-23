@@ -89,8 +89,9 @@ async function openPath(rel) {
     const res = await fetch(`/api/spec?path=${encodeURIComponent(rel)}`);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `${res.status} loading ${rel}`);
-    // Spec-relative gif/img assets resolve under /workspace/<dir>/.
-    const base = new URL(`/workspace/${data.dir ? data.dir + '/' : ''}`, window.location.href).href;
+    // Spec-relative gif/img assets resolve under /workspace/<dir>/ in the CLI
+    // viewer, or through a VS Code webview resource URI when embedded there.
+    const base = data.assetBase || new URL(`/workspace/${data.dir ? data.dir + '/' : ''}`, window.location.href).href;
     await loadSpec(data.spec, base);
     activePath.value = rel;
     // Fresh file → reset the live-reload watch to this version.
@@ -141,7 +142,7 @@ async function reloadActive() {
     const res = await fetch(`/api/spec?path=${encodeURIComponent(rel)}`);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `${res.status} loading ${rel}`);
-    const base = new URL(`/workspace/${data.dir ? data.dir + '/' : ''}`, window.location.href).href;
+    const base = data.assetBase || new URL(`/workspace/${data.dir ? data.dir + '/' : ''}`, window.location.href).href;
     await loadSpec(data.spec, base, restore);   // swaps deck.value only on success
     loadedMtime = latestMtime = data.mtimeMs || latestMtime;
     stale.value = false;
