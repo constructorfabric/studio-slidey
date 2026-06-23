@@ -1,0 +1,192 @@
+schema: project-profile/v1
+id: slidey
+title: Slidey
+summary: |
+  Deterministic, spec-driven declarative video generator. Slidey renders JSON
+  scene specs to MP4, PDF, and an interactive Vue viewer using Node, Vue, Vite,
+  Puppeteer, and ffmpeg for narrated video output.
+
+generated:
+  by: "kitsoki dev-story project onboarding"
+  at: "2026-06-23"
+
+repo:
+  root: "."
+  vcs: git
+  default_branch: main
+  remote: ""
+  monorepo: false
+
+stack:
+  kind: fullstack
+  languages: [javascript]
+  frameworks: [vue, vite, puppeteer]
+  package_managers: [npm]
+
+dev_server:
+  components:
+    - name: viewer
+      role: frontend
+      command: "npm run dev"
+      cwd: "."
+      url: "http://127.0.0.1:5173"
+      ready:
+        probe: http
+        target: "http://127.0.0.1:5173/"
+        expect: "200"
+        timeout_ms: 30000
+        interval_ms: 500
+    - name: cli-viewer
+      role: backend
+      command: "node src/index.js examples/hello.slidey.json --port 5000 --no-open"
+      cwd: "."
+      url: "http://127.0.0.1:5000"
+      ready:
+        probe: http
+        target: "http://127.0.0.1:5000/"
+        expect: "200"
+        timeout_ms: 30000
+        interval_ms: 500
+
+environments:
+  - name: local
+    kind: local
+    url: "http://127.0.0.1:5000"
+    config_ref: ".kitsoki.yaml"
+    notes: "Use the CLI viewer for workspace behavior; plain Vite is useful for component work."
+  - name: ci
+    kind: test
+    config_ref: "package.json"
+    notes: "npm test exercises the Node test suite."
+
+commands:
+  install: "npm install"
+  build: "npm run build"
+  dev: "node src/index.js examples/hello.slidey.json --port 5000 --no-open"
+  test: "npm test"
+  e2e: "npm run test:vscode"
+  lint: ""
+  typecheck: ""
+
+testing:
+  frameworks: [node-test]
+  mechanisms:
+    - kind: unit
+      runner: node-test
+      command: "npm test"
+    - kind: build
+      runner: npm
+      command: "npm run build"
+    - kind: e2e
+      runner: node-test
+      command: "npm run test:vscode"
+  ci:
+    provider: none
+    config_ref: "package.json"
+
+golden_path:
+  applicable: true
+  kind: ui
+  name: "Open a Slidey spec in the CLI viewer"
+  description: |
+    Start the Slidey CLI workspace server on a known example deck and confirm
+    the viewer responds without using any LLM or network-dependent narration.
+  steps:
+    - "Run node src/index.js examples/hello.slidey.json --port 5000 --no-open"
+    - "Open http://127.0.0.1:5000/"
+    - "Confirm the selected example deck renders."
+  verify:
+    harness: command
+    spec: "node src/index.js examples/hello.slidey.json --validate"
+    url: "http://127.0.0.1:5000/"
+
+conventions:
+  source: hybrid
+  dirs:
+    context:   { path: ".context",   use: existing }
+    artifacts: { path: ".artifacts", use: existing }
+    worktrees: { path: ".worktrees", use: existing }
+  gitignore:
+    manage: true
+    additions:
+      - ".kitsoki.local.yaml"
+      - ".kitsoki/sessions/"
+      - ".artifacts/"
+      - ".context"
+      - ".worktrees"
+  rules_files: []
+
+rules:
+  - id: cli-viewer-smoke
+    scope: testing
+    source: operator
+    ref: "README.md#install-as-a-cli--open-a-folderfile"
+    text: "Validate workspace viewer behavior through node src/index.js <spec> rather than plain npm run dev."
+  - id: no-real-llm-in-tests
+    scope: tests
+    source: kitsoki
+    ref: "Kitsoki AGENTS.md"
+    text: "Automated Kitsoki story tests use mocked interactions and never require a real LLM."
+
+kitsoki:
+  story: dev-story
+  instance:
+    id: slidey-dev
+    path: "stories/slidey-dev/app.yaml"
+    bindings:
+      ticket: host.local_files.ticket
+      vcs: host.git
+      ci: host.local
+      workspace: host.git_worktree
+      transport: host.append_to_file
+  harness_profile: ""
+  judge_mode: human
+  autonomy: supervised
+
+mining:
+  job: ""
+  sample: none
+  intent_count: 0
+  themes: []
+
+setup_plan:
+  writes:
+    - path: ".kitsoki/project-profile.yaml"
+      action: create
+      summary: "Declarative onboarding profile for Slidey."
+    - path: "stories/slidey-dev/app.yaml"
+      action: create
+      summary: "Materialized dev-story instance for Slidey."
+    - path: ".kitsoki.yaml"
+      action: create
+      summary: "Discover project-local stories under ./stories."
+    - path: ".gitignore"
+      action: merge
+      summary: "Ignore local Kitsoki runtime/session artifacts."
+  dirs_create: [".context", ".artifacts", ".worktrees", ".kitsoki"]
+  gitignore_additions:
+    - ".kitsoki.local.yaml"
+    - ".kitsoki/sessions/"
+    - ".artifacts/"
+    - ".context"
+    - ".worktrees"
+  verifications:
+    - id: story-load
+      kind: story
+      command: "kitsoki run stories/slidey-dev/app.yaml"
+      gate: required
+    - id: unit-tests
+      kind: tests
+      command: "npm test"
+      gate: required
+    - id: build
+      kind: build
+      command: "npm run build"
+      gate: required
+    - id: cli-validate
+      kind: golden-path
+      command: "node src/index.js examples/hello.slidey.json --validate"
+      gate: required
+
+readiness:
+  status: not-run

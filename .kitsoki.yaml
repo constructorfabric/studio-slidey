@@ -1,0 +1,4 @@
+story_dirs:
+  - ./stories
+
+default_story: stories/slidey-dev/app.yaml

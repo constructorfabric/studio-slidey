@@ -21,6 +21,9 @@ audio/
 .DS_Store
 *.swp
 *~
-
+# Kitsoki local runtime
+.kitsoki.local.yaml
+.kitsoki/sessions/
+.artifacts/
 .context
 .worktrees
