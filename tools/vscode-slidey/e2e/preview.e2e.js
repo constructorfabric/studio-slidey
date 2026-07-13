@@ -5,13 +5,14 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const test = require('node:test');
-const puppeteer = require('puppeteer');
 
 const { launchOptions } = require('../../../src/browser');
 const { mkdtemp } = require('../../../src/temp-path');
 const {
   handleApiRequest,
+  handleOpenReference,
   handleSpecWrite,
+  readSpec,
   writeSpecDocument,
   rewriteViewerHtml,
 } = require('../src/extension');
@@ -19,12 +20,25 @@ const {
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const DIST = path.join(ROOT, 'dist');
 const EXAMPLE = path.join(ROOT, 'examples', 'hello.slidey.json');
+const RRWEB_EXAMPLE = path.join(ROOT, 'examples', 'demos', 'sample-tour.rrweb.json');
 const MIME = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
 };
+
+let puppeteer = null;
+
+function loadPuppeteer(t) {
+  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  if (nodeMajor >= 23) {
+    t.skip('browser-backed VS Code preview e2e requires the package-supported Node range (<23)');
+    return null;
+  }
+  if (!puppeteer) puppeteer = require('puppeteer');
+  return puppeteer;
+}
 
 function fakeVscodeFor(origin) {
   return {
@@ -45,9 +59,22 @@ function fakeWebviewFor(origin) {
   };
 }
 
-function servePreview() {
+function relToRoot(file) {
+  return path.relative(ROOT, file).split(path.sep).join('/');
+}
+
+function writeRrweb(file) {
+  const events = [
+    { type: 4, data: { href: 'about:blank', width: 1280, height: 720 }, timestamp: 1 },
+    { type: 2, data: { node: { type: 0, childNodes: [] }, initialOffset: { left: 0, top: 0 } }, timestamp: 2 },
+  ];
+  fs.writeFileSync(file, JSON.stringify({ schemaVersion: 1, events }), 'utf8');
+}
+
+function servePreview(openFile = relToRoot(EXAMPLE)) {
   let origin = '';
   const vscode = fakeVscodeFor();
+  const openRequests = [];
   const server = http.createServer((req, res) => {
     if (req.url === '/' || req.url === '/index.html') {
       const webview = fakeWebviewFor(origin);
@@ -77,12 +104,18 @@ window.__slideyAcquireVsCodeApi = () => ({
       req.on('data', (chunk) => chunks.push(chunk));
       req.on('end', () => {
         const msg = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-        const result = handleApiRequest({
-          root: ROOT,
-          openFile: path.relative(ROOT, EXAMPLE).split(path.sep).join('/'),
-          webview: fakeWebviewFor(origin),
-          vscode,
-        }, msg);
+        let result;
+        if (msg.type === 'slidey.openReference') {
+          openRequests.push(JSON.parse(msg.body || '{}'));
+          result = { status: 200, body: { ok: true } };
+        } else {
+          result = handleApiRequest({
+            root: ROOT,
+            openFile,
+            webview: fakeWebviewFor(origin),
+            vscode,
+          }, msg);
+        }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ type: 'slidey.response', id: msg.id, status: result.status, body: result.body }));
       });
@@ -102,7 +135,7 @@ window.__slideyAcquireVsCodeApi = () => ({
     server.listen(0, '127.0.0.1', () => {
       const { port } = server.address();
       origin = `http://127.0.0.1:${port}`;
-      resolve({ server, url: origin });
+      resolve({ server, url: origin, openRequests });
     });
   });
 }
@@ -170,13 +203,128 @@ test('writeSpecDocument routes through the VS Code editor model when available',
   assert.deepEqual(JSON.parse(fs.readFileSync(abs, 'utf8')), spec);
 });
 
+test('VS Code preview API treats raw rrweb logs as read-only replay decks', () => {
+  const dir = mkdtemp('slidey-vscode-rrweb-');
+  try {
+    const rel = 'rrweb.json';
+    const abs = path.join(dir, rel);
+    writeRrweb(abs);
+
+    const spec = readSpec(abs);
+    assert.equal(spec.scenes[0].rrweb, rel);
+
+    const got = handleApiRequest({ root: dir, openFile: rel }, { url: `/api/spec?path=${encodeURIComponent(rel)}`, method: 'GET' });
+    assert.equal(got.status, 200);
+    assert.equal(got.body.rrweb, true);
+    assert.equal(got.body.editable, false);
+    assert.equal(got.body.spec.scenes[0].type, 'video');
+    assert.equal(got.body.spec.scenes[0].rrweb, rel);
+
+    const clone = handleApiRequest({ root: dir, openFile: rel }, { url: `/api/clone-spec?path=${encodeURIComponent(rel)}`, method: 'POST', body: '{}' });
+    assert.equal(clone.status, 200);
+    assert.match(clone.body.path, /\.slidey\.json$/);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, clone.body.path), 'utf8')).scenes[0].rrweb, rel);
+
+    const plainRel = 'session.json';
+    writeRrweb(path.join(dir, plainRel));
+    const plain = handleApiRequest({ root: dir, openFile: plainRel }, { url: `/api/spec?path=${encodeURIComponent(plainRel)}`, method: 'GET' });
+    assert.equal(plain.status, 200);
+    assert.equal(plain.body.rrweb, true);
+    assert.equal(plain.body.editable, false);
+    assert.equal(plain.body.spec.scenes[0].rrweb, plainRel);
+    const plainClone = handleApiRequest({ root: dir, openFile: plainRel }, { url: `/api/clone-spec?path=${encodeURIComponent(plainRel)}`, method: 'POST', body: '{}' });
+    assert.equal(plainClone.status, 200);
+    assert.equal(plainClone.body.path, 'session.slidey.json');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, plainClone.body.path), 'utf8')).scenes[0].rrweb, plainRel);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('VS Code preview API exposes the Edge TTS narration route', () => {
+  const got = handleApiRequest({
+    root: ROOT,
+    openFile: path.relative(ROOT, EXAMPLE).split(path.sep).join('/'),
+  }, {
+    url: '/api/narration-audio',
+    method: 'POST',
+    body: JSON.stringify({ text: '' }),
+  });
+  assert.equal(got.status, 400);
+  assert.match(got.body.error, /narration text is empty/);
+});
+
+test('handleOpenReference opens workspace files in VS Code and rejects escapes', async (t) => {
+  const dir = mkdtemp('slidey-vscode-open-');
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const abs = path.join(dir, 'sample.js');
+  const patchAbs = path.join(dir, 'change.patch');
+  fs.writeFileSync(abs, 'one\ntwo\nthree\n', 'utf8');
+  fs.writeFileSync(patchAbs, 'diff --git a/a b/a\n-old\n+new\n', 'utf8');
+
+  const calls = { shown: null, opened: null };
+  const fakeDoc = {
+    uri: { fsPath: abs },
+    lineCount: 3,
+    lineAt: (line) => ({ range: { end: { line, character: ['one', 'two', 'three'][line].length } } }),
+  };
+  const vscode = {
+    Uri: { file: (f) => ({ fsPath: f }) },
+    ViewColumn: { Active: -1 },
+    Position: function (line, character) { this.line = line; this.character = character; },
+    Range: function (start, end) { this.start = start; this.end = end; },
+    workspace: {
+      openTextDocument: async (uri) => {
+        if (uri.fsPath === abs) return fakeDoc;
+        if (uri.fsPath === patchAbs) return { ...fakeDoc, uri, lineCount: 3 };
+        throw new Error(`unexpected openTextDocument path: ${uri.fsPath}`);
+      },
+    },
+    window: {
+      showTextDocument: async (_doc, opts) => { calls.shown = opts; },
+    },
+    commands: {
+      executeCommand: async (_cmd, uri) => { calls.opened = uri.fsPath; },
+    },
+  };
+
+  const ok = await handleOpenReference({ root: dir, vscode }, {
+    method: 'POST',
+    url: '/api/open-reference',
+    body: JSON.stringify({ src: 'sample.js', kind: 'code', lineStart: 2, lineEnd: 3 }),
+  });
+  assert.equal(ok.status, 200);
+  assert.equal(calls.shown.selection.start.line, 1);
+  assert.equal(calls.shown.selection.end.line, 2);
+  assert.equal(calls.opened, null);
+
+  calls.shown = null;
+  const diff = await handleOpenReference({ root: dir, vscode }, {
+    method: 'POST',
+    url: '/api/open-reference',
+    body: JSON.stringify({ src: 'change.patch', kind: 'diff' }),
+  });
+  assert.equal(diff.status, 200);
+  assert.equal(calls.shown.preview, false);
+  assert.equal(calls.opened, null);
+
+  const outside = await handleOpenReference({ root: dir, vscode }, {
+    method: 'POST',
+    url: '/api/open-reference',
+    body: JSON.stringify({ src: '../outside.js', kind: 'code' }),
+  });
+  assert.equal(outside.status, 404);
+});
+
 test('VS Code preview webview opens the real Slidey viewer and selected deck', async (t) => {
   assert.ok(fs.existsSync(path.join(DIST, 'index.html')), 'dist/index.html must exist; run npm run build:web first');
 
-  const { server, url } = await servePreview();
+  const { server, url, openRequests } = await servePreview();
   t.after(() => server.close());
 
-  const browser = await puppeteer.launch(launchOptions({ width: 1440, height: 900 }));
+  const browserDriver = loadPuppeteer(t);
+  if (!browserDriver) return;
+  const browser = await browserDriver.launch(launchOptions({ width: 1440, height: 900 }));
   t.after(() => browser.close());
 
   const page = await browser.newPage();
@@ -210,4 +358,62 @@ test('VS Code preview webview opens the real Slidey viewer and selected deck', a
   assert.equal(state.hasReload, true, 'embedded preview must show the reload button');
   assert.match(state.title, /Hello, Slidey|Slidey/);
   assert.match(state.title, /Declarative videos from a JSON spec/);
+
+  const opened = await page.evaluate(() => {
+    if (typeof window.slideyOpenReference !== 'function') return false;
+    return window.slideyOpenReference({ src: 'examples/hello.slidey.json', kind: 'json', lineStart: 2 })
+      .then(() => true);
+  });
+  assert.equal(opened, true, 'embedded preview exposes direct open-reference bridge');
+  assert.deepEqual(openRequests, [{ src: 'examples/hello.slidey.json', kind: 'json', lineStart: 2 }]);
+});
+
+test('VS Code preview webview renders a raw rrweb replay without Slidey deck chrome', async (t) => {
+  assert.ok(fs.existsSync(path.join(DIST, 'index.html')), 'dist/index.html must exist; run npm run build:web first');
+  assert.ok(fs.existsSync(RRWEB_EXAMPLE), 'sample rrweb fixture must exist');
+
+  const { server, url } = await servePreview(relToRoot(RRWEB_EXAMPLE));
+  t.after(() => server.close());
+
+  const browserDriver = loadPuppeteer(t);
+  if (!browserDriver) return;
+  const browser = await browserDriver.launch(launchOptions({ width: 1440, height: 900 }));
+  t.after(() => browser.close());
+
+  const page = await browser.newPage();
+  const events = [];
+  page.on('console', (msg) => events.push(`console:${msg.type()}:${msg.text()}`));
+  page.on('pageerror', (err) => events.push(`pageerror:${err.message}`));
+  page.on('requestfailed', (req) => events.push(`requestfailed:${req.url()}:${req.failure() && req.failure().errorText}`));
+  await page.setViewport({ width: 1440, height: 900 });
+  await page.goto(url, { waitUntil: 'networkidle0' });
+  try {
+    await page.waitForSelector('.slidey-replay-viewer .rrp-host iframe', { timeout: 20000 });
+  } catch (err) {
+    const html = await page.evaluate(() => document.body.innerText);
+    throw new Error(`${err.message}\n${events.join('\n')}\nbody:${html}`);
+  }
+
+  const state = await page.evaluate(() => ({
+    hasReplay: !!document.querySelector('.rrp'),
+    hasIframe: !!document.querySelector('.rrp-host iframe'),
+    hasFallback: document.body.innerText.includes('No session replay captured.'),
+    hasSidebar: !!document.querySelector('.slidey-sidebar'),
+    hasHud: !!document.querySelector('.slidey-hud'),
+    hasModeToggle: !!document.querySelector('.slidey-embedded-edit'),
+    hasReload: !!document.querySelector('.slidey-embedded-reload'),
+    directBox: (() => {
+      const r = document.querySelector('.slidey-replay-viewer')?.getBoundingClientRect();
+      return r ? { top: r.top, left: r.left, width: r.width, height: r.height } : null;
+    })(),
+  }));
+
+  assert.equal(state.hasReplay, true);
+  assert.equal(state.hasIframe, true);
+  assert.equal(state.hasFallback, false);
+  assert.equal(state.hasSidebar, false);
+  assert.equal(state.hasHud, false, 'raw replay preview must not show the Slidey scene HUD');
+  assert.equal(state.hasModeToggle, false, 'raw replay preview must not show Edit/Present controls');
+  assert.equal(state.hasReload, false, 'raw replay preview should leave only rrweb playback controls visible');
+  assert.deepEqual(state.directBox, { top: 0, left: 0, width: 1440, height: 900 });
 });

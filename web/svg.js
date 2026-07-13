@@ -16,6 +16,7 @@
 //   the corrected sizes so layout reflects real text dimensions.
 
 import dagre from 'dagre';
+import { linkTargetForItem } from './collections.mjs';
 
 // ---------------------------------------------------------------------------
 const LAYOUT_DIRECTIONS = new Set(['TB', 'BT', 'LR', 'RL']);
@@ -328,16 +329,26 @@ export function buildPanel(panel, idx, sizeOverrides = {}) {
     return {
       id: nd.id,
       groupClass: `dsvg-node dsvg-style-${nd.style || 'default'}`,
+      link: linkTargetForItem(nd),
       rect: { x: nd.x, y: nd.y, w: nd.w, h: nd.h },
       texts,
     };
   });
 
-  // Pre-compute which source nodes have multiple outgoing elbow edges so we
-  // can apply bus routing automatically — no "bus: true" needed in the spec.
+  // Pre-compute fan-out (multiple elbow edges leaving one source) and fan-in
+  // (multiple elbow edges arriving at one target) so bus routing applies
+  // automatically — no "bus: true" needed in the spec. Fan-out edges share a
+  // trunk just past the source; fan-in edges share a trunk just before the
+  // target, so converging edges merge into one clean comb instead of a stagger
+  // of near-parallel lines (each source box's width would otherwise shift the
+  // midpoint elbow).
   const elbowEdges = (panel.edges || []).filter(e => e.elbow);
   const elbowOutCount = {};
-  for (const e of elbowEdges) elbowOutCount[e.from] = (elbowOutCount[e.from] || 0) + 1;
+  const elbowInCount  = {};
+  for (const e of elbowEdges) {
+    elbowOutCount[e.from] = (elbowOutCount[e.from] || 0) + 1;
+    elbowInCount[e.to]    = (elbowInCount[e.to]    || 0) + 1;
+  }
   const nodeBounds = nodes.reduce((bounds, n) => {
     const nd = nodeMap[n.id] || (needsAutoLayout && layoutMap?.[n.id]
       ? { ...n, ...layoutMap[n.id] }
@@ -389,6 +400,8 @@ export function buildPanel(panel, idx, sizeOverrides = {}) {
     // Pull heads back from target boxes; nodes render above edges, so markers
     // placed exactly on the box edge can be hidden by the node fill.
     const END_GAP = 10;
+    // Distance from a node edge to its shared bus trunk (fan-in / fan-out).
+    const TRUNK = 50;
 
     if (e.gate) {
       const gateText = e.gate;
@@ -464,11 +477,13 @@ export function buildPanel(panel, idx, sizeOverrides = {}) {
           else        { ex1 = from.x;           ex2 = to.x + to.w; }
           ey1 = fromCy + offset;
           ey2 = toCy   + offset;
-          // Bus routing: when multiple elbow edges leave the same source, use a
-          // common trunk x just beyond the source node so all branches align on
-          // a shared vertical line. Activated automatically; no spec flag needed.
-          const isBus = e.bus || (elbowOutCount[e.from] || 0) > 1;
-          const midx = isBus ? ex1 + 50 : (ex1 + ex2) / 2;
+          // Bus routing (automatic; no spec flag needed): fan-out edges share a
+          // trunk x just beyond the source; fan-in edges share a trunk x just
+          // before the target. Direction-aware so RL diagrams route correctly.
+          const dir = dx > 0 ? 1 : -1;
+          const midx = (elbowOutCount[e.from] || 0) > 1 ? ex1 + dir * TRUNK
+                     : (elbowInCount[e.to]    || 0) > 1 ? ex2 - dir * TRUNK
+                     : (ex1 + ex2) / 2;
           const endX = dx > 0 ? ex2 - END_GAP : ex2 + END_GAP;
           d = `M ${ex1} ${ey1} H ${midx} V ${ey2} H ${endX}`;
           lx = midx;
@@ -478,7 +493,10 @@ export function buildPanel(panel, idx, sizeOverrides = {}) {
           else        { ey1 = from.y;           ey2 = to.y + to.h; }
           ex1 = fromCx + offset;
           ex2 = toCx   + offset;
-          const midy = (ey1 + ey2) / 2;
+          const dirY = dy > 0 ? 1 : -1;
+          const midy = (elbowOutCount[e.from] || 0) > 1 ? ey1 + dirY * TRUNK
+                     : (elbowInCount[e.to]    || 0) > 1 ? ey2 - dirY * TRUNK
+                     : (ey1 + ey2) / 2;
           const endY = dy > 0 ? ey2 - END_GAP : ey2 + END_GAP;
           d = `M ${ex1} ${ey1} V ${midy} H ${ex2} V ${endY}`;
           lx = (ex1 + ex2) / 2;

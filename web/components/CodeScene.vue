@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { store } from '../store.js';
 import { highlightJSON } from '../format.js';
+import { normalizeReference } from '../reference-viewer.js';
 
 // ── Reveal step base-names ──────────────────────────────────────────────────
 // Mirrors stepsForScene('code') and the store reveal table the integrator adds.
@@ -14,6 +15,29 @@ import { highlightJSON } from '../format.js';
 
 const scene   = computed(() => store.scene || {});
 const variant = computed(() => scene.value.variant || 'source');
+const refsApi = inject('slideyReferences', null);
+const sourceReference = computed(() => {
+  const explicit = scene.value.sourceRef || scene.value.reference || scene.value.ref;
+  const fromList = Array.isArray(scene.value.references)
+    ? scene.value.references.find(ref => {
+      const normalized = normalizeReference(ref);
+      return normalized && (normalized.kind === 'code' || normalized.kind === 'text' || normalized.kind === 'json');
+    })
+    : null;
+  const ref = normalizeReference(explicit || fromList);
+  if (!ref) return null;
+  const highlights = Array.isArray(scene.value.highlight) ? scene.value.highlight.filter(n => Number.isFinite(Number(n))) : [];
+  return {
+    ...ref,
+    lineStart: ref.lineStart || (highlights.length ? Math.min(...highlights) : undefined),
+    lineEnd: ref.lineEnd || (highlights.length ? Math.max(...highlights) : undefined),
+  };
+});
+const hasSourceReference = computed(() => !!sourceReference.value && !!refsApi && !!refsApi.open);
+
+function openSourceReference() {
+  if (hasSourceReference.value) refsApi.open(sourceReference.value);
+}
 
 // Source/config code split into lines, keyed for highlight + annotation gutters.
 const codeLines = computed(() => {
@@ -93,7 +117,10 @@ const logLines = computed(() => {
     <div
       id="code-header"
       class="code-header reveal"
-      :class="{ shown: store.isRevealed('code-header') }"
+      :class="{ shown: store.isRevealed('code-header'), 'is-clickable-reference': hasSourceReference }"
+      :title="hasSourceReference ? `Open ${sourceReference.label}` : undefined"
+      :data-slidey-reference-trigger="hasSourceReference ? '' : null"
+      @click.stop="openSourceReference"
     >
       <template v-if="variant === 'function-io'">
         <span class="code-dot code-dot-call">▸</span>
@@ -110,7 +137,10 @@ const logLines = computed(() => {
     <div
       id="code-body"
       class="code-body reveal"
-      :class="{ shown: store.isRevealed('code-body') }"
+      :class="{ shown: store.isRevealed('code-body'), 'is-clickable-reference': hasSourceReference }"
+      :title="hasSourceReference ? `Open ${sourceReference.label}` : undefined"
+      :data-slidey-reference-trigger="hasSourceReference ? '' : null"
+      @click.stop="openSourceReference"
     >
       <!-- source -->
       <pre v-if="variant === 'source'" class="code-pre"><div
@@ -227,6 +257,15 @@ const logLines = computed(() => {
   border: 1px solid #30363d;
   border-radius: 0 0 12px 12px;
   overflow: hidden;
+}
+.code-header.is-clickable-reference,
+.code-body.is-clickable-reference {
+  cursor: zoom-in;
+}
+.code-header.is-clickable-reference:hover,
+.code-body.is-clickable-reference:hover {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 2px rgb(88 166 255 / 20%);
 }
 .code-pre {
   margin: 0;

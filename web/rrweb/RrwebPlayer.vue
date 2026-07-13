@@ -26,7 +26,7 @@
  *   startAtEnd Bool    pause on the last frame on mount (default false; useful
  *                      for bug reports where the final state is most relevant)
  *   loop       Bool    restart at end (default false)
- * Emits: ready(meta), timeupdate(ms), chapter(id)
+ * Emits: ready(meta), timeupdate(ms), chapter(id), play, pause, ended
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 
@@ -40,7 +40,7 @@ const props = defineProps({
   // Off for lean-back cinematic playback where the deck drives everything.
   controls: { type: Boolean, default: true },
 });
-const emit = defineEmits(['ready', 'timeupdate', 'chapter', 'ended']);
+const emit = defineEmits(['ready', 'timeupdate', 'chapter', 'play', 'pause', 'ended']);
 
 const host = ref(null);
 let player = null;
@@ -149,17 +149,24 @@ function destroy() {
   playing.value = false;
 }
 
-function togglePlay() {
+function pause() {
   if (!player) return;
   if (playing.value) {
     player.pause();
     playing.value = false;
     stopTick();
-    return;
+    emit('pause');
   }
+}
+
+function play(fromMs = null) {
+  if (!player) return;
+  if (fromMs != null) currentMs.value = Math.min(Math.max(0, Number(fromMs) || 0), totalMs.value);
+  if (playing.value) return;
   const from = currentMs.value >= totalMs.value ? 0 : currentMs.value;
   player.play(from);
   playing.value = true;
+  emit('play');
   stopTick();
   tick = setInterval(() => {
     if (!player) return;
@@ -167,9 +174,14 @@ function togglePlay() {
     emit('timeupdate', currentMs.value);
     if (currentMs.value >= totalMs.value) {
       if (props.loop) { player.play(0); }
-      else { playing.value = false; stopTick(); emit('ended'); }
+      else { playing.value = false; stopTick(); emit('pause'); emit('ended'); }
     }
   }, 100);
+}
+
+function togglePlay() {
+  if (playing.value) pause();
+  else play();
 }
 
 function seek(ms) {
@@ -179,6 +191,7 @@ function seek(ms) {
   playing.value = false;
   stopTick();
   emit('timeupdate', currentMs.value);
+  emit('pause');
 }
 
 function onScrub(e) { seek(Number(e.target.value)); }
@@ -189,7 +202,7 @@ watch(() => props.events, () => { destroy(); mount(); });
 onMounted(mount);
 onBeforeUnmount(destroy);
 
-defineExpose({ play: togglePlay, seek, destroy });
+defineExpose({ play, pause, seek, destroy });
 </script>
 
 <template>

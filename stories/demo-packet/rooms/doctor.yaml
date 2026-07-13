@@ -1,0 +1,35 @@
+states:
+  doctor:
+    description: "Demo packet complete — doctor report"
+    relevant_world: [node_id, manifest_path, doctor_ok, doctor_report, status]
+    on_enter:
+      - invoke: host.demo
+        id: packet_doctor
+        with:
+          op: doctor
+          manifest_path: "{{ world.manifest_path }}"
+        bind: { doctor_report: report, doctor_ok: report.ok }
+        on_error: failed
+      - set: { status: "complete" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - kv:
+              pairs:
+                Node: "{{ world.node_id|default:'(none)' }}"
+                Manifest: "{{ world.manifest_path|default:'(none)' }}"
+                Status: "{{ world.status|default:'complete' }}"
+          - prose: "demo-doctor.mjs's checks (states, deck paths, freshness, chapters, estimate — generalized for real-app manifests, C2) all pass. Run `restart` to materialize another use case's demo packet."
+        choices:
+          - list:
+              items:
+                - { label: "restart" }
+                - { label: "look" }
+    on:
+      restart:
+        - target: plan
+          effects:
+            - set: { status: "", target_ready: false, doctor_ok: false, doctor_report: "" }
+      look:
+        - target: doctor

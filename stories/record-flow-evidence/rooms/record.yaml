@@ -1,0 +1,84 @@
+states:
+  record:
+    description: "Re-recording the flow evidence"
+    relevant_world: [node_id, record_command, record_ok, record_exit, status]
+    on_enter:
+      # `|| true` is deliberate: a failing suite still writes its evidence
+      # envelope (exit != 0, report: null), and evidence-of-failure is what
+      # the gate check exists to judge. Only a recorder that cannot run at
+      # all (missing script) lands in record_failed.
+      - invoke: host.run
+        id: run_recorder
+        with:
+          cmd: "sh"
+          cwd: "{{ world.repo_root }}"
+          args:
+            - "-c"
+            - "$1 || true"
+            - "sh"
+            - "{{ world.record_command }}"
+        bind: { record_ok: ok, record_stdout: stdout, record_exit: exit_code }
+        on_error: record_failed
+      - set: { status: "recorded" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - kv:
+              pairs:
+                Node: "{{ world.node_id|default:'(none)' }}"
+                Recorder: "{{ world.record_command }}"
+                Recorded: "{{ world.status|default:'(pending)' }}"
+          - prose: "Evidence re-recorded under pog/evidence/. The engine judges it next: the test-suite type's flows_recorded.star gate check runs as the job's check:gate stage — the job is only real if the recorded runs are clean."
+        choices:
+          - list:
+              items:
+                - { label: "next", hint: "hand off to the gate check" }
+                - { label: "look" }
+    on:
+      next:
+        - target: done
+      look:
+        - target: record
+  record_failed:
+    description: "The recorder itself could not run"
+    terminal: true
+    relevant_world: [node_id, record_command]
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - prose: "host.run could not execute the recorder; no evidence was written."
+        choices:
+          - list:
+              items:
+                - { label: "look" }
+    on:
+      look:
+        - target: record_failed
+  done:
+    description: "Evidence recorded; gate check pending"
+    relevant_world: [node_id, record_exit, status]
+    on_enter:
+      - set: { status: "complete" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - kv:
+              pairs:
+                Node: "{{ world.node_id|default:'(none)' }}"
+                Recorder exit: "{{ world.record_exit }}"
+          - prose: "Recording complete. Run `restart` to re-record."
+        choices:
+          - list:
+              items:
+                - { label: "restart" }
+                - { label: "look" }
+    on:
+      restart:
+        - target: record
+          effects:
+            - set: { record_ok: false, record_stdout: "", record_exit: 0, status: "" }
+      look:
+        - target: done

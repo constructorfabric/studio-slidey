@@ -24,7 +24,11 @@ function framesToVideo(framesDir, outputPath, fps = 30, audioSegments = null) {
   // Verify ffmpeg is available
   const which = spawnSync('which', ['ffmpeg'], { encoding: 'utf8' });
   if (which.status !== 0) {
-    throw new Error('ffmpeg not found on PATH — please install ffmpeg first');
+    throw new Error(
+      'ffmpeg not found on PATH. MP4 export requires ffmpeg.\n' +
+      'Install: brew install ffmpeg  # macOS; apt install ffmpeg on Debian/Ubuntu\n' +
+      'Check:   slidey doctor'
+    );
   }
 
   // Ensure output directory exists
@@ -63,16 +67,7 @@ function framesToVideo(framesDir, outputPath, fps = 30, audioSegments = null) {
     inputArgs.push('-i', s.audioPath);
   });
 
-  // Each input audio (1-indexed; 0 is the video) gets adelay'd, then we amix.
-  const delayLabels = audioSegments.map((s, i) => {
-    const ms = Math.round(s.startSeconds * 1000);
-    // adelay needs per-channel delays; "ms|ms" handles stereo regardless of input layout
-    return `[${i + 1}:a]adelay=${ms}|${ms}[a${i}]`;
-  });
-  const mixInputs = audioSegments.map((_, i) => `[a${i}]`).join('');
-  const filterComplex =
-    delayLabels.join(';') +
-    `;${mixInputs}amix=inputs=${audioSegments.length}:duration=longest:dropout_transition=0,volume=2.0[aout]`;
+  const filterComplex = buildNarrationFilter(audioSegments);
 
   const args = [
     '-y',
@@ -95,4 +90,18 @@ function framesToVideo(framesDir, outputPath, fps = 30, audioSegments = null) {
   }
 }
 
-module.exports = { framesToVideo };
+function buildNarrationFilter(audioSegments) {
+  // Each input audio (1-indexed; 0 is the video) gets adelay'd, then we amix.
+  const delayLabels = audioSegments.map((s, i) => {
+    const ms = Math.round(s.startSeconds * 1000);
+    // adelay needs per-channel delays; "ms|ms" handles stereo regardless of input layout
+    return `[${i + 1}:a]adelay=${ms}|${ms}[a${i}]`;
+  });
+  const mixInputs = audioSegments.map((_, i) => `[a${i}]`).join('');
+
+  return delayLabels.join(';') +
+    `;${mixInputs}amix=inputs=${audioSegments.length}:duration=longest:dropout_transition=0:normalize=0,` +
+    'loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[aout]';
+}
+
+module.exports = { framesToVideo, buildNarrationFilter };

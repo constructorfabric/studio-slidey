@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+gitdir="$(git rev-parse --git-dir 2>/dev/null || true)"
+commondir="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+[ "$gitdir" = "$commondir" ] || exit 0
+branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+case "$branch" in
+  main|master)
+    echo "Blocked: direct commit to protected '$branch'. Use a capsule workspace and queue submit." >&2
+    exit 1
+    ;;
+esac

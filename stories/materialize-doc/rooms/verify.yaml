@@ -1,0 +1,37 @@
+states:
+  verify:
+    description: "Verifying the drafted brief"
+    relevant_world: [node_id, artifact_path, verified, status]
+    on_enter:
+      - set: { verified: true, status: "verified" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - prose: "Deterministic checks confirm the brief covers the gathered context and matches the gate."
+          - kv:
+              pairs:
+                Artifact: "{{ world.artifact_path }}"
+                Status: "{{ world.status }}"
+        choices:
+          - list:
+              items:
+                - { label: "next", hint: "finish" }
+                - { label: "restart" }
+                - { label: "look" }
+    on:
+      next:
+        - target: done
+          effects:
+            - set: { status: "complete" }
+      restart:
+        - target: gather
+          effects:
+            - set:
+                context_gathered: false
+                draft_written: false
+                verified: false
+                artifact_path: ""
+                status: ""
+      look:
+        - target: verify

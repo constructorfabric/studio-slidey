@@ -1,0 +1,21 @@
+{
+  "scenes": [
+    {
+      "type": "title",
+      "title": "slidey — click through your first deck"
+    },
+    {
+      "type": "video",
+      "mode": "fullscreen",
+      "fit": "contain",
+      "rrweb": "clips/onboarding-tour-journey.rrweb.json",
+      "chapters": "auto",
+      "title": "journey",
+      "narration": [
+        { "chapter": "step_0_open_the_viewer_the_deck_loads", "text": "One command serves the interactive viewer on any deck spec" },
+        { "chapter": "step_1_step_forward_through_the_scenes", "text": "Arrow keys step through the same scenes video and PDF output render" },
+        { "chapter": "step_2_jump_back_and_replay_a_scene", "text": "Navigation is free — step back and replay any scene" }
+      ]
+    }
+  ]
+}

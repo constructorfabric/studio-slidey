@@ -57,11 +57,25 @@ function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
+// Marker char used to carry `[label](target)` links through the escape/
+// format passes below intact. It's a C0 control code (never appears in real
+// Markdown source), untouched by escapeHtml() (only &<>"' are escaped) and
+// by \s+ collapsing / trim() (it isn't whitespace), so the label's own
+// emphasis/code formatting still applies before the final <a> wrapper is
+// stitched back onto the fully-escaped text.
+const LINK_MARK = String.fromCharCode(1);
+const LINK_TOKEN_RE = new RegExp(`${LINK_MARK}(\\d+)${LINK_MARK}([\\s\\S]*?)${LINK_MARK}${LINK_MARK}`, 'g');
+
 function cleanInlineRich(s) {
+  const links = [];
   let text = String(s || '')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, label, target) => {
+      const i = links.length;
+      links.push(target.trim());
+      return `${LINK_MARK}${i}${LINK_MARK}${label}${LINK_MARK}${LINK_MARK}`;
+    })
     .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<\/?(?:span|div|section|p|small|sup|sub)\b[^>]*>/gi, '');
 
@@ -73,6 +87,13 @@ function cleanInlineRich(s) {
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/\s+/g, ' ')
     .trim();
+
+  if (links.length) {
+    text = text.replace(LINK_TOKEN_RE, (m, i, inner) => {
+      const target = links[Number(i)];
+      return target ? `<a data-slidey-ref="${escapeHtml(target)}">${inner}</a>` : inner;
+    });
+  }
 
   return text;
 }
@@ -240,11 +261,13 @@ function slideToScene(slide, idx, inputPath, outputPath) {
     !listMarker(l) &&
     !/^\s+/.test(l)
   ).map(l => cleanInlineRich(l)).filter(Boolean);
-  const body = cleanInline(lines.filter(l =>
+  const bodyRawLine = lines.filter(l =>
     !isStructuralLine(l) &&
     !listMarker(l) &&
     !/^\s+/.test(l)
-  ).join(' '));
+  ).join(' ');
+  const body = cleanInline(bodyRawLine);
+  const bodyHtml = cleanInlineRich(bodyRawLine);
 
   if (lead || (heading && heading.level === 1 && !bullets.length && !image && !code)) {
     return {
@@ -319,7 +342,14 @@ function slideToScene(slide, idx, inputPath, outputPath) {
       ...(outroHtml && outroHtml !== outro ? { outroHtml } : {}),
     };
   }
-  return { type: 'narrative', eyebrow: title, body: body || quote || title };
+  const narrativeBody = body || quote || title;
+  const narrativeBodyHtml = body ? bodyHtml : (quote ? quoteHtml : escapeHtml(title));
+  return {
+    type: 'narrative',
+    eyebrow: title,
+    body: narrativeBody,
+    ...(narrativeBodyHtml && narrativeBodyHtml !== narrativeBody ? { bodyHtml: narrativeBodyHtml } : {}),
+  };
 }
 
 function convertMarkdownFile(inputPath, outputPath, opts = {}) {

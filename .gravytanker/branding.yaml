@@ -1,0 +1,26 @@
+schema: gravytanker/branding/v1
+name: Slidey
+icon: ../docs/branding/assets/slide-stack.svg
+
+# Editorial "projection screen" identity: paper white, ink black, one
+# electric-blue accent. Deliberately far from kitsoki's mesa palette and the
+# portal's default cream/lime so the generated site reads as its own product.
+site:
+  hero: centered
+  display: serif
+  corners: sharp
+  cards: ruled
+
+colors:
+  primary: "#16161a"
+  on_primary: "#f5f4ef"
+  accent: "#2b3fe0"
+  on_accent: "#ffffff"
+  canvas: "#ffffff"
+  surface: "#f4f2ec"
+  text: "#16161a"
+  muted: "#5b5b66"
+  border: "#d8d6cf"
+  success: "#1f7a4d"
+  warning: "#b0741f"
+  danger: "#c22f2f"

@@ -7,12 +7,29 @@ const EXTENSION_ROOT = path.resolve(__dirname, '..');
 const CHECKOUT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const PACKAGED_DIST_DIR = path.join(EXTENSION_ROOT, '.slidey-dist');
 const PACKAGED_RUNTIME_DIR = path.join(EXTENSION_ROOT, '.slidey-runtime', 'src');
-const DIST_DIR = fs.existsSync(path.join(PACKAGED_DIST_DIR, 'index.html'))
-  ? PACKAGED_DIST_DIR
-  : path.join(CHECKOUT_ROOT, 'dist');
-const RUNTIME_SRC_DIR = fs.existsSync(path.join(PACKAGED_RUNTIME_DIR, 'schema.js'))
-  ? PACKAGED_RUNTIME_DIR
-  : path.join(CHECKOUT_ROOT, 'src');
+const CHECKOUT_DIST_DIR = path.join(CHECKOUT_ROOT, 'dist');
+const CHECKOUT_RUNTIME_DIR = path.join(CHECKOUT_ROOT, 'src');
+const PACKAGED_RUNTIME_READY = ['schema.js', 'trace.js', 'rrweb-viewer.js', 'narration.js', 'narration-preview.js', 'feedback-config.js']
+  .every((name) => fs.existsSync(path.join(PACKAGED_RUNTIME_DIR, name)));
+const CHECKOUT_RUNTIME_READY = ['schema.js', 'trace.js', 'rrweb-viewer.js', 'narration.js', 'narration-preview.js', 'feedback-config.js']
+  .every((name) => fs.existsSync(path.join(CHECKOUT_RUNTIME_DIR, name)));
+const DIST_DIR = fs.existsSync(path.join(CHECKOUT_DIST_DIR, 'index.html'))
+  ? CHECKOUT_DIST_DIR
+  : PACKAGED_DIST_DIR;
+const RUNTIME_SRC_DIR = CHECKOUT_RUNTIME_READY
+  ? CHECKOUT_RUNTIME_DIR
+  : PACKAGED_RUNTIME_READY
+    ? PACKAGED_RUNTIME_DIR
+    : CHECKOUT_RUNTIME_DIR;
+const {
+  isRrwebFile,
+  isRrwebSourceFile,
+  readSpecOrRrwebInfo,
+  rrwebSpecForFile,
+  readSpecOrRrweb,
+} = require(path.join(RUNTIME_SRC_DIR, 'rrweb-viewer'));
+const { handleNarrationPreviewRequest } = require(path.join(RUNTIME_SRC_DIR, 'narration-preview'));
+const { runtimeFeedbackConfig, appendLocalFeedback } = require(path.join(RUNTIME_SRC_DIR, 'feedback-config'));
 const SPEC_EXT = new Set(['.json', '.jsonl']);
 const READONLY_SUFFIX = '.readonly.slidey.json';
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'dist-render', 'dist-web-single', '.slidey-dist', '.slidey-runtime', '.git']);
@@ -21,7 +38,7 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', 'dist-render', 'dist-web-sing
 // convention (plus generated `.jsonl` traces). Plain `.json` files still
 // preview when opened explicitly, they just don't clutter the picker.
 function isDiscoverableSpec(name) {
-  return /\.(?:readonly\.)?slidey\.json$/i.test(name) || /\.jsonl$/i.test(name);
+  return /\.(?:readonly\.)?slidey\.json$/i.test(name) || /\.jsonl$/i.test(name) || isRrwebFile(name);
 }
 
 function isReadOnlySlideySpec(abs) {
@@ -29,16 +46,23 @@ function isReadOnlySlideySpec(abs) {
 }
 
 function isEditableSpec(abs) {
-  return /\.json$/i.test(abs) && !isReadOnlySlideySpec(abs);
+  if (!/\.json$/i.test(abs) || isReadOnlySlideySpec(abs) || isRrwebFile(abs)) return false;
+  if (/\.slidey\.json$/i.test(abs)) return true;
+  return !isRrwebSourceFile(abs);
 }
 
 function defaultCloneTarget(sourceRel) {
   const normalized = sourceRel.replace(/\\/g, '/');
   const dir = path.posix.dirname(normalized);
   const base = path.posix.basename(normalized);
-  const candidate = base
+  const editableBase = base
+    .replace(/\.rrweb\.json$/i, '.slidey.json')
+    .replace(/^rrweb\.json$/i, 'rrweb.slidey.json')
     .replace(/\.readonly\.slidey\.json$/i, '.slidey.json')
     .replace(/\.jsonl$/i, '.slidey.json');
+  const candidate = /\.slidey\.json$/i.test(editableBase)
+    ? editableBase
+    : `${editableBase.replace(/\.json$/i, '')}.slidey.json`;
   return dir === '.' ? candidate : path.posix.join(dir, candidate);
 }
 
@@ -103,7 +127,14 @@ function readSpec(absFile) {
   if (/\.jsonl$/i.test(absFile)) {
     return require(path.join(RUNTIME_SRC_DIR, 'trace')).buildSpecFromFile(absFile);
   }
-  return JSON.parse(fs.readFileSync(absFile, 'utf8'));
+  return readSpecOrRrweb(absFile);
+}
+
+function readSpecInfo(absFile) {
+  if (/\.jsonl$/i.test(absFile)) {
+    return { spec: require(path.join(RUNTIME_SRC_DIR, 'trace')).buildSpecFromFile(absFile), rrweb: false };
+  }
+  return readSpecOrRrwebInfo(absFile);
 }
 
 function response(status, body) {
@@ -124,7 +155,17 @@ function handleApiRequest({ root, openFile, webview, vscode }, request) {
   if (pathname === '/api/config') {
     // `embedded` tells the web app it's the single-file VS Code preview: no
     // file-tree sidebar, auto-reload on disk changes (see App.vue).
-    return response(200, { root: workspaceRoot, openFile, embedded: true });
+    return response(200, { root: workspaceRoot, openFile, embedded: true, feedback: runtimeFeedbackConfig(workspaceRoot) });
+  }
+
+  if (pathname === '/api/feedback/local' && request.method === 'POST') {
+    try {
+      const bundle = JSON.parse(request.body || '{}');
+      const file = appendLocalFeedback(workspaceRoot, bundle);
+      return response(201, { ref: `${file}#${bundle.idempotencyKey}` });
+    } catch (err) {
+      return response(400, { error: String(err.message || err) });
+    }
   }
 
   if (pathname === '/api/tree') {
@@ -150,14 +191,15 @@ function handleApiRequest({ root, openFile, webview, vscode }, request) {
     if (!abs || !fs.existsSync(abs)) return response(404, { error: `not found: ${rel}` });
     try {
       const stat = fs.statSync(abs);
-      const spec = readSpec(abs);
+      const { spec, rrweb } = readSpecInfo(abs);
       const dir = path.dirname(rel).replace(/\\/g, '/');
       return response(200, {
         spec,
+        rrweb,
         dir: dir === '.' ? '' : dir,
         assetBase: assetBaseFor(webview, vscode, abs),
         mtimeMs: stat.mtimeMs,
-        editable: isEditableSpec(abs) && !/\.jsonl$/i.test(abs),
+        editable: !rrweb && isEditableSpec(abs) && !/\.jsonl$/i.test(abs),
       });
     } catch (err) {
       return response(400, { error: String(err.message || err) });
@@ -169,6 +211,10 @@ function handleApiRequest({ root, openFile, webview, vscode }, request) {
   // synchronous path only ever sees it if that interception is bypassed.
   if (pathname === '/api/spec' && request.method === 'POST') {
     return response(405, { error: 'spec writes are handled asynchronously' });
+  }
+
+  if (pathname === '/api/narration-audio' && request.method === 'POST') {
+    return handleNarrationPreviewRequest(request);
   }
 
   if (pathname === '/api/clone-spec' && request.method === 'POST') {
@@ -191,7 +237,10 @@ function handleApiRequest({ root, openFile, webview, vscode }, request) {
     if (target === source) return response(400, { error: 'clone target must differ from source' });
     const finalRel = uniqueRel(workspaceRoot, path.relative(workspaceRoot, target).replace(/\\/g, '/'));
     const finalAbs = safeResolve(workspaceRoot, finalRel);
-    fs.writeFileSync(finalAbs, fs.readFileSync(source, 'utf8'), 'utf8');
+    const body = isRrwebSourceFile(source)
+      ? JSON.stringify(rrwebSpecForFile(source), null, 2) + '\n'
+      : fs.readFileSync(source, 'utf8');
+    fs.writeFileSync(finalAbs, body, 'utf8');
     return response(200, {
       source: rel,
       path: posixRel(workspaceRoot, finalAbs),
@@ -247,6 +296,53 @@ async function handleSpecWrite({ root, vscode }, request) {
   }
 }
 
+async function handleOpenReference({ root, vscode }, request) {
+  const workspaceRoot = path.resolve(root);
+  let payload;
+  try {
+    payload = JSON.parse(request.body || '{}');
+  } catch (err) {
+    return response(400, { error: `invalid JSON body: ${err.message}` });
+  }
+  const rel = typeof payload.src === 'string' ? payload.src : '';
+  const abs = safeResolve(workspaceRoot, rel);
+  if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+    return response(404, { error: `not found: ${rel}` });
+  }
+
+  const uri = vscode.Uri.file(abs);
+  const lineStart = Number(payload.lineStart);
+  const lineEnd = Number(payload.lineEnd || payload.lineStart);
+  const kind = typeof payload.kind === 'string' ? payload.kind : '';
+  const preferText = ['code', 'diff', 'markdown', 'json', 'text', 'file'].includes(kind) || Number.isFinite(lineStart);
+
+  try {
+    if (preferText) {
+      const doc = await vscode.workspace.openTextDocument(uri);
+      const opts = { preview: false, viewColumn: vscode.ViewColumn.Active };
+      if (Number.isFinite(lineStart) && lineStart > 0) {
+        const startLine = Math.max(0, Math.min(doc.lineCount - 1, Math.floor(lineStart) - 1));
+        const endLine = Math.max(startLine, Math.min(doc.lineCount - 1, Math.floor(Number.isFinite(lineEnd) && lineEnd > 0 ? lineEnd : lineStart) - 1));
+        opts.selection = new vscode.Range(
+          new vscode.Position(startLine, 0),
+          doc.lineAt(endLine).range.end,
+        );
+      }
+      await vscode.window.showTextDocument(doc, opts);
+    } else {
+      await vscode.commands.executeCommand('vscode.open', uri);
+    }
+    return response(200, { ok: true });
+  } catch (err) {
+    try {
+      await vscode.commands.executeCommand('vscode.open', uri);
+      return response(200, { ok: true });
+    } catch (_) {
+      return response(400, { error: String(err.message || err) });
+    }
+  }
+}
+
 // Replace the file's contents with the pretty-printed spec. When the real
 // `vscode` API is present we route through a WorkspaceEdit + document.save() so
 // the write is a normal editor edit (undoable, integrated with the dirty flag).
@@ -291,6 +387,29 @@ function webviewBridgeScript() {
     }));
   });
   const nativeFetch = window.fetch.bind(window);
+  window.slideyOpenReference = (payload) => {
+    const id = nextId++;
+    const promise = new Promise((resolve, reject) => {
+      pending.set(id, {
+        resolve: (response) => {
+          if (response.ok) resolve(response);
+          else reject(new Error('Slidey reference open failed'));
+        },
+        reject
+      });
+      setTimeout(() => {
+        if (!pending.has(id)) return;
+        pending.delete(id);
+        reject(new Error('Timed out waiting for Slidey reference open'));
+      }, 15000);
+    });
+    vscode.postMessage({
+      type: 'slidey.openReference',
+      id,
+      body: JSON.stringify(payload || {})
+    });
+    return promise;
+  };
   window.fetch = (input, init = {}) => {
     const raw = typeof input === 'string' ? input : (input && input.url) || '';
     const url = new URL(raw, window.location.href);
@@ -300,11 +419,12 @@ function webviewBridgeScript() {
       const body = init.body == null ? null : String(init.body);
       const promise = new Promise((resolve, reject) => {
         pending.set(id, { resolve, reject });
+        const timeoutMs = url.pathname === '/api/narration-audio' ? 60000 : 15000;
         setTimeout(() => {
           if (!pending.has(id)) return;
           pending.delete(id);
           reject(new Error('Timed out waiting for Slidey preview API response'));
-        }, 15000);
+        }, timeoutMs);
       });
       vscode.postMessage({ type: 'slidey.fetch', id, url: url.pathname + url.search, method, body });
       return promise;
@@ -336,7 +456,7 @@ async function openPreview(vscode, context, uri) {
   }
   const file = target.fsPath;
   if (!SPEC_EXT.has(path.extname(file).toLowerCase())) {
-    vscode.window.showErrorMessage('Slidey previews require a .json or .jsonl spec.');
+    vscode.window.showErrorMessage('Slidey previews require a .json, .jsonl, or .rrweb.json file.');
     return;
   }
   const folder = vscode.workspace.getWorkspaceFolder(target);
@@ -364,13 +484,18 @@ async function openPreview(vscode, context, uri) {
 
   panel.webview.html = rewriteViewerHtml(fs.readFileSync(index, 'utf8'), panel.webview, vscode);
   panel.webview.onDidReceiveMessage(async (msg) => {
-    if (!msg || msg.type !== 'slidey.fetch') return;
-    const request = { url: msg.url, method: msg.method || 'GET', body: msg.body };
+    if (!msg || (msg.type !== 'slidey.fetch' && msg.type !== 'slidey.openReference')) return;
+    const request = msg.type === 'slidey.openReference'
+      ? { url: '/api/open-reference', method: 'POST', body: msg.body }
+      : { url: msg.url, method: msg.method || 'GET', body: msg.body };
     let result;
-    const isSpecWrite = request.method === 'POST'
-      && new URL(request.url, 'https://slidey.local').pathname === '/api/spec';
+    const route = new URL(request.url, 'https://slidey.local').pathname;
+    const isSpecWrite = request.method === 'POST' && route === '/api/spec';
+    const isOpenReference = request.method === 'POST' && route === '/api/open-reference';
     if (isSpecWrite) {
       result = await handleSpecWrite({ root, vscode }, request);
+    } else if (isOpenReference) {
+      result = await handleOpenReference({ root, vscode }, request);
     } else {
       result = handleApiRequest({ root, openFile, webview: panel.webview, vscode }, request);
     }
@@ -390,6 +515,7 @@ module.exports = {
   deactivate,
   buildTree,
   handleApiRequest,
+  handleOpenReference,
   handleSpecWrite,
   writeSpecDocument,
   previewTitle,

@@ -1,0 +1,58 @@
+# POG demo-packet — deterministic story bound to the use-case type's
+# `materialize:` declaration in pog/catalog.yaml (C2,
+# use-case-loop-plan.md §3.5/§4). Four rooms = four stage pills: plan ->
+# launch -> capture -> doctor, matching the plan's "demo packet" row
+# ("real-app tours + rrweb clips + deck", stages plan -> launch -> capture
+# -> doctor).
+#
+# Same tour vocabulary as stories/mockup-packet, re-targeted: no mockup HTML
+# is generated (there's nothing to generate for a live app), so there's no
+# "create" stage. Instead `plan` resolves the real-app manifest (declaring
+# `sources`/`states` in place of `mockup`, per C2's demo-manifest.mjs
+# generalization) and `launch` is the pre-flight checkpoint before
+# record-tour.mjs launches + health-checks the target itself (slidey's own
+# target:{launch,addr,readyPath} support — unmodified, see C2 recon).
+# `capture` and `doctor` call the SAME host.demo.* verb family the mockup
+# packet uses (record, doctor) — the packet mechanism doesn't fork per
+# artifact kind, only the manifest shape does.
+#
+# Flow tests cassette host.demo the same way stories/mockup-packet's
+# materialize_packet.yaml does — no live node/chromium in CI. Real
+# invocation is CLI/hand-run (scripts/demo-packet-gate.sh runs demo-doctor
+# directly against a committed fixture manifest for the deterministic gate;
+# a live capture against the running portal kit is a separately-documented
+# local command, never part of a landed gate).
+app:
+  id: pog-demo-packet
+  version: 0.1.0
+  title: "POG use-case demo packet (real app)"
+  author: "pog"
+  license: "CC0"
+
+world:
+  node_id: { type: string, default: "" }
+  target_url: { type: string, default: "" }
+  manifest_path: { type: string, default: "" }
+  target_ready: { type: bool, default: false }
+  doctor_ok: { type: bool, default: false }
+  doctor_report: { type: object, default: {} }
+  record_stdout: { type: string, default: "" }
+  status: { type: string, default: "" }
+
+intents:
+  next:
+    description: "Advance to the next packet stage."
+    examples: ["next", "continue"]
+    priority: 80
+  restart:
+    description: "Restart the packet pipeline from the plan stage."
+    examples: ["restart", "start over"]
+    priority: 40
+  look:
+    description: "Re-render the current stage."
+    examples: ["look", "?"]
+    priority: 10
+
+root: plan
+include:
+  - rooms/*.yaml

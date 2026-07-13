@@ -1,6 +1,11 @@
 <script setup>
 import { computed } from 'vue';
 import { store } from '../store.js';
+import {
+  evidencePlaybackRef,
+  evidencePlaybackTitle,
+  isEvidencePlayback,
+} from '../evidencePlayback.mjs';
 
 const MAX_ITEMS = 6;
 
@@ -29,6 +34,22 @@ function statusMeta(status) {
 function refLabel(item) {
   const type = String(item.refType || 'artifact').toUpperCase();
   return type.replace(/[-_]+/g, ' ');
+}
+
+function openPlayback(item) {
+  if (!isEvidencePlayback(item)) return;
+  try {
+    window.dispatchEvent(new CustomEvent('slidey:open-rrweb', {
+      detail: {
+        ref: evidencePlaybackRef(item),
+        title: evidencePlaybackTitle(item),
+        label: item.label || '',
+        note: item.note || '',
+      },
+    }));
+  } catch (_) {
+    /* no browser event target */
+  }
 }
 </script>
 
@@ -62,7 +83,18 @@ function refLabel(item) {
           <div class="evidence-detail" :data-edit-path="JSON.stringify(['items', i, 'detail'])" data-edit-multiline>{{ item.detail }}</div>
           <div v-if="item.ref" class="evidence-ref">
             <span class="evidence-ref-type">{{ refLabel(item) }}</span>
-            <code>{{ item.ref }}</code>
+            <button
+              v-if="isEvidencePlayback(item)"
+              type="button"
+              class="evidence-ref-playback"
+              data-testid="evidence-open-rrweb"
+              :title="`Open playback: ${item.ref}`"
+              @click.stop="openPlayback(item)"
+            >
+              <span class="evidence-ref-play-icon" aria-hidden="true">▶</span>
+              <code>{{ item.ref }}</code>
+            </button>
+            <code v-else>{{ item.ref }}</code>
           </div>
         </div>
       </article>
@@ -196,11 +228,15 @@ function refLabel(item) {
   letter-spacing: 0.1em;
 }
 
-.evidence-ref code {
+.evidence-ref code,
+.evidence-ref-playback {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.evidence-ref code {
   display: block;
   border: 1px solid rgba(88, 166, 255, 0.22);
   border-radius: 8px;
@@ -209,6 +245,46 @@ function refLabel(item) {
   background: rgba(13, 17, 23, 0.7);
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   font-size: 21px;
+}
+
+.evidence-ref-playback {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(88, 166, 255, 0.44);
+  border-radius: 8px;
+  padding: 0;
+  color: #e6edf3;
+  background: rgba(31, 111, 235, 0.16);
+  cursor: pointer;
+  text-align: left;
+}
+
+.evidence-ref-playback:hover,
+.evidence-ref-playback:focus-visible {
+  border-color: #58a6ff;
+  background: rgba(31, 111, 235, 0.26);
+  outline: none;
+}
+
+.evidence-ref-playback code {
+  border: 0;
+  background: transparent;
+  padding-left: 0;
+}
+
+.evidence-ref-play-icon {
+  width: 34px;
+  height: 34px;
+  margin-left: 8px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #0d1117;
+  background: #58a6ff;
+  font-size: 16px;
+  font-weight: 900;
 }
 
 .evidence-done,

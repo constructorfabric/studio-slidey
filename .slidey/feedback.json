@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "publishing": { "environment": "public", "environments": { "local": { "sinks": ["upstream-feedback"] }, "public": { "sinks": ["upstream-feedback"] } } },
+  "sinks": { "upstream-feedback": { "label": "Slidey public feedback", "type": "http", "endpoint": "/api/feedback" } },
+  "local": { "path": ".slidey/feedback/feedback.jsonl" }
+}

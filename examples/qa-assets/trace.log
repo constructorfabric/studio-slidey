@@ -1,0 +1,4 @@
+2026-07-03T10:00:00Z INFO  opened inline reference viewer
+2026-07-03T10:00:02Z INFO  rendered markdown fixture
+2026-07-03T10:00:04Z INFO  rendered code fixture
+2026-07-03T10:00:06Z WARN  unknown plugin kind falls back to text

@@ -16,6 +16,18 @@ const single = computed(() => (store.scene.panels || []).length === 1);
 // Serialize a scene-relative JSON path for the in-place text editor (inline-edit.js).
 const ep = (arr) => (arr ? JSON.stringify(arr) : null);
 
+function openNodeLink(node, event) {
+  if (!node || !node.link) return;
+  event.preventDefault();
+  event.stopPropagation();
+  window.dispatchEvent(new CustomEvent('slidey:library-link', { detail: node.link }));
+}
+
+function onNodeLinkKey(node, event) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  openNodeLink(node, event);
+}
+
 // Reset overrides whenever the scene changes so each new scene starts fresh.
 watch(() => store.scene, () => {
   sizeOverrides.value = {};
@@ -162,7 +174,18 @@ onUpdated(async () => { await nextTick(); autoSizeNodes(); });
             </g>
           </template>
           <!-- data-node-id is read by autoSizeNodes to key size measurements -->
-          <g v-for="(n, k) in p.nodes" :key="`n${k}`" :class="n.groupClass" :data-node-id="n.id">
+          <g
+            v-for="(n, k) in p.nodes"
+            :key="`n${k}`"
+            :class="[n.groupClass, { 'dsvg-node-link slidey-library-link': n.link }]"
+            :data-node-id="n.id"
+            :role="n.link ? 'button' : null"
+            :tabindex="n.link ? 0 : null"
+            :focusable="n.link ? 'true' : null"
+            :aria-label="n.link ? `Open ${n.link.label}` : null"
+            @click="openNodeLink(n, $event)"
+            @keydown="onNodeLinkKey(n, $event)"
+          >
             <rect :x="n.rect.x" :y="n.rect.y" :width="n.rect.w" :height="n.rect.h" rx="14" ry="14" />
             <text v-for="(t, m) in n.texts" :key="m" :class="t.cls" :x="t.x" :y="t.y" text-anchor="middle" dominant-baseline="middle" :data-edit-path="ep(t.editPath)">{{ t.text }}</text>
           </g>

@@ -1,0 +1,74 @@
+states:
+  render:
+    description: "Regenerating the deck from its source data"
+    relevant_world: [node_id, build_command, build_ok, build_exit, status]
+    on_enter:
+      - invoke: host.run
+        id: run_builder
+        with:
+          cmd: "{{ world.build_command }}"
+        bind: { build_ok: ok, build_stdout: stdout, build_exit: exit_code }
+        on_error: render_failed
+      - set: { status: "rendered" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - kv:
+              pairs:
+                Node: "{{ world.node_id|default:'(none)' }}"
+                Builder: "{{ world.build_command }}"
+                Exit: "{{ world.build_exit }}"
+          - prose: "Deck regenerated. The engine judges it next: the deck type's deck_matches_evidence.star gate check runs as the job's check:gate stage — the deck is only real if it is 1:1 with its evidence registries."
+        choices:
+          - list:
+              items:
+                - { label: "next", hint: "hand off to the gate check" }
+                - { label: "look" }
+    on:
+      next:
+        - target: done
+      look:
+        - target: render
+  render_failed:
+    description: "The deck builder could not run"
+    terminal: true
+    relevant_world: [node_id, build_command]
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - prose: "host.run could not execute the deck builder; the committed deck is unchanged."
+        choices:
+          - list:
+              items:
+                - { label: "look" }
+    on:
+      look:
+        - target: render_failed
+  done:
+    description: "Deck regenerated; gate check pending"
+    relevant_world: [node_id, build_exit, status]
+    on_enter:
+      - set: { status: "complete" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - kv:
+              pairs:
+                Node: "{{ world.node_id|default:'(none)' }}"
+                Builder exit: "{{ world.build_exit }}"
+          - prose: "Render complete. Run `restart` to regenerate."
+        choices:
+          - list:
+              items:
+                - { label: "restart" }
+                - { label: "look" }
+    on:
+      restart:
+        - target: render
+          effects:
+            - set: { build_ok: false, build_stdout: "", build_exit: 0, status: "" }
+      look:
+        - target: done

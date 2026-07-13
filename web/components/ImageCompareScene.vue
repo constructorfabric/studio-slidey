@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { store } from '../store.js';
+import { normalizeReference } from '../reference-viewer.js';
 
 const sc = computed(() => store.scene || {});
 const shown = name => store.isRevealed(name);
@@ -10,6 +11,17 @@ const leftSrc = computed(() => store.leftImageDataUri || left.value.dataUri || l
 const rightSrc = computed(() => store.rightImageDataUri || right.value.dataUri || right.value.src || '');
 const fit = computed(() => sc.value.fit === 'cover' ? 'cover' : 'contain');
 const variant = computed(() => sc.value.variant === 'qa' ? 'qa' : 'default');
+const refsApi = inject('slideyReferences', null);
+
+function mediaReference(side, fallback) {
+  return normalizeReference(side.reference || { src: side.src, label: side.label || fallback, kind: 'image' });
+}
+
+function openPanel(side, fallback) {
+  if (!refsApi || !refsApi.open) return;
+  const ref = mediaReference(side, fallback);
+  if (ref) refsApi.open(ref);
+}
 </script>
 
 <template>
@@ -31,7 +43,16 @@ const variant = computed(() => sc.value.variant === 'qa' ? 'qa' : 'default');
       class="imagecompare-frame reveal"
       :class="{ shown: shown('imagecompare-frame') }"
     >
-      <figure class="imagecompare-panel">
+      <figure
+        class="imagecompare-panel is-clickable-reference"
+        role="button"
+        tabindex="0"
+        :title="`Open ${left.label || 'Old'}`"
+        data-slidey-reference-trigger
+        @click.stop="openPanel(left, 'Old')"
+        @keydown.enter.stop.prevent="openPanel(left, 'Old')"
+        @keydown.space.stop.prevent="openPanel(left, 'Old')"
+      >
         <figcaption data-edit-path='["left","label"]'>{{ left.label || 'Old' }}</figcaption>
         <img
           v-if="leftSrc"
@@ -42,7 +63,16 @@ const variant = computed(() => sc.value.variant === 'qa' ? 'qa' : 'default');
         />
         <div v-else class="imagecompare-missing">Missing image source</div>
       </figure>
-      <figure class="imagecompare-panel">
+      <figure
+        class="imagecompare-panel is-clickable-reference"
+        role="button"
+        tabindex="0"
+        :title="`Open ${right.label || 'New'}`"
+        data-slidey-reference-trigger
+        @click.stop="openPanel(right, 'New')"
+        @keydown.enter.stop.prevent="openPanel(right, 'New')"
+        @keydown.space.stop.prevent="openPanel(right, 'New')"
+      >
         <figcaption data-edit-path='["right","label"]'>{{ right.label || 'New' }}</figcaption>
         <img
           v-if="rightSrc"
@@ -109,6 +139,13 @@ const variant = computed(() => sc.value.variant === 'qa' ? 'qa' : 'default');
   display: grid;
   grid-template-rows: 36px minmax(0, 1fr);
   overflow: hidden;
+}
+.imagecompare-panel.is-clickable-reference {
+  cursor: zoom-in;
+}
+.imagecompare-panel.is-clickable-reference:hover {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 2px rgb(88 166 255 / 20%);
 }
 
 .imagecompare-panel figcaption {

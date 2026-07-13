@@ -51,6 +51,13 @@ function edgeTtsAvailable() {
   }
 }
 
+function hasNarrationText(sceneBoundaries) {
+  return sceneBoundaries.some(sb => {
+    if (typeof sb.narration === 'string' && sb.narration) return true;
+    return Array.isArray(sb.narrationCues) && sb.narrationCues.some(cue => cue && cue.text);
+  });
+}
+
 /**
  * Apply phonetic respellings to spoken narration text.
  *
@@ -68,19 +75,61 @@ function edgeTtsAvailable() {
  *
  * @param {string} text
  * @param {Object<string,string>} pronunciations
- * @returns {string}
+ * @returns {{ text: string, appliedTerms: Array<{ term: string, spokenAs: string }> }}
  */
-function applyPronunciations(text, pronunciations) {
-  if (!text || !pronunciations) return text;
+function applyPronunciationsWithDetails(text, pronunciations) {
+  if (!text || !pronunciations) return { text, appliedTerms: [] };
   const terms = Object.keys(pronunciations)
     .filter(t => t && pronunciations[t])
     .sort((a, b) => b.length - a.length); // longest first → wins in alternation
-  if (!terms.length) return text;
+  if (!terms.length) return { text, appliedTerms: [] };
 
   const escaped = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const re = new RegExp(`(?<!\\w)(?:${escaped.join('|')})(?!\\w)`, 'gi');
-  const lookup = new Map(terms.map(t => [t.toLowerCase(), pronunciations[t]]));
-  return text.replace(re, m => lookup.get(m.toLowerCase()) ?? m);
+  const lookup = new Map(terms.map(t => [t.toLowerCase(), { term: t, spokenAs: pronunciations[t] }]));
+  const applied = new Set();
+  const spokenText = text.replace(re, m => {
+    const replacement = lookup.get(m.toLowerCase());
+    if (replacement) applied.add(replacement.term);
+    return replacement ? replacement.spokenAs : m;
+  });
+  return {
+    text: spokenText,
+    appliedTerms: terms.filter(term => applied.has(term)).map(term => ({ term, spokenAs: pronunciations[term] })),
+  };
+}
+
+function applyPronunciations(text, pronunciations) {
+  return applyPronunciationsWithDetails(text, pronunciations).text;
+}
+
+function commandFailureDetail(err, command) {
+  if (err && err.code === 'ENOENT') return `${command} not found on PATH`;
+  const stderr = err && err.stderr ? err.stderr.toString().trim() : '';
+  const stdout = err && err.stdout ? err.stdout.toString().trim() : '';
+  const detail = [stderr, stdout].filter(Boolean).join('\n');
+  return detail || (err && err.message ? err.message : String(err));
+}
+
+/**
+ * Generate one narration audio file via edge-tts CLI.
+ */
+function synthesizeOne(text, audioPath, voice = DEFAULT_VOICE, rate = '+0%') {
+  // edge-tts handles quoting safely via argv (we use execFileSync).
+  try {
+    execFileSync('edge-tts', [
+      '--text',         text,
+      '--voice',        voice,
+      '--rate',         rate,
+      '--write-media',  audioPath,
+    ], { stdio: 'pipe' });
+  } catch (err) {
+    throw new Error(
+      `edge-tts failed for voice ${voice}: ${commandFailureDetail(err, 'edge-tts')}\n` +
+      'Install: pipx install edge-tts  # or: python3 -m pip install --user edge-tts\n' +
+      `Check:   slidey doctor --voice ${voice}`
+    );
+  }
 }
 
 /**
@@ -88,23 +137,26 @@ function applyPronunciations(text, pronunciations) {
  * @returns {number} duration of generated audio in seconds
  */
 function generateOne(text, audioPath, voice = DEFAULT_VOICE, rate = '+0%') {
-  // edge-tts handles quoting safely via argv (we use execFileSync).
-  execFileSync('edge-tts', [
-    '--text',         text,
-    '--voice',        voice,
-    '--rate',         rate,
-    '--write-media',  audioPath,
-  ], { stdio: 'pipe' });
+  synthesizeOne(text, audioPath, voice, rate);
   return getAudioDuration(audioPath);
 }
 
 function getAudioDuration(audioPath) {
-  const out = execFileSync('ffprobe', [
-    '-v', 'error',
-    '-show_entries', 'format=duration',
-    '-of', 'default=noprint_wrappers=1',
-    audioPath,
-  ]).toString();
+  let out;
+  try {
+    out = execFileSync('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1',
+      audioPath,
+    ]).toString();
+  } catch (err) {
+    throw new Error(
+      `ffprobe failed while reading narration audio duration: ${commandFailureDetail(err, 'ffprobe')}\n` +
+      'Install: brew install ffmpeg  # ffprobe is included with ffmpeg\n' +
+      'Check:   slidey doctor'
+    );
+  }
   return parseFloat(out.split('=')[1] || '0');
 }
 
@@ -184,4 +236,14 @@ function generateAll(sceneBoundaries, fps, totalFrames, narrationMeta, audioDir)
   return segments;
 }
 
-module.exports = { generateAll, generateOne, getAudioDuration, applyPronunciations, edgeTtsAvailable, DEFAULT_VOICE };
+module.exports = {
+  generateAll,
+  generateOne,
+  synthesizeOne,
+  getAudioDuration,
+  applyPronunciations,
+  applyPronunciationsWithDetails,
+  edgeTtsAvailable,
+  hasNarrationText,
+  DEFAULT_VOICE,
+};

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "_sourcesComment": "the real files this tour's real-app capture actually exercises (C2): the live affordance registry it resolves selectors from, the catalog data the roadmap listing/node detail in step_1/step_2 render, and the portal components that render the surfaces the tour drives (App.vue mounts the kit page; CatalogPanel.vue owns catalog-panel/lifecycle-pill-roadmap/object-listing/back-to-list) -- not a decoupled snapshot file (see docs/plan.md's C2 note on the affordances.json stand-in this replaced). demo-packet-gate.sh normalizes these external paths' mtimes (like it does the fixture dir) so freshness stays deterministic in CI.",
+  "sources": [
+    "../../../../pog/qa/driver.json",
+    "../../../../pog/catalog.yaml",
+    "../../../../portal/src/App.vue",
+    "../../../../portal/src/components/objectgraph/CatalogPanel.vue"
+  ],
+  "states": [
+    "step_0_open_the_portal_the_catalog_view_loads_t",
+    "step_1_switch_to_the_roadmap_diff_view_desired_",
+    "step_2_drill_into_a_changed_node_its_decision_c"
+  ],
+  "deck": "pm-reviews-the-roadmap-as-a-computed-diff-demo.slidey.json",
+  "airSec": 1.5,
+  "target": {
+    "launch": "kitsoki web --kits-dir kits --addr 127.0.0.1:7892",
+    "addr": "127.0.0.1:7892",
+    "readyPath": "/",
+    "cwd": "../../../..",
+    "timeoutMs": 30000
+  },
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "postersDir": "clips/posters",
+  "tours": [
+    {
+      "tour": "pm-reviews-the-roadmap-as-a-computed-diff-journey.tour.json",
+      "out": "clips/pm-reviews-the-roadmap-as-a-computed-diff-journey.rrweb.json"
+    }
+  ]
+}

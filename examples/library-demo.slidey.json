@@ -1,0 +1,849 @@
+{
+  "meta": {
+    "title": "Tree of Life taxonomy",
+    "mode": "pitch"
+  },
+  "library": {
+    "title": "Tree of Life taxonomy",
+    "sourceTitle": "Tree of Life",
+    "sourceDescription": "Canonical overview slides used by synced teaching subsets",
+    "defaultDeck": "source",
+    "decks": [
+      {
+        "id": "bacteria",
+        "deckType": "hierarchy",
+        "title": "Bacteria",
+        "description": "Domain-level deck for bacterial lineages",
+        "scenes": [
+          {
+            "id": "bacteria-title",
+            "type": "title",
+            "title": "Bacteria",
+            "subtitle": "A domain-level deck under the Tree of Life"
+          },
+          {
+            "id": "bacteria-lineages",
+            "type": "cards",
+            "variant": "grid",
+            "title": "Major bacterial lineages",
+            "sections": ["proteobacteria", "cyanobacteria", "actinomycetota"],
+            "links": [
+              { "deck": "proteobacteria", "section": "proteobacteria", "label": "Open Proteobacteria" },
+              { "deck": "cyanobacteria", "section": "cyanobacteria", "label": "Open Cyanobacteria" },
+              { "deck": "actinomycetota", "section": "actinomycetota", "label": "Open Actinomycetota" }
+            ],
+            "cards": [
+              { "label": "Proteobacteria", "sub": "Large, metabolically diverse clade", "deck": "proteobacteria", "section": "proteobacteria" },
+              { "label": "Cyanobacteria", "sub": "Oxygenic photosynthesis", "deck": "cyanobacteria", "section": "cyanobacteria" },
+              { "label": "Actinomycetota", "sub": "High-GC Gram-positive bacteria", "deck": "actinomycetota", "section": "actinomycetota" }
+            ]
+          },
+          {
+            "id": "bacteria-patterns",
+            "type": "cards",
+            "variant": "numbered",
+            "title": "What to compare",
+            "cards": [
+              { "label": "Cell envelope structure" },
+              { "label": "Metabolism and energy source" },
+              { "label": "Ecological niche" }
+            ]
+          }
+        ],
+        "children": [
+          {
+            "id": "proteobacteria",
+            "deckType": "hierarchy",
+            "title": "Proteobacteria",
+            "description": "Bacterial child deck",
+            "scenes": [
+              {
+                "id": "proteobacteria-title",
+                "type": "title",
+                "title": "Proteobacteria",
+                "subtitle": "Diverse Gram-negative bacteria"
+              },
+              {
+                "id": "proteobacteria-cards",
+                "type": "cards",
+                "variant": "grid",
+                "title": "Representative groups",
+                "cards": [
+                  { "label": "Alphaproteobacteria" },
+                  { "label": "Gammaproteobacteria" },
+                  { "label": "Betaproteobacteria" }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "cyanobacteria",
+            "deckType": "hierarchy",
+            "title": "Cyanobacteria",
+            "description": "Photosynthetic bacterial child deck",
+            "scenes": [
+              {
+                "id": "cyanobacteria-title",
+                "type": "title",
+                "title": "Cyanobacteria",
+                "subtitle": "Photosynthetic bacteria that reshaped Earth's atmosphere"
+              },
+              {
+                "id": "cyanobacteria-cards",
+                "type": "cards",
+                "variant": "numbered",
+                "title": "Key traits",
+                "cards": [
+                  { "label": "Oxygenic photosynthesis" },
+                  { "label": "Pigmented thylakoid membranes" },
+                  { "label": "Freshwater and marine blooms" }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "actinomycetota",
+            "deckType": "hierarchy",
+            "title": "Actinomycetota",
+            "description": "Soil bacteria child deck",
+            "scenes": [
+              {
+                "id": "actinomycetota-title",
+                "type": "title",
+                "title": "Actinomycetota",
+                "subtitle": "Soil bacteria known for complex chemistry"
+              },
+              {
+                "id": "actinomycetota-cards",
+                "type": "cards",
+                "variant": "grid",
+                "title": "Why they matter",
+                "cards": [
+                  { "label": "Decompose organic matter" },
+                  { "label": "Produce many antibiotics" },
+                  { "label": "Often form branching filaments" }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "bacteria-lab-subset",
+            "deckType": "subset",
+            "title": "Bacteria lab subset",
+            "description": "Synced lab view from Bacteria and its descendant lineage decks",
+            "purpose": "lab",
+            "theme": "microbiology",
+            "scenes": [
+              { "fromDeck": "bacteria", "ref": "bacteria-title" },
+              { "fromDeck": "bacteria", "ref": "bacteria-lineages" },
+              { "fromDeck": "proteobacteria", "ref": "proteobacteria-title" },
+              { "fromDeck": "cyanobacteria", "ref": "cyanobacteria-title" },
+              { "fromDeck": "actinomycetota", "ref": "actinomycetota-title" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "archaea",
+        "deckType": "hierarchy",
+        "title": "Archaea",
+        "description": "Domain-level deck for archaeal lineages",
+        "scenes": [
+          {
+            "id": "archaea-title",
+            "type": "title",
+            "title": "Archaea",
+            "subtitle": "A domain-level deck under the Tree of Life"
+          },
+          {
+            "id": "archaea-lineages",
+            "type": "cards",
+            "variant": "grid",
+            "title": "Major archaeal lineages",
+            "sections": ["euryarchaeota", "asgard-archaea", "thaumarchaeota"],
+            "links": [
+              { "deck": "euryarchaeota", "section": "euryarchaeota", "label": "Open Euryarchaeota" },
+              { "deck": "asgard-archaea", "section": "asgard-archaea", "label": "Open Asgard archaea" },
+              { "deck": "thaumarchaeota", "section": "thaumarchaeota", "label": "Open Thaumarchaeota" }
+            ],
+            "cards": [
+              { "label": "Euryarchaeota", "sub": "Methanogens and extreme halophiles", "deck": "euryarchaeota", "section": "euryarchaeota" },
+              { "label": "Asgard archaea", "sub": "Close relatives of eukaryotes", "deck": "asgard-archaea", "section": "asgard-archaea" },
+              { "label": "Thaumarchaeota", "sub": "Ammonia-oxidizing archaea", "deck": "thaumarchaeota", "section": "thaumarchaeota" }
+            ]
+          }
+        ],
+        "children": [
+          {
+            "id": "euryarchaeota",
+            "deckType": "hierarchy",
+            "title": "Euryarchaeota",
+            "description": "Archaeal child deck",
+            "scenes": [
+              {
+                "id": "euryarchaeota-title",
+                "type": "title",
+                "title": "Euryarchaeota",
+                "subtitle": "Methanogens, halophiles, and thermophiles"
+              },
+              {
+                "id": "euryarchaeota-cards",
+                "type": "cards",
+                "variant": "grid",
+                "title": "Representative lifestyles",
+                "cards": [
+                  { "label": "Methanogenesis" },
+                  { "label": "High-salt environments" },
+                  { "label": "High-temperature habitats" }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "asgard-archaea",
+            "deckType": "hierarchy",
+            "title": "Asgard archaea",
+            "description": "Archaeal child deck",
+            "scenes": [
+              {
+                "id": "asgard-title",
+                "type": "title",
+                "title": "Asgard archaea",
+                "subtitle": "Archaea with genes linked to eukaryotic cell biology"
+              },
+              {
+                "id": "asgard-cards",
+                "type": "cards",
+                "variant": "numbered",
+                "title": "Why they are important",
+                "cards": [
+                  { "label": "Inform models of eukaryote origins" },
+                  { "label": "Contain eukaryotic signature proteins" },
+                  { "label": "Known largely from environmental genomes" }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "thaumarchaeota",
+            "deckType": "hierarchy",
+            "title": "Thaumarchaeota",
+            "description": "Archaeal child deck",
+            "scenes": [
+              {
+                "id": "thaumarchaeota-title",
+                "type": "title",
+                "title": "Thaumarchaeota",
+                "subtitle": "Widespread ammonia-oxidizing archaea"
+              },
+              {
+                "id": "thaumarchaeota-cards",
+                "type": "cards",
+                "variant": "grid",
+                "title": "Ecological role",
+                "cards": [
+                  { "label": "Drive nitrification" },
+                  { "label": "Common in oceans and soils" },
+                  { "label": "Adapted to low nutrient levels" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "eukarya",
+        "deckType": "hierarchy",
+        "title": "Eukarya",
+        "description": "Domain-level deck for eukaryotic lineages",
+        "scenes": [
+          {
+            "id": "eukarya-title",
+            "type": "title",
+            "title": "Eukarya",
+            "subtitle": "A domain-level deck under the Tree of Life"
+          },
+          {
+            "id": "eukarya-lineages",
+            "type": "cards",
+            "variant": "grid",
+            "title": "Major eukaryotic branches",
+            "sections": ["animals", "plants", "fungi"],
+            "links": [
+              { "deck": "animals", "section": "animals", "label": "Open Animals" },
+              { "deck": "plants", "section": "plants", "label": "Open Plants" },
+              { "deck": "fungi", "section": "fungi", "label": "Open Fungi" }
+            ],
+            "cards": [
+              { "label": "Animals", "sub": "Multicellular consumers", "deck": "animals", "section": "animals" },
+              { "label": "Plants", "sub": "Photosynthetic land lineages", "deck": "plants", "section": "plants" },
+              { "label": "Fungi", "sub": "Absorptive decomposers and symbionts", "deck": "fungi", "section": "fungi" }
+            ]
+          },
+          {
+            "id": "eukarya-tree",
+            "type": "diagram-svg",
+            "title": "Nested deck hierarchy",
+            "panels": [
+              {
+                "nodes": [
+                  { "id": "life", "label": "Tree of Life", "x": 60, "y": 230, "w": 210, "h": 90, "style": "primary" },
+                  { "id": "eukarya", "label": "Eukarya", "x": 360, "y": 230, "w": 190, "h": 90, "deck": "eukarya", "section": "eukarya" },
+                  { "id": "animals", "label": "Animals", "x": 650, "y": 120, "w": 190, "h": 90, "style": "secondary", "deck": "animals", "section": "animals" },
+                  { "id": "plants", "label": "Plants", "x": 650, "y": 250, "w": 190, "h": 90, "deck": "plants", "section": "plants" },
+                  { "id": "fungi", "label": "Fungi", "x": 650, "y": 380, "w": 190, "h": 90, "deck": "fungi", "section": "fungi" },
+                  { "id": "chordates", "label": "Chordates", "x": 940, "y": 70, "w": 190, "h": 80, "deck": "chordates", "section": "chordates" },
+                  { "id": "arthropods", "label": "Arthropods", "x": 940, "y": 180, "w": 190, "h": 80, "deck": "arthropods", "section": "arthropods" },
+                  { "id": "angiosperms", "label": "Angiosperms", "x": 940, "y": 300, "w": 190, "h": 80, "deck": "angiosperms", "section": "angiosperms" },
+                  { "id": "ascomycetes", "label": "Ascomycetes", "x": 940, "y": 410, "w": 190, "h": 80, "deck": "ascomycetes", "section": "ascomycetes" }
+                ],
+                "edges": [
+                  { "from": "life", "to": "eukarya" },
+                  { "from": "eukarya", "to": "animals" },
+                  { "from": "eukarya", "to": "plants" },
+                  { "from": "eukarya", "to": "fungi" },
+                  { "from": "animals", "to": "chordates" },
+                  { "from": "animals", "to": "arthropods" },
+                  { "from": "plants", "to": "angiosperms" },
+                  { "from": "fungi", "to": "ascomycetes" }
+                ]
+              }
+            ],
+            "caption": "Hierarchy decks are separate presentations. The source deck is just the root of the collection tree."
+          }
+        ],
+        "children": [
+          {
+            "id": "animals",
+            "deckType": "hierarchy",
+            "title": "Animals",
+            "description": "Eukarya child deck",
+            "scenes": [
+              {
+                "id": "animals-title",
+                "type": "title",
+                "title": "Animals",
+                "subtitle": "A child deck under Eukarya"
+              },
+              {
+                "id": "animals-lineages",
+                "type": "cards",
+                "variant": "grid",
+                "title": "Animal branches",
+                "sections": ["chordates", "arthropods", "mollusks"],
+                "links": [
+                  { "deck": "chordates", "section": "chordates", "label": "Open Chordates" },
+                  { "deck": "arthropods", "section": "arthropods", "label": "Open Arthropods" },
+                  { "deck": "mollusks", "section": "mollusks", "label": "Open Mollusks" }
+                ],
+                "cards": [
+                  { "label": "Chordates", "sub": "Notochord and dorsal nerve cord", "deck": "chordates", "section": "chordates" },
+                  { "label": "Arthropods", "sub": "Jointed limbs and exoskeletons", "deck": "arthropods", "section": "arthropods" },
+                  { "label": "Mollusks", "sub": "Mantle, muscular foot, and radula in many groups", "deck": "mollusks", "section": "mollusks" }
+                ]
+              }
+            ],
+            "children": [
+              {
+                "id": "chordates",
+                "deckType": "hierarchy",
+                "title": "Chordates",
+                "description": "Animal child deck",
+                "scenes": [
+                  {
+                    "id": "chordates-title",
+                    "type": "title",
+                    "title": "Chordates",
+                    "subtitle": "Animals with a notochord at some life stage"
+                  },
+                  {
+                    "id": "chordates-cards",
+                    "type": "cards",
+                    "variant": "grid",
+                    "title": "Chordate examples",
+                    "cards": [
+                      { "label": "Vertebrates" },
+                      { "label": "Tunicates" },
+                      { "label": "Lancelets" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "arthropods",
+                "deckType": "hierarchy",
+                "title": "Arthropods",
+                "description": "Animal child deck",
+                "scenes": [
+                  {
+                    "id": "arthropods-title",
+                    "type": "title",
+                    "title": "Arthropods",
+                    "subtitle": "Segmented animals with jointed appendages"
+                  },
+                  {
+                    "id": "arthropods-cards",
+                    "type": "cards",
+                    "variant": "numbered",
+                    "title": "Major groups",
+                    "cards": [
+                      { "label": "Insects" },
+                      { "label": "Arachnids" },
+                      { "label": "Crustaceans" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "mollusks",
+                "deckType": "hierarchy",
+                "title": "Mollusks",
+                "description": "Animal child deck",
+                "scenes": [
+                  {
+                    "id": "mollusks-title",
+                    "type": "title",
+                    "title": "Mollusks",
+                    "subtitle": "Soft-bodied animals with a mantle"
+                  },
+                  {
+                    "id": "mollusks-cards",
+                    "type": "cards",
+                    "variant": "grid",
+                    "title": "Mollusk examples",
+                    "cards": [
+                      { "label": "Gastropods" },
+                      { "label": "Bivalves" },
+                      { "label": "Cephalopods" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "animal-body-plans-subset",
+                "deckType": "subset",
+                "title": "Body plans subset",
+                "description": "Synced comparison view from Animals and selected animal child decks",
+                "purpose": "seminar",
+                "theme": "body plans",
+                "scenes": [
+                  { "fromDeck": "animals", "ref": "animals-title" },
+                  { "fromDeck": "animals", "ref": "animals-lineages" },
+                  { "fromDeck": "chordates", "ref": "chordates-title" },
+                  { "fromDeck": "arthropods", "ref": "arthropods-title" },
+                  { "fromDeck": "mollusks", "ref": "mollusks-title" }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "plants",
+            "deckType": "hierarchy",
+            "title": "Plants",
+            "description": "Eukarya child deck",
+            "scenes": [
+              {
+                "id": "plants-title",
+                "type": "title",
+                "title": "Plants",
+                "subtitle": "A child deck under Eukarya"
+              },
+              {
+                "id": "plants-lineages",
+                "type": "cards",
+                "variant": "grid",
+                "title": "Plant branches",
+                "sections": ["angiosperms", "gymnosperms", "bryophytes"],
+                "links": [
+                  { "deck": "angiosperms", "section": "angiosperms", "label": "Open Angiosperms" },
+                  { "deck": "gymnosperms", "section": "gymnosperms", "label": "Open Gymnosperms" },
+                  { "deck": "bryophytes", "section": "bryophytes", "label": "Open Bryophytes" }
+                ],
+                "cards": [
+                  { "label": "Angiosperms", "sub": "Flowering plants", "deck": "angiosperms", "section": "angiosperms" },
+                  { "label": "Gymnosperms", "sub": "Seed plants without flowers", "deck": "gymnosperms", "section": "gymnosperms" },
+                  { "label": "Bryophytes", "sub": "Non-vascular land plants", "deck": "bryophytes", "section": "bryophytes" }
+                ]
+              }
+            ],
+            "children": [
+              {
+                "id": "angiosperms",
+                "deckType": "hierarchy",
+                "title": "Angiosperms",
+                "description": "Plant child deck",
+                "scenes": [
+                  {
+                    "id": "angiosperms-title",
+                    "type": "title",
+                    "title": "Angiosperms",
+                    "subtitle": "Flowering plants"
+                  },
+                  {
+                    "id": "angiosperms-cards",
+                    "type": "cards",
+                    "variant": "grid",
+                    "title": "Defining traits",
+                    "cards": [
+                      { "label": "Flowers" },
+                      { "label": "Fruit-enclosed seeds" },
+                      { "label": "Double fertilization" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "gymnosperms",
+                "deckType": "hierarchy",
+                "title": "Gymnosperms",
+                "description": "Plant child deck",
+                "scenes": [
+                  {
+                    "id": "gymnosperms-title",
+                    "type": "title",
+                    "title": "Gymnosperms",
+                    "subtitle": "Seed plants with exposed ovules"
+                  },
+                  {
+                    "id": "gymnosperms-cards",
+                    "type": "cards",
+                    "variant": "numbered",
+                    "title": "Major groups",
+                    "cards": [
+                      { "label": "Conifers" },
+                      { "label": "Cycads" },
+                      { "label": "Ginkgo" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "bryophytes",
+                "deckType": "hierarchy",
+                "title": "Bryophytes",
+                "description": "Plant child deck",
+                "scenes": [
+                  {
+                    "id": "bryophytes-title",
+                    "type": "title",
+                    "title": "Bryophytes",
+                    "subtitle": "Non-vascular land plants"
+                  },
+                  {
+                    "id": "bryophytes-cards",
+                    "type": "cards",
+                    "variant": "grid",
+                    "title": "Examples",
+                    "cards": [
+                      { "label": "Mosses" },
+                      { "label": "Liverworts" },
+                      { "label": "Hornworts" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "seed-plants-subset",
+                "deckType": "subset",
+                "title": "Seed plants subset",
+                "description": "Synced plant view limited to Plants and its seed-plant descendants",
+                "purpose": "classroom",
+                "theme": "seed plants",
+                "scenes": [
+                  { "fromDeck": "plants", "ref": "plants-title" },
+                  { "fromDeck": "plants", "ref": "plants-lineages" },
+                  { "fromDeck": "angiosperms", "ref": "angiosperms-title" },
+                  { "fromDeck": "gymnosperms", "ref": "gymnosperms-title" }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fungi",
+            "deckType": "hierarchy",
+            "title": "Fungi",
+            "description": "Eukarya child deck",
+            "scenes": [
+              {
+                "id": "fungi-title",
+                "type": "title",
+                "title": "Fungi",
+                "subtitle": "A child deck under Eukarya"
+              },
+              {
+                "id": "fungi-lineages",
+                "type": "cards",
+                "variant": "grid",
+                "title": "Fungal branches",
+                "sections": ["ascomycetes", "basidiomycetes", "zygomycetes"],
+                "links": [
+                  { "deck": "ascomycetes", "section": "ascomycetes", "label": "Open Ascomycetes" },
+                  { "deck": "basidiomycetes", "section": "basidiomycetes", "label": "Open Basidiomycetes" },
+                  { "deck": "zygomycetes", "section": "zygomycetes", "label": "Open Zygomycetes" }
+                ],
+                "cards": [
+                  { "label": "Ascomycetes", "sub": "Sac fungi", "deck": "ascomycetes", "section": "ascomycetes" },
+                  { "label": "Basidiomycetes", "sub": "Club fungi", "deck": "basidiomycetes", "section": "basidiomycetes" },
+                  { "label": "Zygomycetes", "sub": "Fast-growing molds", "deck": "zygomycetes", "section": "zygomycetes" }
+                ]
+              }
+            ],
+            "children": [
+              {
+                "id": "ascomycetes",
+                "deckType": "hierarchy",
+                "title": "Ascomycetes",
+                "description": "Fungal child deck",
+                "scenes": [
+                  {
+                    "id": "ascomycetes-title",
+                    "type": "title",
+                    "title": "Ascomycetes",
+                    "subtitle": "Sac fungi"
+                  },
+                  {
+                    "id": "ascomycetes-cards",
+                    "type": "cards",
+                    "variant": "grid",
+                    "title": "Examples",
+                    "cards": [
+                      { "label": "Yeasts" },
+                      { "label": "Morels" },
+                      { "label": "Truffles" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "basidiomycetes",
+                "deckType": "hierarchy",
+                "title": "Basidiomycetes",
+                "description": "Fungal child deck",
+                "scenes": [
+                  {
+                    "id": "basidiomycetes-title",
+                    "type": "title",
+                    "title": "Basidiomycetes",
+                    "subtitle": "Club fungi"
+                  },
+                  {
+                    "id": "basidiomycetes-cards",
+                    "type": "cards",
+                    "variant": "numbered",
+                    "title": "Examples",
+                    "cards": [
+                      { "label": "Mushrooms" },
+                      { "label": "Puffballs" },
+                      { "label": "Rusts and smuts" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "zygomycetes",
+                "deckType": "hierarchy",
+                "title": "Zygomycetes",
+                "description": "Fungal child deck",
+                "scenes": [
+                  {
+                    "id": "zygomycetes-title",
+                    "type": "title",
+                    "title": "Zygomycetes",
+                    "subtitle": "A traditional grouping of filamentous molds"
+                  },
+                  {
+                    "id": "zygomycetes-cards",
+                    "type": "cards",
+                    "variant": "grid",
+                    "title": "Teaching note",
+                    "cards": [
+                      { "label": "Useful for introductory taxonomy" },
+                      { "label": "Modern fungal taxonomy is more resolved" },
+                      { "label": "Often introduced through bread mold examples" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "eukaryote-kingdoms-subset",
+            "deckType": "subset",
+            "title": "Kingdoms subset",
+            "description": "Synced survey view from Eukarya and its kingdom-level child decks",
+            "purpose": "classroom",
+            "theme": "kingdom survey",
+            "scenes": [
+              { "fromDeck": "eukarya", "ref": "eukarya-title" },
+              { "fromDeck": "eukarya", "ref": "eukarya-lineages" },
+              { "fromDeck": "animals", "ref": "animals-title" },
+              { "fromDeck": "plants", "ref": "plants-title" },
+              { "fromDeck": "fungi", "ref": "fungi-title" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "domain-survey-subset",
+        "deckType": "subset",
+        "title": "Domain survey subset",
+        "description": "Synced root-level view combining Tree of Life overview slides with the first slide of each domain deck",
+        "purpose": "classroom",
+        "theme": "domain survey",
+        "scenes": [
+          "life-title",
+          "three-domains",
+          "taxonomy-map",
+          { "fromDeck": "bacteria", "ref": "bacteria-title" },
+          { "fromDeck": "archaea", "ref": "archaea-title" },
+          { "fromDeck": "eukarya", "ref": "eukarya-title" }
+        ]
+      },
+      {
+        "id": "field-taxonomy",
+        "deckType": "subset",
+        "title": "Field taxonomy subset",
+        "description": "Synced subset of root overview slides for identifying organisms",
+        "purpose": "field lab",
+        "theme": "identification",
+        "select": { "tags": ["field"] }
+      }
+    ],
+    "sections": [
+      { "id": "bacteria", "title": "Bacteria", "deck": "bacteria" },
+      { "id": "proteobacteria", "title": "Proteobacteria", "parent": "bacteria", "deck": "proteobacteria" },
+      { "id": "cyanobacteria", "title": "Cyanobacteria", "parent": "bacteria", "deck": "cyanobacteria" },
+      { "id": "actinomycetota", "title": "Actinomycetota", "parent": "bacteria", "deck": "actinomycetota" },
+      { "id": "archaea", "title": "Archaea", "deck": "archaea" },
+      { "id": "euryarchaeota", "title": "Euryarchaeota", "parent": "archaea", "deck": "euryarchaeota" },
+      { "id": "asgard-archaea", "title": "Asgard archaea", "parent": "archaea", "deck": "asgard-archaea" },
+      { "id": "thaumarchaeota", "title": "Thaumarchaeota", "parent": "archaea", "deck": "thaumarchaeota" },
+      { "id": "eukarya", "title": "Eukarya", "deck": "eukarya" },
+      { "id": "animals", "title": "Animals", "parent": "eukarya", "deck": "animals" },
+      { "id": "chordates", "title": "Chordates", "parent": "animals", "deck": "chordates" },
+      { "id": "arthropods", "title": "Arthropods", "parent": "animals", "deck": "arthropods" },
+      { "id": "mollusks", "title": "Mollusks", "parent": "animals", "deck": "mollusks" },
+      { "id": "plants", "title": "Plants", "parent": "eukarya", "deck": "plants" },
+      { "id": "angiosperms", "title": "Angiosperms", "parent": "plants", "deck": "angiosperms" },
+      { "id": "gymnosperms", "title": "Gymnosperms", "parent": "plants", "deck": "gymnosperms" },
+      { "id": "bryophytes", "title": "Bryophytes", "parent": "plants", "deck": "bryophytes" },
+      { "id": "fungi", "title": "Fungi", "parent": "eukarya", "deck": "fungi" },
+      { "id": "ascomycetes", "title": "Ascomycetes", "parent": "fungi", "deck": "ascomycetes" },
+      { "id": "basidiomycetes", "title": "Basidiomycetes", "parent": "fungi", "deck": "basidiomycetes" },
+      { "id": "zygomycetes", "title": "Zygomycetes", "parent": "fungi", "deck": "zygomycetes" }
+    ]
+  },
+  "scenes": [
+    {
+      "id": "life-title",
+      "type": "title",
+      "title": "Tree of Life",
+      "subtitle": "A collection root with separate child decks for taxa"
+    },
+    {
+      "id": "three-domains",
+      "type": "cards",
+      "variant": "grid",
+      "title": "Three domains",
+      "tags": ["intro", "field"],
+      "links": [
+        { "deck": "bacteria", "section": "bacteria", "label": "Open Bacteria" },
+        { "deck": "archaea", "section": "archaea", "label": "Open Archaea" },
+        { "deck": "eukarya", "section": "eukarya", "label": "Open Eukarya" }
+      ],
+      "cards": [
+        { "label": "Bacteria", "sub": "Prokaryotes with enormous metabolic range", "deck": "bacteria", "section": "bacteria" },
+        { "label": "Archaea", "sub": "Prokaryotes with distinct membranes and information machinery", "deck": "archaea", "section": "archaea" },
+        { "label": "Eukarya", "sub": "Cells with nuclei and membrane-bound organelles", "deck": "eukarya", "section": "eukarya" }
+      ]
+    },
+    {
+      "id": "taxonomy-map",
+      "type": "diagram-svg",
+      "title": "Collection hierarchy",
+      "tags": ["intro"],
+      "panels": [
+        {
+          "nodes": [
+            { "id": "life", "label": "Tree of Life", "x": 90, "y": 240, "w": 220, "h": 90, "style": "primary" },
+            { "id": "bacteria", "label": "Bacteria", "x": 420, "y": 100, "w": 190, "h": 80, "deck": "bacteria", "section": "bacteria" },
+            { "id": "archaea", "label": "Archaea", "x": 420, "y": 240, "w": 190, "h": 80, "deck": "archaea", "section": "archaea" },
+            { "id": "eukarya", "label": "Eukarya", "x": 420, "y": 380, "w": 190, "h": 80, "deck": "eukarya", "section": "eukarya" },
+            { "id": "animals", "label": "Animals", "x": 740, "y": 300, "w": 180, "h": 70, "style": "secondary", "deck": "animals", "section": "animals" },
+            { "id": "plants", "label": "Plants", "x": 740, "y": 390, "w": 180, "h": 70, "deck": "plants", "section": "plants" },
+            { "id": "fungi", "label": "Fungi", "x": 740, "y": 480, "w": 180, "h": 70, "deck": "fungi", "section": "fungi" }
+          ],
+          "edges": [
+            { "from": "life", "to": "bacteria" },
+            { "from": "life", "to": "archaea" },
+            { "from": "life", "to": "eukarya" },
+            { "from": "eukarya", "to": "animals" },
+            { "from": "eukarya", "to": "plants" },
+            { "from": "eukarya", "to": "fungi" }
+          ]
+        }
+      ],
+      "caption": "Each taxon is a separate deck in the hierarchy. Subsets are separate synced views of these root overview slides."
+    },
+    {
+      "id": "bacteria-overview",
+      "type": "cards",
+      "variant": "numbered",
+      "title": "Bacteria overview",
+      "section": "bacteria",
+      "tags": ["intro", "field"],
+      "links": [
+        { "deck": "bacteria", "section": "bacteria", "label": "Open Bacteria deck" }
+      ],
+      "cards": [
+        { "label": "Single-celled prokaryotes" },
+        { "label": "Cell walls often contain peptidoglycan" },
+        { "label": "Major roles in decomposition, symbiosis, and disease" }
+      ]
+    },
+    {
+      "id": "archaea-overview",
+      "type": "cards",
+      "variant": "numbered",
+      "title": "Archaea overview",
+      "section": "archaea",
+      "tags": ["intro"],
+      "links": [
+        { "deck": "archaea", "section": "archaea", "label": "Open Archaea deck" }
+      ],
+      "cards": [
+        { "label": "Distinct membrane lipids" },
+        { "label": "Many thrive in extreme environments" },
+        { "label": "Important in nitrogen and methane cycles" }
+      ]
+    },
+    {
+      "id": "eukarya-overview",
+      "type": "cards",
+      "variant": "numbered",
+      "title": "Eukarya overview",
+      "section": "eukarya",
+      "tags": ["intro", "field"],
+      "links": [
+        { "deck": "eukarya", "section": "eukarya", "label": "Open Eukarya deck" }
+      ],
+      "cards": [
+        { "label": "Cells contain nuclei" },
+        { "label": "Includes animals, plants, fungi, and protists" },
+        { "label": "Many lineages are multicellular" }
+      ]
+    },
+    {
+      "id": "field-identification",
+      "type": "cards",
+      "variant": "agenda",
+      "title": "Field identification checklist",
+      "tags": ["field"],
+      "cards": [
+        { "label": "Start with cellular organization and habitat" },
+        { "label": "Look for photosynthesis, motility, and body plan" },
+        { "label": "Use deeper decks when a branch needs more detail" }
+      ]
+    }
+  ]
+}

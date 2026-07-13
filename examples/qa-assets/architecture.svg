@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-label="Slidey reference architecture">
+  <rect width="1280" height="720" fill="#0d1117"/>
+  <rect x="90" y="120" width="300" height="150" rx="18" fill="#1f6feb" opacity="0.92"/>
+  <rect x="490" y="120" width="300" height="150" rx="18" fill="#238636" opacity="0.92"/>
+  <rect x="890" y="120" width="300" height="150" rx="18" fill="#8957e5" opacity="0.92"/>
+  <rect x="290" y="430" width="700" height="150" rx="18" fill="#21262d" stroke="#58a6ff" stroke-width="4"/>
+  <g fill="#f0f6fc" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="240" y="205" font-size="42" font-weight="700">Scene</text>
+    <text x="640" y="205" font-size="42" font-weight="700">References</text>
+    <text x="1040" y="205" font-size="42" font-weight="700">Viewer</text>
+    <text x="640" y="520" font-size="38" font-weight="700">Spec-relative files and media</text>
+  </g>
+  <g stroke="#8b949e" stroke-width="8" fill="none" stroke-linecap="round">
+    <path d="M390 195 H490"/>
+    <path d="M790 195 H890"/>
+    <path d="M640 270 V430"/>
+  </g>
+</svg>

@@ -284,3 +284,52 @@ test('convertMarkdownFile preserves Marp theme metadata for Slidey theming', () 
   const result = validateSpec(spec);
   assert.equal(result.valid, true, result.errors.join('\n'));
 });
+
+test('convertMarkdownFile preserves inline Markdown links as data-slidey-ref anchors in bodyHtml', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slidey-md-'));
+  const input = path.join(dir, 'deck.md');
+  const output = path.join(dir, 'deck.json');
+  fs.writeFileSync(input, [
+    '---',
+    'marp: true',
+    '---',
+    '## Links',
+    '',
+    'See the [design doc](docs/design.md) for **details** and [the demo deck](deck:kitsoki#intro).',
+  ].join('\n'), 'utf-8');
+
+  const spec = convertMarkdownFile(input, output);
+  const scene = spec.scenes[0];
+
+  assert.equal(scene.type, 'narrative');
+  // Plain-text `body` still discards the link target (unchanged behavior —
+  // it's the non-interactive fallback rendered when bodyHtml is absent).
+  assert.equal(scene.body, 'See the design doc for details and the demo deck.');
+  assert.equal(
+    scene.bodyHtml,
+    'See the <a data-slidey-ref="docs/design.md">design doc</a> for <strong>details</strong> and '
+      + '<a data-slidey-ref="deck:kitsoki#intro">the demo deck</a>.',
+  );
+
+  const result = validateSpec(spec);
+  assert.equal(result.valid, true, result.errors.join('\n'));
+});
+
+test('convertMarkdownFile escapes special characters in data-slidey-ref targets', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slidey-md-'));
+  const input = path.join(dir, 'deck.md');
+  const output = path.join(dir, 'deck.json');
+  fs.writeFileSync(input, [
+    '---',
+    'marp: true',
+    '---',
+    '## Bullets',
+    '- [Query link](src/x.js?a=1&b=2) item',
+  ].join('\n'), 'utf-8');
+
+  const spec = convertMarkdownFile(input, output);
+  const card = spec.scenes[0].cards[0];
+
+  assert.equal(card.label, 'Query link item');
+  assert.equal(card.labelHtml, '<a data-slidey-ref="src/x.js?a=1&amp;b=2">Query link</a> item');
+});

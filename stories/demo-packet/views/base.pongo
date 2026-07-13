@@ -1,0 +1,5 @@
+{% block status %}POG · demo packet · {{ world.node_id|default:'(node)' }} · {{ state.description }}{% endblock %}
+{% block heading %}{{ state.description }}{% endblock %}
+{% block body %}{% endblock %}
+{% block choices %}{% endblock %}
+{% block footer %}{% endblock %}

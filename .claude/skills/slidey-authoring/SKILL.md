@@ -102,6 +102,7 @@ All are declared in JSON; render handlers live in `src/scenes/`:
 | `stat` | Big gradient number + caption | `value`, `label`, `detail` | 7s |
 | `cta` | Wordmark + tagline + URL end card | `wordmark`, `tagline`, `url` | 8s |
 | `terminal-gif` | Embed a recorded gif in a fake-terminal chrome | `gif`, `title`, `caption` | 8–12s |
+| `kitsoki-tui` | Static Kitsoki TUI welcome/onboarding screen | `appTitle`, `hints[]`, `choicePrompt`, `menuItems[]` | 8–12s |
 | `video` | Embed a demo MP4, rrweb log, or captured tour — fullscreen or inset in a slide, with chapter captions, annotations, and synced narration | `src` \| `rrweb` \| `capture`, `mode`, `annotations[]`, `narration[]` | = source length |
 | `request` | API request/response card (live/mock/playback) | see `src/scenes/request.js` | varies |
 | `transcript` | Full agent/chat session as per-turn cards | `turns: [...]` | varies |
@@ -382,6 +383,28 @@ enlarges the previews for review decks.
 Use this for VHS-style terminal recordings. Prefer `video` for browser/product
 demos, especially when chapters, annotations, trimming, or narration cues matter.
 
+### Kitsoki TUI mock
+
+```json
+{ "type": "kitsoki-tui",
+  "title": "kitsoki run",
+  "appTitle": "kitsoki · project onboarding",
+  "hints": ["/help        list commands", "/world       inspect current state"],
+  "choicePrompt": "Start Kitsoki onboarding?",
+  "menuItems": [
+    { "label": "Start onboarding", "hint": "discover project, then ask before writes" },
+    { "label": "Review setup plan", "hint": "read-only preview" },
+    { "label": "Skip for now", "hint": "stay in idle" }
+  ],
+  "selectedIndex": 0,
+  "footer": "[↑/↓ move • Enter pick • Tab chat • Esc cancel]",
+  "caption": "A simplified first-run Kitsoki onboarding screen." }
+```
+
+Use this for static Kitsoki startup/onboarding moments with the Mesa mark and
+selectable menu affordance. Use `terminal-gif` when you need a recorded terminal
+session instead of a mockable TUI state.
+
 ### Demo videos — the `video` scene + tour capture
 
 Slidey can splice a recorded product demo into a deck. Two halves:
@@ -655,6 +678,7 @@ slidey/
 │       ├── diagram-svg.js      # Proper SVG (the workhorse)
 │       ├── mermaid.js          # Mermaid source rendered as themed SVG
 │       ├── terminal-gif.js
+│       ├── kitsoki-tui.js
 │       ├── trace.js
 │       ├── thread.js
 │       ├── stat.js

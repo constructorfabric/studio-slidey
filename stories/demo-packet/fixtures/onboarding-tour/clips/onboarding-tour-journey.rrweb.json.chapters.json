@@ -1,0 +1,38 @@
+[
+  {
+    "index": 0,
+    "id": "step_0_open_the_viewer_the_deck_loads",
+    "label": "Open the viewer; the deck loads with its scenes ready to click through.",
+    "start_ms": 615,
+    "end_ms": 8130,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "onboarding-tour-journey.tour.json",
+      "step_id": "step_0_open_the_viewer_the_deck_loads"
+    }
+  },
+  {
+    "index": 1,
+    "id": "step_1_step_forward_through_the_scenes",
+    "label": "Arrow keys step forward through the same scenes video and PDF output render.",
+    "start_ms": 8130,
+    "end_ms": 16813,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "onboarding-tour-journey.tour.json",
+      "step_id": "step_1_step_forward_through_the_scenes"
+    }
+  },
+  {
+    "index": 2,
+    "id": "step_2_jump_back_and_replay_a_scene",
+    "label": "Step back to replay a scene — navigation is free, nothing is a baked video.",
+    "start_ms": 16813,
+    "end_ms": 23716,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "onboarding-tour-journey.tour.json",
+      "step_id": "step_2_jump_back_and_replay_a_scene"
+    }
+  }
+]

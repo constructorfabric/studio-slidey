@@ -1,0 +1,30 @@
+states:
+  launch:
+    description: "Real-app target ready for capture"
+    relevant_world: [node_id, manifest_path, target_ready, status]
+    on_enter:
+      - set: { target_ready: true, status: "target-ready" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - prose: "The manifest's target:{launch, addr, readyPath} declares how to spin the real app up (slidey's tour engine launches + health-checks it directly — no portal-native launch code, C2). record-tour.mjs launches it once and reuses the same live instance for every tour in the next stage."
+          - kv:
+              pairs:
+                Manifest: "{{ world.manifest_path }}"
+                Status: "{{ world.status }}"
+        choices:
+          - list:
+              items:
+                - { label: "next", hint: "capture rrweb clips" }
+                - { label: "restart" }
+                - { label: "look" }
+    on:
+      next:
+        - target: capture
+      restart:
+        - target: plan
+          effects:
+            - set: { status: "", target_ready: false, doctor_ok: false, doctor_report: "" }
+      look:
+        - target: launch

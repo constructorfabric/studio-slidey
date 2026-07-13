@@ -566,6 +566,29 @@ body.mode-pitch #pitch-stage:has(#transcript-region.active) { padding: 40px 64px
 /* --no-gaps mode: suppress fade-in so scenes cut hard with no blank frames */
 body.instant .reveal { transition: none !important; }
 
+/* Inline `[text](target)` links (see src/markdown.js, web/inline-links.js).
+   This chrome applies identically in the live web viewer AND in exported
+   PNG/PDF/MP4 snapshots (both entry points load this file) — only the web
+   viewer's click router (App.vue) actually opens anything, so the glyph is
+   the graceful-degradation signal in static renders that the run of text is
+   a reference. Set meta.linkMarkers:false on the spec to hide the glyph. */
+[data-slidey-ref] {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+[data-slidey-ref]::after {
+  content: "\2197";
+  display: inline-block;
+  margin-left: 0.15em;
+  font-size: 0.72em;
+  vertical-align: super;
+  opacity: 0.75;
+}
+body.slidey-no-link-markers [data-slidey-ref]::after { content: none; }
+
 /* ── Narrative ───────────────────────────────────────────────────────────── */
 #narrative-region { gap: 36px; max-width: 1500px; margin: 0 auto; text-align: center; }
 #narrative-eyebrow {
@@ -823,6 +846,20 @@ body.instant .reveal { transition: none !important; }
   fill: #211633;
   stroke: #bc8cff;
   stroke-width: 3.5;
+}
+.dsvg-node.dsvg-node-link {
+  cursor: pointer;
+}
+.dsvg-node.dsvg-node-link rect {
+  stroke: #3fb950;
+  filter: drop-shadow(0 0 9px rgba(63, 185, 80, 0.34));
+}
+.dsvg-node.dsvg-node-link:hover rect,
+.dsvg-node.dsvg-node-link:focus-visible rect {
+  stroke: #7ee787;
+  stroke-width: 4.5;
+  filter: drop-shadow(0 0 14px rgba(126, 231, 135, 0.48));
+  outline: none;
 }
 .dsvg-label {
   font-family: 'JetBrains Mono', 'Courier New', monospace;

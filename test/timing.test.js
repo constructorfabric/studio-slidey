@@ -107,6 +107,19 @@ test('cards grid item reveals match the renderer per-item hold beyond the table'
   assert.equal(f, reveal + TIMING.cards_hold + TIMING.inter_scene);
 });
 
+test('personas estimates title, item, caption, hold, and gap like the renderer', () => {
+  const scene = {
+    type: 'personas',
+    variant: 'use-cases',
+    title: 'Who does what',
+    cases: [{}, {}, {}],
+    caption: 'one workflow',
+    hold: 555,
+  };
+  assert.equal(estimateScene(scene), 20 + 3 * 20 + 20 + 555 + TIMING.inter_scene);
+  assert.equal(estimateScene(scene, { noGaps: true }), 555);
+});
+
 test('table clamps revealed rows to MAX_ROWS (8)', () => {
   const rows = Array.from({ length: 20 }, (_, i) => i);
   const f = estimateScene({ type: 'table', rows });

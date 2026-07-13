@@ -1,0 +1,31 @@
+states:
+  done:
+    description: "Implementation brief complete"
+    relevant_world: [node_id, artifact_path, status]
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - kv:
+              pairs:
+                Node: "{{ world.node_id|default:'(none)' }}"
+                Artifact: "{{ world.artifact_path|default:'(none)' }}"
+                Status: "{{ world.status|default:'complete' }}"
+          - prose: "Run `restart` to materialize this document again."
+        choices:
+          - list:
+              items:
+                - { label: "restart" }
+                - { label: "look" }
+    on:
+      restart:
+        - target: gather
+          effects:
+            - set:
+                context_gathered: false
+                draft_written: false
+                verified: false
+                artifact_path: ""
+                status: ""
+      look:
+        - target: done

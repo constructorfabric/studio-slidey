@@ -1,0 +1,64 @@
+{
+  "meta": {
+    "mode": "pitch",
+    "title": "Localization Demo",
+    "locale": "en",
+    "locales": {
+      "th": {
+        "label": "Synthetic Thai",
+        "path": ".slidey-locales/localized-demo.th.slidey.locale.json"
+      }
+    },
+    "narration": {
+      "voice": "en-AU-NatashaNeural"
+    }
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "eyebrow": "Synthetic example",
+      "title": "One deck, many locales",
+      "subtitle": "The structure stays canonical while text is resolved from deterministic overlays.",
+      "narration": "This synthetic deck demonstrates deterministic localization without using private presentation content."
+    },
+    {
+      "type": "cards",
+      "variant": "grid",
+      "title": "What stays in sync",
+      "cards": [
+        {
+          "label": "Layout",
+          "sub": "Scene types, variants, and timing stay in the base deck.",
+          "lines": [
+            "No duplicated slide structure",
+            "One source for visual polish"
+          ]
+        },
+        {
+          "label": "Text",
+          "sub": "Localized strings live in a small overlay file.",
+          "lines": [
+            "JSON Pointer paths identify each field",
+            "Source text hashes catch stale translations"
+          ]
+        },
+        {
+          "label": "Rendering",
+          "sub": "Choose a locale at render or viewer time.",
+          "lines": [
+            "Use --locale for CLI output",
+            "Use ?locale=th in the workspace viewer"
+          ]
+        }
+      ],
+      "narration": "The base deck keeps layout and timing. Locale overlays keep only translated strings and a hash of the source text they were extracted from."
+    },
+    {
+      "type": "narrative",
+      "eyebrow": "Workflow",
+      "lede": "Translate once, render repeatedly.",
+      "body": "Start with a canonical deck, create a same-structure translated copy, extract the overlay, and then render any locale from the canonical deck. When the source text changes, the overlay refuses to apply until it is refreshed.",
+      "narration": "The workflow is intentionally deterministic. A translated copy is used to extract an overlay, and later renders do not need another model call."
+    }
+  ]
+}

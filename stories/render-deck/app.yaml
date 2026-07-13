@@ -1,0 +1,46 @@
+# slidey render-deck — deterministic story bound to the deck deliverable
+# type's `materialize:` declaration in pog/catalog.yaml (POG
+# materialization-first taxonomy: the catalog holds deliverable specs, and
+# "work" is the act of materializing them). One producing room: `render`
+# runs the node's deck builder (the `build_command` materialize param) via
+# host.run — for the meme gallery that regenerates
+# examples/meme-gallery-all.slidey.json from the vendored template
+# registries. The judging half is NOT here: the materialize driver runs the
+# deck type's deck_matches_evidence.star gate check as a real "check:gate"
+# stage after these rooms — the deck must be 1:1 with the registry union or
+# the job fails.
+app:
+  id: slidey-render-deck
+  version: 0.1.0
+  title: "slidey deck — regenerate from deterministic data"
+  author: "slidey"
+  license: "MIT"
+
+hosts:
+  - host.run
+
+world:
+  node_id: { type: string, default: "" }
+  build_command: { type: string, default: "" }
+  build_ok: { type: bool, default: false }
+  build_stdout: { type: string, default: "" }
+  build_exit: { type: int, default: 0 }
+  status: { type: string, default: "" }
+
+intents:
+  next:
+    description: "Advance to the next stage."
+    examples: ["next", "continue"]
+    priority: 80
+  restart:
+    description: "Re-run the deck builder."
+    examples: ["restart", "start over"]
+    priority: 40
+  look:
+    description: "Re-render the current stage."
+    examples: ["look", "?"]
+    priority: 10
+
+root: render
+include:
+  - rooms/*.yaml

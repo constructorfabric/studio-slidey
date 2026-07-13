@@ -1,5 +1,7 @@
 'use strict';
 
+const { addressableScenes } = require('./scene-address');
+
 /**
  * SLIDEY — authoring-time validation pass (--check)
  *
@@ -48,8 +50,14 @@ function runCheck(spec) {
   let totalViolations = 0;
   let totalScenesChecked = 0;
 
-  for (let si = 0; si < spec.scenes.length; si++) {
-    const scene = spec.scenes[si];
+  // Walk every addressable scene — top-level scenes[] AND every
+  // library.decks[] hierarchy deck's own inline scenes — so a diagram-svg
+  // scene that only exists inside a library deck (e.g. a per-pillar sub-deck)
+  // still gets checked, not silently skipped. See src/scene-address.js.
+  const { entries } = addressableScenes(spec);
+
+  for (const entry of entries) {
+    const { scene, index: si, deckId, deckTitle } = entry;
     if (scene.type !== 'diagram-svg') continue;
 
     totalScenesChecked++;
@@ -237,7 +245,8 @@ function runCheck(spec) {
 
     if (sceneViolations.length > 0) {
       const title = scene.title ? `"${scene.title}"` : '(no title)';
-      console.log(`[check] scene ${si} (diagram-svg) ${title}`);
+      const owner = deckId ? `library.decks["${deckId}"] (${deckTitle}) scene ${si}` : `scene ${si}`;
+      console.log(`[check] ${owner} (diagram-svg) ${title}`);
       for (const v of sceneViolations) {
         console.log(v);
       }

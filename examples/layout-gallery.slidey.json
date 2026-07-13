@@ -267,6 +267,37 @@
       "title": "Code layouts"
     },
     {
+      "type": "kitsoki-tui",
+      "title": "kitsoki run",
+      "appTitle": "kitsoki · project onboarding",
+      "subtitle": "v1.2.0 · local setup story",
+      "hints": [
+        "/help        list commands",
+        "/world       inspect current state",
+        "/quit        exit"
+      ],
+      "status": "session sess_42... · story onboarding · state intro",
+      "choicePrompt": "Start Kitsoki onboarding?",
+      "menuItems": [
+        {
+          "label": "Start onboarding",
+          "hint": "discover project, then ask before writes"
+        },
+        {
+          "label": "Review setup plan",
+          "hint": "read-only preview"
+        },
+        {
+          "label": "Skip for now",
+          "hint": "stay in idle"
+        }
+      ],
+      "selectedIndex": 0,
+      "footer": "[↑/↓ move • Enter pick • Tab chat • Esc cancel]",
+      "caption": "Use for static Kitsoki TUI onboarding, setup, or story-start screens.",
+      "hold": 220
+    },
+    {
       "type": "code",
       "variant": "source",
       "title": "router.js",

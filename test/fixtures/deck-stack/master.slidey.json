@@ -1,0 +1,44 @@
+{
+  "meta": { "title": "Constructor Studio stack", "mode": "pitch" },
+  "library": {
+    "title": "Constructor Studio library",
+    "sourceTitle": "Full stack deck",
+    "defaultDeck": "source",
+    "decks": [
+      { "id": "pog", "title": "POG deep dive", "deckType": "hierarchy", "src": "pog-deck.slidey.json" },
+      { "id": "kitsoki", "title": "Kitsoki deep dive", "deckType": "hierarchy", "src": "kitsoki-deck.slidey.json" },
+      {
+        "id": "pitch-15min",
+        "title": "15-minute pitch cut",
+        "deckType": "subset",
+        "purpose": "investor",
+        "scenes": [
+          "root-intro",
+          { "fromDeck": "pog", "ref": "pog-title" },
+          {
+            "fromDeck": "pog",
+            "ref": "pog-detail",
+            "narration": "Constructor Studio starts with POG, the graph that tells you what to build next -- and proves it.",
+            "overrides": { "eyebrow": "POG, in one slide" }
+          },
+          { "fromDeck": "kitsoki", "ref": "kit-title" },
+          {
+            "fromDeck": "kitsoki",
+            "ref": "kit-detail",
+            "narration": "Then Kitsoki turns that roadmap into bounded, auditable execution.",
+            "overrides": { "eyebrow": "Kitsoki, in one slide" }
+          },
+          "root-close"
+        ]
+      }
+    ],
+    "sections": [
+      { "id": "pog-architecture", "title": "POG architecture", "deck": "pog" },
+      { "id": "kitsoki-architecture", "title": "Kitsoki architecture", "deck": "kitsoki" }
+    ]
+  },
+  "scenes": [
+    { "id": "root-intro", "type": "title", "title": "Constructor Studio", "subtitle": "One graph, one engine, one stack", "tags": ["pitch"], "section": "pog-architecture" },
+    { "id": "root-close", "type": "narrative", "eyebrow": "Thank you", "body": "Questions?", "tags": ["pitch"] }
+  ]
+}

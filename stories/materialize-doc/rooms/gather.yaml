@@ -1,0 +1,25 @@
+states:
+  gather:
+    description: "Gathering context"
+    relevant_world: [node_id, depth, audience, gate, context_gathered]
+    on_enter:
+      - set: { context_gathered: true, status: "gathering" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - prose: "Walking the node's transitive context (depth {{ world.depth }}) for the {{ world.audience }} audience."
+          - kv:
+              pairs:
+                Node: "{{ world.node_id|default:'(unset)' }}"
+                Gate: "{{ world.gate|default:'(unset)' }}"
+        choices:
+          - list:
+              items:
+                - { label: "next", hint: "draft the brief" }
+                - { label: "look" }
+    on:
+      next:
+        - target: draft
+      look:
+        - target: gather

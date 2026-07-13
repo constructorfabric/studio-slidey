@@ -30,9 +30,11 @@ const { mkdtemp } = require('../temp-path');
  *
  * @param {object} tour       Parsed tour spec (see capture.js).
  * @param {string} outMp4     Destination .mp4 path.
- * @param {object} opts       { fps=30, pace, framesDir?, keepFrames?, onProgress?, adapter? }
+ * @param {object} opts       { fps=30, pace, framesDir?, keepFrames?, onProgress?, onStepSettled?, adapter? }
  *                            `adapter` is an adapter OBJECT (or registered name);
  *                            absent → the tour's `adapter` field → `dom` default.
+ *                            `onStepSettled` — see capture.js; used by the
+ *                            tour-set runner's poster capture.
  * @returns {Promise<{ mp4, sidecar, frameCount, chapters }>}
  */
 async function captureToVideo(tour, outMp4, opts = {}) {
@@ -44,7 +46,7 @@ async function captureToVideo(tour, outMp4, opts = {}) {
 
   try {
     const { frameCount, chapters } = await captureTour(tour, framesDir, {
-      fps, pace: opts.pace, onProgress: opts.onProgress, adapter: opts.adapter,
+      fps, pace: opts.pace, onProgress: opts.onProgress, onStepSettled: opts.onStepSettled, adapter: opts.adapter,
     });
     if (frameCount === 0) throw new Error('tour produced no frames (no steps?)');
 
@@ -64,13 +66,15 @@ async function captureToVideo(tour, outMp4, opts = {}) {
  *
  * @param {object} tour    Parsed tour spec (see capture.js).
  * @param {string} outPath Destination `.rrweb.json` path.
- * @param {object} opts    { pace, mask?, onProgress?, adapter? }
+ * @param {object} opts    { pace, mask?, onProgress?, onStepSettled?, adapter? }
  *                         `adapter` is an adapter OBJECT (or registered name).
+ *                         `onStepSettled` — see rrweb-capture.js; used by the
+ *                         tour-set runner's poster capture.
  * @returns {Promise<{ rrweb, sidecar, eventCount, chapters, durationMs }>}
  */
 async function captureToRrweb(tour, outPath, opts = {}) {
   const { events, chapters, viewport } = await captureTourRrweb(tour, {
-    pace: opts.pace, mask: opts.mask, onProgress: opts.onProgress, adapter: opts.adapter,
+    pace: opts.pace, mask: opts.mask, onProgress: opts.onProgress, onStepSettled: opts.onStepSettled, adapter: opts.adapter,
   });
   if (!events || events.length < 2) throw new Error('tour produced no rrweb events (no steps?)');
 

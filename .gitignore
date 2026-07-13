@@ -21,6 +21,7 @@ audio/
 .DS_Store
 *.swp
 *~
+.vscode-test/
 
 # Kitsoki local runtime
 .kitsoki.local.yaml
@@ -34,3 +35,13 @@ audio/
 
 # Local Codex MCP config (machine-specific cwd — do not commit, breaks CI)
 .codex/
+
+# Viewer-feedback deploy tooling: hash->recipient mapping + HMAC secret never leave this machine
+tools/deploy/audience.local.json
+tools/deploy/audience-secret.local
+tools/deploy/*.local*
+tools/deploy/feedback.local/
+
+# Per-developer feedback destinations and local reviewed-feedback log.
+.slidey/feedback.local.json
+.slidey/feedback/

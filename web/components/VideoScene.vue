@@ -26,6 +26,7 @@ const scene = computed(() => store.scene || {});
 const embedded = computed(() => scene.value.mode === 'embedded');
 const hasRrweb = computed(() => (store.rrwebEvents || []).length >= 2);
 const mediaKind = computed(() => (hasRrweb.value ? 'rrweb' : (scene.value.src ? 'mp4' : 'none')));
+const hasAudio = computed(() => !!scene.value.audio);
 
 // Cinematic choreography runs for embedded scenes that have media, unless the
 // scene opts out. Non-embedded (fullscreen) scenes already fill the stage.
@@ -44,15 +45,27 @@ const HUD_INSET = 52;
 // Show the transport: always when playing inline (non-cinematic), and during the
 // fullscreen cinematic playback (the intro/outro thumbnail stays chrome-free).
 const showControls = computed(() => !cinematic.value || expanded.value);
+const reducedMotion = ref(false);
 
 const frameRef = ref(null);
 const playerRef = ref(null);
 const videoRef = ref(null);
+const audioRef = ref(null);
 const frameRect = ref(null);
+const playbackStarted = ref(false);
 // Gate the size transition: off for the initial inline placement (so the holder
 // snaps onto the thumbnail with no grow-in), on once we start expanding.
 const animate = ref(false);
 let introTimer = null;
+let motionQuery = null;
+let onMotionPreferenceChange = null;
+
+function emitVideoEvent(name, detail = {}) {
+  if (typeof window === 'undefined' || typeof CustomEvent !== 'function') return;
+  window.dispatchEvent(new CustomEvent(`slidey:video-${name}`, {
+    detail: { kind: mediaKind.value, scene: scene.value, ...detail },
+  }));
+}
 
 function measure() {
   const el = frameRef.value;
@@ -75,22 +88,83 @@ const holderStyle = computed(() => {
 function startPlayback() {
   if (mediaKind.value === 'rrweb' && playerRef.value) {
     playerRef.value.seek(0);
+    syncAudioToMs(0);
     playerRef.value.play();
+    playAudio();
   } else if (mediaKind.value === 'mp4' && videoRef.value) {
     try { videoRef.value.currentTime = 0; } catch { /* ignore */ }
+    syncAudioToMs(0);
     const p = videoRef.value.play();
     if (p && p.catch) p.catch(() => {});
+    playAudio();
   }
 }
 
-function onEnded() { if (phase.value === 'full') phase.value = 'outro'; }
+function syncAudioToMs(ms) {
+  const a = audioRef.value;
+  if (!a) return;
+  const seconds = Math.max(0, ms / 1000);
+  if (Math.abs((a.currentTime || 0) - seconds) > 0.25) {
+    try { a.currentTime = seconds; } catch { /* ignore */ }
+  }
+}
+
+function playAudio() {
+  const a = audioRef.value;
+  if (!a) return;
+  const p = a.play();
+  if (p && p.catch) p.catch(() => {});
+}
+
+function pauseAudio() {
+  const a = audioRef.value;
+  if (a) a.pause();
+}
+
+function onReplayTime(ms) {
+  syncAudioToMs(ms);
+  emitVideoEvent('time', { ms });
+}
+function onReplayPlay() {
+  playbackStarted.value = true;
+  playAudio();
+  emitVideoEvent('play');
+}
+function onReplayPause() {
+  pauseAudio();
+  emitVideoEvent('pause');
+}
+function onMp4Play() {
+  playbackStarted.value = true;
+  const ms = (videoRef.value?.currentTime || 0) * 1000;
+  syncAudioToMs(ms);
+  playAudio();
+  emitVideoEvent('play', { ms });
+}
+function onMp4Pause() {
+  pauseAudio();
+  emitVideoEvent('pause', { ms: (videoRef.value?.currentTime || 0) * 1000 });
+}
+function onMp4TimeUpdate() {
+  const ms = (videoRef.value?.currentTime || 0) * 1000;
+  syncAudioToMs(ms);
+  emitVideoEvent('time', { ms });
+}
+
+function onEnded() {
+  pauseAudio();
+  emitVideoEvent('ended');
+  if (phase.value === 'full') phase.value = 'outro';
+}
 
 // Drive the choreography whenever a video scene mounts/activates.
 function begin() {
   clearTimeout(introTimer);
+  pauseAudio();
+  playbackStarted.value = false;
   animate.value = false;
   measure();
-  if (!cinematic.value) { phase.value = 'full'; nextTick(startPlayback); return; }
+  if (!cinematic.value || reducedMotion.value) { phase.value = 'full'; nextTick(startPlayback); return; }
   phase.value = 'intro';
   introTimer = setTimeout(() => {
     animate.value = true;       // enable the tween for the expand (and later shrink)
@@ -102,6 +176,22 @@ function begin() {
 
 function onResize() { if (!expanded.value) measure(); }
 
+function onRrwebReady() {
+  if (mediaKind.value === 'rrweb' && phase.value === 'full' && !playbackStarted.value) {
+    startPlayback();
+  }
+}
+
+function onVideoCommand(e) {
+  const action = e && e.detail && e.detail.action;
+  if (action === 'play') startPlayback();
+  if (action === 'pause') {
+    if (playerRef.value && mediaKind.value === 'rrweb') playerRef.value.pause();
+    if (videoRef.value && mediaKind.value === 'mp4') videoRef.value.pause();
+    pauseAudio();
+  }
+}
+
 // While a video is expanded, flag the document so the slidey HUD relocates to the
 // top (NavController reacts to body.slidey-video-full) — keeping its bar clear of
 // the player's transport at the bottom of the fullscreen video.
@@ -111,10 +201,20 @@ function setFullFlag(on) {
 watch(expanded, setFullFlag);
 
 watch(() => store.scene, () => nextTick(begin));
-onMounted(() => { window.addEventListener('resize', onResize); nextTick(begin); });
+onMounted(() => {
+  motionQuery = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  onMotionPreferenceChange = () => { reducedMotion.value = Boolean(motionQuery && motionQuery.matches); };
+  onMotionPreferenceChange();
+  if (motionQuery) motionQuery.addEventListener('change', onMotionPreferenceChange);
+  window.addEventListener('resize', onResize);
+  window.addEventListener('slidey:video-command', onVideoCommand);
+  nextTick(begin);
+});
 onBeforeUnmount(() => {
   clearTimeout(introTimer);
   window.removeEventListener('resize', onResize);
+  window.removeEventListener('slidey:video-command', onVideoCommand);
+  if (motionQuery && onMotionPreferenceChange) motionQuery.removeEventListener('change', onMotionPreferenceChange);
   setFullFlag(false);
 });
 </script>
@@ -152,6 +252,10 @@ onBeforeUnmount(() => {
             :chapters="store.rrwebChapters"
             :autoplay="false"
             :controls="showControls"
+            @ready="onRrwebReady"
+            @timeupdate="onReplayTime"
+            @play="onReplayPlay"
+            @pause="onReplayPause"
             @ended="onEnded"
           />
           <video
@@ -162,8 +266,17 @@ onBeforeUnmount(() => {
             playsinline
             :controls="showControls"
             preload="auto"
+            @play="onMp4Play"
+            @pause="onMp4Pause"
+            @timeupdate="onMp4TimeUpdate"
             @ended="onEnded"
           ></video>
+          <audio
+            v-if="hasAudio"
+            ref="audioRef"
+            :src="scene.audio"
+            preload="auto"
+          ></audio>
         </div>
       </template>
     </Teleport>
@@ -230,6 +343,7 @@ onBeforeUnmount(() => {
   height: auto;
   aspect-ratio: auto;
 }
+.video-cine-holder > audio { display: none; }
 .video-mp4 {
   width: 100%;
   height: 100%;
@@ -248,4 +362,7 @@ onBeforeUnmount(() => {
   transition: opacity 0.5s ease;
 }
 .video-cine-backdrop.expanded { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .video-cine-holder.animate, .video-cine-backdrop { transition: none; }
+}
 </style>

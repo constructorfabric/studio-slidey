@@ -31,6 +31,17 @@ The Vue components are built into a self-contained `dist-render/render.html`
 `web/store.js` + `web/slideyAdapter.js` re-expose the exact `window.slidey.*` API
 the scene modules drive, so `src/renderer.js` runs against the bundle unchanged.
 
+## Native localization and accessibility
+
+Slidey localizes from one canonical deck rather than forking translations. A
+locale overlay is source-hash checked, so a translated web, PDF, or MP4 export
+cannot silently drift from its source. The interactive viewer applies the
+deck's `meta.locale` to the document language, announces slide and reveal
+position to assistive technology, preserves native keyboard controls for media
+and buttons, honors reduced-motion preferences, and can show narration as
+closed captions during automatic playback. These behaviors are part of the
+same deck runtime—not a separate accessibility export.
+
 For the iteration workflow (when to use `--estimate`, `--scenes`,
 `--skip-render`, narration budgeting, common gotchas), see
 [`.claude/skills/slidey-authoring/SKILL.md`](.claude/skills/slidey-authoring/SKILL.md).
@@ -39,16 +50,24 @@ This document is the **reference**: pipeline architecture and JSON schema.
 ## Requirements
 
 Three external prerequisites — only Node is needed for the schema/validation
-tooling; the other two are for actually rendering a video:
+tooling; `ffmpeg` is needed for MP4 export, and `edge-tts` is needed when a
+deck contains narration:
 
 | Prerequisite | Needed for | Check | Install |
 |---|---|---|---|
-| **Node ≥ 18** | everything (CLI, build, validation) | `node --version` | [nodejs.org](https://nodejs.org/) or `nvm install 18` |
+| **Node 20.19–22.x** | everything (CLI, build, validation) | `node --version` | [nodejs.org](https://nodejs.org/) or `nvm install 22` |
 | **ffmpeg** on `PATH` | video output only — muxes frames + audio into the MP4 | `ffmpeg -version` | `apt install ffmpeg` · `brew install ffmpeg` |
 | **edge-tts** on `PATH` | narration audio only | `edge-tts --version` | `pipx install edge-tts` (or `pip install edge-tts`) |
 
 Notes:
 
+- Run `slidey doctor` or `make doctor` after setup. By default it checks the
+  narrated-MP4 path: Node packages, render bundle, browser launch, `ffmpeg`,
+  `ffprobe`, `edge-tts`, and a tiny online TTS sample with
+  `en-AU-NatashaNeural`. Use `slidey doctor --no-narration` for PDF/PNG/silent
+  video environments, or `--no-tts-sample` when CI cannot make network calls.
+  Doctor does not install Homebrew/Python dependencies; it exits non-zero and
+  prints concrete `fix:` commands for anything missing.
 - **edge-tts** is a Python package and uses Microsoft's online TTS, so narrated
   renders need network access. It is only invoked when at least one scene
   carries a `narration` string — a spec with no narration renders silently
@@ -63,8 +82,11 @@ Notes:
 ## Quick start
 
 ```sh
+make setup                                            # npm install, build render bundle, run doctor
+# or manually:
 npm install
 npm run build:render                                  # build the Vue render bundle (required before video/PDF)
+npm run doctor                                        # verify narrated MP4 export dependencies
 
 node src/index.js examples/hello.slidey.json --validate     # check the spec is well-formed (no render, no deps)
 node src/index.js examples/hello.slidey.json --estimate     # scene/duration table, no render (~50ms)
@@ -80,15 +102,192 @@ Slidey specs use the `.slidey.json` extension (this is what the file-tree sideba
 and the VS Code extension auto-discover), and `.readonly.slidey.json` is the
 authoritative, non-editable variant for reports/artifacts.
 `examples/hello.slidey.json` is the
-smallest starting point; `examples/kitsoki-pitch.slidey.json` and
-`examples/layout-gallery.slidey.json` exercise every scene type. All are safe to
-delete or copy as templates.
+smallest starting point; `examples/kitsoki-pitch.slidey.json` is a fuller pitch
+example, and `examples/layout-gallery.slidey.json` exercises the authoring
+layout gallery. `examples/embed-qa.slidey.json` is the single manual-QA deck for
+inline references and embeddable media. Keep `examples/embed-qa.slidey.json` up
+to date whenever Slidey adds a new reference kind, plugin viewer, media source,
+or embeddable scene source. All examples are safe to delete or copy as templates.
+
+### Collections, synced subset decks, and drill-down navigation
+
+A `.slidey.json` file can also be a **library**. The root `scenes[]` are the
+full source deck and can be used for synced subset views. `library.decks` can
+also contain hierarchy decks: separate child presentations with their own local
+slides and parent/child navigation. In the viewer sidebar, a collection spec
+expands like a folder: source deck, hierarchy children, grandchildren, and a
+separate Subsets group.
+
+```json
+{
+  "meta": { "title": "Tree of Life taxonomy", "mode": "pitch" },
+  "library": {
+    "sourceTitle": "Tree of Life",
+    "defaultDeck": "source",
+    "decks": [
+      {
+        "id": "bacteria",
+        "deckType": "hierarchy",
+        "title": "Bacteria",
+        "scenes": [
+          { "id": "bacteria-intro", "type": "title", "title": "Bacteria" },
+          {
+            "id": "bacteria-lineages",
+            "type": "cards",
+            "variant": "grid",
+            "title": "Major bacterial lineages",
+            "links": [
+              { "deck": "proteobacteria", "label": "Open Proteobacteria" },
+              { "deck": "cyanobacteria", "label": "Open Cyanobacteria" }
+            ],
+            "cards": [
+              { "label": "Proteobacteria" },
+              { "label": "Cyanobacteria" }
+            ]
+          }
+        ],
+        "children": [
+          {
+            "id": "proteobacteria",
+            "deckType": "hierarchy",
+            "title": "Proteobacteria",
+            "scenes": [
+              { "id": "proteobacteria-intro", "type": "title", "title": "Proteobacteria" }
+            ]
+          },
+          {
+            "id": "cyanobacteria",
+            "deckType": "hierarchy",
+            "title": "Cyanobacteria",
+            "scenes": [
+              { "id": "cyanobacteria-intro", "type": "title", "title": "Cyanobacteria" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "eukarya",
+        "deckType": "hierarchy",
+        "title": "Eukarya",
+        "children": [
+          { "id": "animals", "deckType": "hierarchy", "title": "Animals", "scenes": [{ "id": "animals-intro", "type": "title", "title": "Animals" }] },
+          { "id": "plants", "deckType": "hierarchy", "title": "Plants", "scenes": [{ "id": "plants-intro", "type": "title", "title": "Plants" }] },
+          { "id": "fungi", "deckType": "hierarchy", "title": "Fungi", "scenes": [{ "id": "fungi-intro", "type": "title", "title": "Fungi" }] }
+        ],
+        "scenes": [
+          { "id": "eukarya-intro", "type": "title", "title": "Eukarya" }
+        ]
+      },
+      {
+        "id": "intro-biology",
+        "deckType": "subset",
+        "title": "Intro biology subset",
+        "purpose": "classroom",
+        "theme": "overview",
+        "select": { "tags": ["intro"] }
+      }
+    ],
+    "sections": [
+      { "id": "bacteria", "title": "Bacteria", "deck": "bacteria" },
+      { "id": "proteobacteria", "title": "Proteobacteria", "parent": "bacteria", "deck": "proteobacteria" },
+      { "id": "cyanobacteria", "title": "Cyanobacteria", "parent": "bacteria", "deck": "cyanobacteria" },
+      { "id": "eukarya", "title": "Eukarya", "deck": "eukarya" }
+    ]
+  },
+  "scenes": [
+    { "id": "intro", "type": "title", "title": "Tree of Life", "tags": ["intro"] },
+    {
+      "id": "three-domains",
+      "type": "cards",
+      "variant": "grid",
+      "title": "Three domains",
+      "tags": ["intro"],
+      "links": [
+        { "deck": "bacteria", "label": "Open Bacteria" },
+        { "deck": "eukarya", "label": "Open Eukarya" }
+      ],
+      "cards": [
+        { "label": "Bacteria" },
+        { "label": "Archaea" },
+        { "label": "Eukarya" }
+      ]
+    }
+  ]
+}
+```
+
+Open the viewer directly with `slidey deck.slidey.json --deck eukarya`, or
+append `?deck=eukarya` to a hosted viewer URL. Render/export commands also
+accept `--deck eukarya`. In the web viewer, subset decks are read-only
+resolved views; edit the source deck and every subset follows. Hierarchy decks
+are separate presentations and show normal slide counts, not “3 of 5” subset
+counts. Summary scenes can link to deeper decks with
+`links: [{ "label": "Open Animals", "deck": "animals" }]`, or by matching
+`scene.section` to `library.sections[].deck`.
+
+#### A master deck composing sibling deck FILES
+
+A large stack (one master + several child decks, each maintained by a
+different author) doesn't have to be one giant inlined JSON file. A
+`library.decks[]` entry can point at another `.slidey.json` file with `src`
+(aliases `file`/`path`, resolved relative to the file that declares the
+reference) instead of an inline `scenes[]` array. The referenced file is an
+ordinary, independently-openable/validatable slidey spec — its top-level
+`scenes[]` become that deck's local (hierarchy) scenes, and if it ALSO has its
+own `library.decks[]`, those become nested grandchildren:
+
+```json
+{
+  "meta": { "title": "Constructor Studio stack", "mode": "pitch" },
+  "library": {
+    "sourceTitle": "Full stack deck",
+    "decks": [
+      { "id": "pog", "deckType": "hierarchy", "title": "POG deep dive", "src": "pog-deck.slidey.json" },
+      { "id": "kitsoki", "deckType": "hierarchy", "title": "Kitsoki deep dive", "src": "kitsoki-deck.slidey.json" },
+      {
+        "id": "pitch-15min",
+        "deckType": "subset",
+        "title": "15-minute pitch cut",
+        "scenes": [
+          "root-intro",
+          { "fromDeck": "pog", "ref": "pog-title" },
+          { "fromDeck": "pog", "ref": "pog-detail", "narration": "Custom VO for this cut", "overrides": { "eyebrow": "POG, in one slide" } },
+          { "fromDeck": "kitsoki", "ref": "kit-title" },
+          "root-close"
+        ]
+      }
+    ]
+  },
+  "scenes": [
+    { "id": "root-intro", "type": "title", "title": "Constructor Studio", "tags": ["pitch"] },
+    { "id": "root-close", "type": "narrative", "eyebrow": "Thank you", "body": "Questions?", "tags": ["pitch"] }
+  ]
+}
+```
+
+`pog-deck.slidey.json` and `kitsoki-deck.slidey.json` sit next to the master
+and are themselves plain `{ "meta": {...}, "scenes": [...] }` specs (openable
+and `slidey validate`-able on their own). The **`pitch-15min` subset selects
+specific slides across BOTH children in a bespoke order**, with a per-scene
+narration and title (`overrides`) override on top of the file-loaded scene —
+the same explicit `{fromDeck, ref, overrides}` ref form works whether the
+origin deck's scenes came from an inline `scenes[]` or from `src`. `--deck`,
+`--list`, `--estimate`, PNG/PDF/MP4 render, `bundle`, and the viewer's
+`/api/tree`+`/api/spec` all resolve the file-loaded children transparently —
+see `test/fixtures/deck-stack/` for a complete, runnable 3-file example and
+`test/collections-file-refs.test.js` for the coverage (CLI validate/list/
+estimate/render, viewer server, node/browser resolver parity, missing-file and
+circular-reference handling).
+
+A `select`-based (tag) subset cannot reorder or override per-scene — use the
+explicit `scenes: [...]` ref form (as above) whenever a pitch cut needs a
+specific order or per-scene copy/VO changes.
 
 ### Install as a CLI & open a folder/file
 
 ```sh
 npm run build:web          # build the viewer bundle once (auto-built on first open if missing)
-npm link                   # or: make install   → runs `npm install -g .`, puts `slidey` on your PATH
+npm link                   # or: make install   → installs into ~/.local/bin for this user
 
 slidey ./examples          # open a folder → VS-Code-style file-tree sidebar + click-through deck
 slidey examples/hello.slidey.json # open a single deck (sidebar rooted at its folder, file pre-selected)
@@ -100,11 +299,36 @@ server and open the interactive viewer in your browser: pick any `.json` /
 `.jsonl` spec from the sidebar, arrow keys / click to step through it.
 `slidey in.json out.mp4` (two paths) still renders, unchanged.
 
+### Feedback destinations
+
+The first local preview creates no remote data by default: its feedback picker
+offers **Save in this repo**, which appends reviewed bugs, ideas, and evidence
+to `.slidey/feedback/feedback.jsonl` beside the deck workspace. That output is
+ignored by Git so it is safe for private working notes.
+
+Commit `.slidey/feedback.json` to name the HTTP intake sink(s) used by each
+publishing environment. `tools/deploy/publish-deck.sh` injects the selected
+`SLIDEY_FEEDBACK_ENVIRONMENT` (default `public`) into the generated deck.
+Developers can add an ignored `.slidey/feedback.local.json` overlay to expose a
+personal/fork GitHub intake alongside the upstream one:
+
+```json
+{
+  "publishing": { "environments": { "local": { "sinks": ["my-origin", "upstream-feedback"] } } },
+  "sinks": {
+    "my-origin": { "label": "My fork GitHub", "type": "http", "endpoint": "https://feedback.example/my-origin" }
+  }
+}
+```
+
+An HTTP sink is an authenticated server-side GitHub/issue intake, not a token
+embedded in the deck. The viewer sends only the reviewed Sassfully bundle.
+
 ### Preview in VS Code
 
 Slidey also ships a local VS Code extension under `tools/vscode-slidey`. It opens
-`.slidey.json`, `.json`, and `.jsonl` specs in a webview preview tab using the
-same built web viewer as `slidey <file>`.
+`.slidey.json`, `.json`, `.jsonl`, and raw rrweb replay logs in a webview preview
+tab using the same built web viewer as `slidey <file>`.
 
 ```sh
 make vscode-install-local
@@ -118,11 +342,10 @@ extension package, creates a VSIX, and installs it into the local editor. Overri
 make vscode-install-local CODE_CLI=/path/to/code-compatible-cli
 ```
 
-Inside VS Code, run **Slidey: Preview Presentation** from the command palette, or
-use the editor-title / Explorer context menu on a `.slidey.json` or `.jsonl`
-file. The preview is read-only: edit the JSON in VS Code, and the webview reloads
-from disk. The extension auto-discovers `.slidey.json` decks and `.jsonl` traces;
-plain `.json` files can still be previewed explicitly.
+Inside VS Code, run **Slidey: Preview Deck or Replay** from the command palette,
+or use the editor-title / Explorer context menu on a `.slidey.json`, `*.rrweb.json`,
+`rrweb.json`, or `.jsonl` file. The extension auto-discovers deck files, rrweb
+logs, and `.jsonl` traces; plain `.json` files can still be previewed explicitly.
 
 The video and PDF pipelines load the built `dist-render/render.html`; rebuild it
 with `npm run build:render` whenever you change anything under `web/`. `npm run
@@ -136,6 +359,101 @@ the deck. Output defaults to `dist-web-single/<spec>.html`. (The orchestrator is
 [`web/build-single.mjs`](web/build-single.mjs), built via the `webfile` Vite
 target; it folds the app's JS + CSS inline the same way the render harness does
 and injects the spec as `window.__SLIDEY_SPEC__`.)
+
+The interactive viewer can also inspect scene references inline. Add
+`references` to any scene as a path, object, or list:
+
+```json
+{
+  "type": "code",
+  "variant": "source",
+  "title": "Renderer hook",
+  "code": "await render(page, scene, ctx)",
+  "references": [
+    { "label": "Implementation", "src": "src/renderer.js", "kind": "code" },
+    "docs/design-notes.md"
+  ]
+}
+```
+
+References resolve relative to the spec. Built-in viewers cover Markdown,
+highlighted text/code/JSON, unified diffs (`.diff`/`.patch`), images, and
+MP4/WebM videos; unknown types still open as text or in a new tab. Existing media scenes (`image`, `image-compare`,
+`video`) automatically expose their own media as inspectable reference chips in
+the web viewer.
+
+Use a `reference` scene when the slide should show an excerpt or media preview
+that opens into the full modal:
+
+```json
+{
+  "type": "reference",
+  "title": "Design notes",
+  "reference": {
+    "label": "Full Markdown",
+    "src": "docs/design-notes.md",
+    "kind": "markdown",
+    "section": "Runtime contract"
+  }
+}
+```
+
+For source files, add `lines: [start, end]` (or `lineStart` / `lineEnd`) to show
+and highlight the linked range while keeping the modal pointed at the full file.
+`code` scenes can also set `sourceRef` so clicking the code block opens the full
+source. For proposed code changes, use `kind: "diff"` or a `.diff`/`.patch`
+reference; the modal button is labelled `View Diff` and routes through the host
+open behavior.
+
+Manual QA for this surface should use `examples/embed-qa.slidey.json`; it covers
+Markdown, code, diff patches, JSON/text/logs, image/image-compare, Mermaid graph
+source, MP4, and rrweb fixtures in one deck. Keep it updated whenever a new
+embed type, reference kind, plugin viewer, or host open behavior is added.
+
+### Inline links that open in a modal
+
+A `[text](target)` Markdown link inside prose is preserved through
+`slidey convert` (and can be hand-authored the same way) as
+`<a data-slidey-ref="target">text</a>` in the field's `*Html` companion —
+`bodyHtml`/`ledeHtml` on `narrative` scenes, `labelHtml`/`subHtml`/`linesHtml`
+on Markdown-imported `cards`, `introHtml`/`outroHtml`, `subtitleHtml`, and so
+on. Clicking one in the web viewer opens `target` in whichever surface
+already owns that kind — nothing new to configure per link, the routing is
+inferred from `target` itself:
+
+- **A path or URL** (`docs/design.md`, `qa-assets/mockup.html`,
+  `diagram.svg`, `demo.mp4`, ...) opens the reference viewer modal, exactly
+  like a `references[]` entry — same kind inference (Markdown, code, JSON,
+  diff, text, image, video), plus a new **`html` kind** for `.html`/`.htm`
+  files: it renders the page live in a sandboxed `<iframe>` instead of
+  showing it as source.
+- **`deck:<id>`** or **`deck:<id>#<sceneId>`** switches to another `library`
+  deck (and optionally a scene in it) — the same in-app navigation a `links`
+  entry drives, without opening a modal.
+- **A target ending in `.rrweb.json`** opens the rrweb session-replay modal.
+
+The modal dismisses via its close button, <kbd>Escape</kbd>, or a backdrop
+click — the same as every other reference modal — and the link is exempt
+from the deck's click-to-advance navigation, so clicking it never also
+changes slides.
+
+Static exports (PNG/PDF/MP4) never intercept the click — there's no click to
+intercept — so the link renders as a plain visible reference marker instead
+(an underline plus a small ↗ glyph after the text) rather than silently
+looking like ordinary prose. Set `meta.linkMarkers: false` on the spec to
+hide the glyph deck-wide (the underline stays either way).
+
+```json
+{
+  "type": "narrative",
+  "eyebrow": "Inline links",
+  "body": "See the design doc for details.",
+  "bodyHtml": "See the <a data-slidey-ref=\"docs/design.md\">design doc</a> for details."
+}
+```
+
+`examples/embed-qa.slidey.json` includes a slide exercising the Markdown-link
+and HTML-iframe cases end to end.
 
 ## Visualizing a kitsoki session trace
 
@@ -224,6 +542,10 @@ capture on the fly via that scene's `capture` field). See `examples/demos/`.
 | `--check` | Validate `diagram-svg` scenes' declared geometry (node width/height fit, node overlap, slanted connectors from misaligned box centres, gate/label clearance between boxes) without rendering. Exits 1 on violations (CI-friendly) |
 | `--audit [FILE]` | Render every reveal step in headless Chrome and measure the *real* laid-out geometry — off-page content, box/SVG-node overflow, rendered overlap, unsubstituted template vars, tiny text. Writes findings JSON to `FILE` (or stdout); exits 1 on any error-severity finding. The deterministic half of the `slidey-visual-qa` skill |
 
+Run `slidey doctor` before a narrated MP4 export. Use `--no-narration` for
+PDF/PNG/silent-video machines, `--no-tts-sample` for offline CI, and
+`--voice <id>` to verify the exact Edge TTS voice a deck uses.
+
 ## Marp Replacement Matrix
 
 Marp is excellent for Markdown-first slide authoring: `---` separates slides,
@@ -280,8 +602,11 @@ slidey-mcp --root /path/to/presentation-workspace
 The server keeps all file access inside `--root` and exposes tools for the full
 authoring loop:
 
-- `slidey_workspace_tree`, `slidey_read_spec` — discover/read `.slidey.json`,
-  `.readonly.slidey.json`, and generated `.jsonl` trace decks.
+- `slidey_workspace_tree`, `slidey_deck_overview`, `slidey_read_slide`,
+  `slidey_search_slides` — discover decks, get a compact outline, retrieve one
+  slide, or search slide text without fetching an entire large spec.
+- `slidey_read_spec` — read the complete `.slidey.json`,
+  `.readonly.slidey.json`, or generated `.jsonl` trace deck when it is needed.
 - `slidey_write_spec`, `slidey_patch_spec` — edit `.json` specs directly;
   `.jsonl` and `.readonly.slidey.json` are read-only because their specs are
   generated or authoritative.
@@ -293,7 +618,7 @@ authoring loop:
 - `slidey_render_png`, `slidey_render_html` — render a specific scene/reveal
   step through the real Vue render bundle and return an image or HTML snapshot.
 - `slidey_schema`, `slidey_docs`, `slidey_doctor` — expose the schema, bundled
-  authoring guide, and headless-browser health check.
+  authoring guide, and export setup check.
 
 The PNG/HTML/audit tools launch headless Chrome, so they need the same browser
 setup as PDF/PNG/video rendering. The MCP protocol itself uses stdout; Slidey
@@ -334,8 +659,8 @@ sampling (≈8/658 on the sample deck — on par with the legacy renderer).
 Internally, scene types fall into two families the template toggles between: a
 *slides* family (`title`, `narrative`, `diagram`, `diagram-svg`, `mermaid`,
 `trace`, `transcript`, `thread`, `stat`, `cta`, `terminal-gif`, `cards`,
-`objectives`, `evidence`, `code`, `table`, `chart`, `image`, `image-compare`,
-`book`, `video`, `personas`) and an
+`objectives`, `evidence`, `code`, `reference`, `table`, `chart`, `image`,
+`image-compare`, `book`, `video`, `personas`) and an
 *api* family (`request`). The
 spec's optional `meta.mode` selects the default; you rarely set it by hand. (In
 the code this distinction still carries its original `pitch`/`api` names — e.g.
@@ -369,9 +694,11 @@ A spec is a JSON object with two top-level keys: `meta` (optional) and
 | `meta.resolution` | `{ width, height }`. Default 1920×1080. Changing this is unusual |
 | `meta.narration.voice` | edge-tts voice id. Default `en-AU-NatashaNeural` |
 | `meta.narration.rate` | edge-tts speech rate, e.g. `"+0%"`, `"-10%"` |
-| `meta.narration.pronunciations` | `{ "term": "respelling" }` map fixing TTS mispronunciations. Applied whole-word and case-insensitively to the **spoken** audio only (spec/`--list` text is unchanged). e.g. `{ "Anthropic": "an-THROP-ik", "SDLC": "S D L C" }` |
+| `meta.narration.pronunciations` | `{ "term": "respelling" }` map fixing TTS mispronunciations. Applied whole-word and case-insensitively to the **spoken** audio only (spec/`--list` text is unchanged). Use lower-case pronounceable syllables for words; use spaced capitals only for acronyms you want spelled out. Avoid uncommon tokens like `soh` that some voices spell out. e.g. `{ "Anthropic": "an throp ik", "SDLC": "S D L C", "Kitsoki": "kit so key" }` |
 | `meta.context` | Key/value template variables interpolated into scene fields. Overridden by `--context` CLI flags |
 | `meta.personas` | Deck-wide cast registry for `personas` scenes. Each entry has `id`, plus optional `name`, `role`, `intro`, `color`, and `glyph` |
+| `meta.theme` | Theme name or `{ name, background, fontFamily, colors, css }`. Built-ins include `rose-pine-moon`, `github-dark-default`, `one-dark-pro`, `dracula`, `ayu-dark`, `monokai-pro`, `night-owl`, `tokyo-night`, `palenight`, `synthwave-84`, and `atom-one-light` |
+| `meta.themePacks` | Optional array of pack JSON paths, resolved relative to the deck, or inline pack objects. Use this when a deck needs an explicit reusable theme/layout pack |
 
 A scene also takes a top-level `narration: "..."` string (any scene type). If
 **any** scene has `narration`, edge-tts is invoked and the resulting audio is
@@ -380,6 +707,47 @@ muxed onto the video, with each segment starting at that scene's start frame.
 Scenes also accept `hold: <frames>` to extend the post-reveal dwell. `30
 frames = 1s` at default fps. The default hold per scene type lives in
 `timing.js` (`narrative_hold`, `diagram_hold`, etc.).
+
+### Theme and layout packs
+
+Slidey discovers reusable packs at render/view time, so a project can add color
+schemes or layout templates without rebuilding Slidey. Put JSON files in any of:
+
+- `.slidey/packs/*.json`
+- `.slidey/theme-packs/*.json`
+- `.slidey/template-packs/*.json`
+- `slidey-packs/*.json`
+- `theme-packs/*.json`
+- `slidey.packs.json`, `slidey.theme-pack.json`, or `slidey.template-pack.json`
+
+Pack shape:
+
+```json
+{
+  "id": "my-project",
+  "themes": {
+    "my-project": {
+      "background": "#101820",
+      "colors": {
+        "base": "#101820",
+        "surface": "#162333",
+        "text": "#f6f7f9",
+        "accent": "#58a6ff"
+      }
+    }
+  },
+  "layouts": [
+    {
+      "id": "project-proof",
+      "label": "Project Proof",
+      "scene": { "type": "title", "title": "Proof" }
+    }
+  ]
+}
+```
+
+The web editor and `slidey_layout_gallery` include pack layouts. `slidey_add_slide`
+can insert them by id.
 
 ### Scene types
 
@@ -483,6 +851,76 @@ Up to three panels (`diagram_panel_0..2` reveal slots).
 Single-panel vs two-panel layouts differ in scale (single = larger fonts,
 fixed 680px SVG height, no panel chrome; two = side-by-side, smaller fonts,
 1/0.7 aspect ratio). See the authoring skill for sizing rules.
+
+#### `graph` — Cytoscape graph viewer with reveal-by-reveal navigation
+
+Use `graph` when the audience should follow a path through a graph, not just
+inspect a static diagram. The first reveal shows the graph; each `path` entry
+can center a node, highlight one or more edges, and show a short focus note.
+
+For repeatable pitch or diligence diagrams, prefer a lane grid over hand-tuned
+pixel positions:
+
+```json
+{
+  "type": "graph",
+  "title": "Buyer diligence graph",
+  "layout": "preset",
+  "layoutTemplate": "lane-grid",
+  "grid": { "columns": 5, "rows": 3, "x": 105, "y": 95, "width": 2800, "height": 810 },
+  "nodes": [
+    { "id": "buyer", "label": "Regulated buyer", "col": 1, "row": 2 },
+    { "id": "gate", "label": "FIPS 140-3", "sub": "federal crypto gate", "col": 2, "row": 1 },
+    { "id": "proof", "label": "Security packet", "col": 4, "row": 1 },
+    { "id": "signoff", "label": "Diligence signoff", "col": 5, "row": 2 }
+  ],
+  "edges": [
+    { "id": "buyer-gate", "from": "buyer", "to": "gate", "label": "eligibility gate", "weight": 10 },
+    { "id": "gate-proof", "from": "gate", "to": "proof", "label": "evidence", "weight": 8 },
+    { "id": "proof-signoff", "from": "proof", "to": "signoff", "label": "clears gate", "weight": 10 }
+  ],
+  "path": [
+    { "node": "buyer", "view": "overview" },
+    { "node": "gate", "edge": "buyer-gate", "note": "Hard gate before evaluation." }
+  ]
+}
+```
+
+`layoutTemplate: "lane-grid-3x5"` is a built-in shortcut for three horizontal
+lanes across five columns. A custom `grid` overrides the shortcut. Nodes use
+one-indexed `col`/`row` slots plus optional `xOffset`/`yOffset` nudges for small
+semantic adjustments. Edge labels get deterministic geometry-based offsets and
+opaque backgrounds; use `labelMarginX`/`labelMarginY` only for exceptions. When
+two edges' auto-computed labels would land on top of each other (a common case
+in a dense lane grid, e.g. the crossing diagonals of a 2x2 node block), the
+renderer nudges the later one apart rather than stacking them — this only
+applies to the auto-offset heuristic, never to an explicit
+`labelMarginX`/`labelMarginY` you set yourself. The graph frame always fills
+its slide area regardless of `title`/`caption` length.
+
+##### `projection` input mode — render a graph-projection JSON instead of `nodes`/`edges`
+
+Use this to drive graph scenes from an existing graph-projection v1 JSON
+(lane/row-positioned nodes, a shared type `palette`, and named `states` that
+each select one graph plus a `done`/`fail`/`plan`/`dim`/`pulse` status
+overlay) instead of authoring `nodes`/`edges` per scene:
+
+```json
+{ "type": "graph",
+  "title": "Diligence: compliance question",
+  "projection": "gravytanker-portal.graph-projection.json",
+  "state": "complianceQuestion",
+  "caption": "The buyer's first question is always the crypto boundary." }
+```
+
+`projection` is a path relative to the spec file; `state` is a key in the
+projection's `states` map (or, as a fallback, a bare graph id with no status
+overlay). One scene renders one state — author one scene per state to build a
+reveal across several states of the same graph. There is no `path`/`focus`
+camera in this mode (`path`/`focus` are Cytoscape-only); the whole graph is
+shown at once, sized and centered to fill the frame at the graph's own aspect
+ratio. `slidey_graph_audit` statically checks that `projection` resolves to
+valid JSON and that `state` is a real key/graph id before you ever render.
 
 #### `mermaid` — Mermaid diagrams rendered as themed SVG
 
@@ -660,7 +1098,9 @@ Splices a product demo or recorded UI session into the deck. Pick **one** source
 
 `mode: "embedded"` insets the video in a slide with `eyebrow`/`title`/`caption`
 chrome instead of filling the frame (`fit: "contain"|"cover"`);
-`start`/`end`/`speed` trim and retime. Deck-styled lower-third captions come from
+`start`/`end`/`speed` trim and retime. `audio` can point at an mp3/m4a/wav/ogg
+file synced with rrweb playback in the web viewer; raw `*.rrweb.json` or
+`rrweb.json` viewer inputs automatically pick up a sibling `*.mp3` when present. Deck-styled lower-third captions come from
 the chapter sidecar (`chapters`), `annotations` add timed callouts, and
 `narration` may be a string or time-keyed cues (`{at|chapter, text}`) so the
 voiceover tracks demo moments. The scene's duration equals the (trimmed) source

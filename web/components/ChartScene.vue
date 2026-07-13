@@ -327,7 +327,7 @@ function buildScatter(s, series, unit) {
 function buildQuadrant(s, series) {
   // Collect all points; auto-scale to [0,1] if any value falls outside it.
   const all = [];
-  for (const ser of series) for (const p of ser.points) all.push({ ...p, color: ser.color });
+  for (const ser of series) for (const p of ser.points) all.push({ ...p, color: ser.color, seriesName: ser.name });
   let xlo = Infinity, xhi = -Infinity, ylo = Infinity, yhi = -Infinity;
   for (const p of all) {
     const x = +p.x, y = +p.y;
@@ -335,8 +335,11 @@ function buildQuadrant(s, series) {
     if (y < ylo) ylo = y; if (y > yhi) yhi = y;
   }
   const inUnit = all.length && xlo >= 0 && xhi <= 1 && ylo >= 0 && yhi <= 1;
-  const sx = inUnit ? { min: 0, max: 1 } : { min: xlo, max: xhi || 1 };
-  const sy = inUnit ? { min: 0, max: 1 } : { min: ylo, max: yhi || 1 };
+  // Pad the auto-scaled domain so extreme points sit inside the frame
+  // instead of on (or visually outside) the plot border.
+  const pad = (lo, hi) => { const m = (hi - lo || 1) * 0.12; return { min: lo - m, max: hi + m }; };
+  const sx = inUnit ? { min: 0, max: 1 } : pad(xlo, xhi || 1);
+  const sy = inUnit ? { min: 0, max: 1 } : pad(ylo, yhi || 1);
 
   const xpos = (v) => PLOT.x + ((v - sx.min) / (sx.max - sx.min || 1)) * PLOT.w;
   const ypos = (v) => PLOT.y + PLOT.h - ((v - sy.min) / (sy.max - sy.min || 1)) * PLOT.h;
@@ -349,7 +352,7 @@ function buildQuadrant(s, series) {
     // Keep labels inside the plot: anchor toward the centre.
     const anchor = x > midX ? 'end' : 'start';
     const lx = x + (x > midX ? -14 : 14);
-    return { x, y, color: p.color, label: String(p.label || p.name || ''), anchor, lx, ly: y + 6 };
+    return { x, y, color: p.color, label: String(p.label || p.name || p.seriesName || ''), anchor, lx, ly: y + 6 };
   });
 
   return {
@@ -367,19 +370,11 @@ const caption = computed(() => (store.scene && store.scene.caption) || '');
 function seriesShown(i) { return store.isRevealed(`chart-series-${i}`); }
 const frameShown = computed(() => store.isRevealed('chart-frame'));
 
-// Legend anchored at the top-right of the plot, on a backing panel so a data
-// point that lands in the corner can never blur into a swatch (the prior
-// crowding the geometry/vision audit flagged on the line + scatter charts).
-const PLOT_RIGHT = PLOT.x + PLOT.w;
+// Legend is intentionally outside the SVG plot. Keeping it in DOM below the
+// chart preserves the plot viewBox/centering while keeping data unobscured.
 const LEGEND = computed(() => {
   const items = (model.value && model.value.legend) || [];
-  if (!items.length) return null;
-  const maxChars = Math.max(...items.map(l => String(l.name || '').length));
-  const rowH = 32, padX = 16, padY = 12, swatch = 16, gap = 12;
-  const textW = Math.ceil(maxChars * 13.5);      // ~0.56em per char at 24px
-  const w = padX * 2 + swatch + gap + textW;
-  const h = padY * 2 + items.length * rowH - (rowH - 18);
-  return { x: PLOT_RIGHT - w, y: PLOT.y, w, h, rowH, padX, padY, swatch, gap, items };
+  return items.length ? items : null;
 });
 </script>
 
@@ -393,174 +388,166 @@ const LEGEND = computed(() => {
     >{{ title }}</div>
 
     <div id="chart-frame" class="reveal" :class="{ shown: frameShown }">
-      <svg
-        :viewBox="`0 0 ${1000} ${620}`"
-        preserveAspectRatio="xMidYMid meet"
-        xmlns="http://www.w3.org/2000/svg"
-        class="chart-svg"
-      >
-        <!-- ── Axes + gridlines (all non-pie/quadrant variants) ── -->
-        <template v-if="model.hasYAxis">
-          <g class="chart-grid">
-            <line
-              v-for="(g, i) in model.grid"
-              :key="`g${i}`"
-              :x1="96" :x2="96 + (1000 - 96 - 48)"
-              :y1="g.y" :y2="g.y"
-            />
-          </g>
-          <g class="chart-axis-labels">
-            <text
-              v-for="(g, i) in model.grid"
-              :key="`gl${i}`"
-              :x="88" :y="g.y" text-anchor="end" dominant-baseline="middle"
-            >{{ g.label }}</text>
-          </g>
-          <!-- axis lines -->
-          <line class="chart-axis" :x1="96" :y1="40" :x2="96" :y2="40 + (620 - 40 - 92)" />
-          <line class="chart-axis" :x1="96" :y1="40 + (620 - 40 - 92)" :x2="96 + (1000 - 96 - 48)" :y2="40 + (620 - 40 - 92)" />
-          <!-- axis titles -->
-          <text
-            v-if="model.axes && model.axes.y"
-            class="chart-axis-title"
-            :x="28" :y="40 + (620 - 40 - 92) / 2"
-            text-anchor="middle"
-            :transform="`rotate(-90 28 ${40 + (620 - 40 - 92) / 2})`"
-            data-edit-path='["axes","y"]'
-          >{{ model.axes.y }}</text>
-          <text
-            v-if="model.axes && model.axes.x"
-            class="chart-axis-title"
-            :x="96 + (1000 - 96 - 48) / 2" :y="600"
-            text-anchor="middle"
-            data-edit-path='["axes","x"]'
-          >{{ model.axes.x }}</text>
-        </template>
-
-        <!-- ── BAR ── -->
-        <template v-if="model.variant === 'bar'">
-          <g
-            v-for="(grp, gi) in model.groups"
-            :key="`grp${gi}`"
-            class="chart-group"
-          >
-            <g v-for="(b, bi) in grp.bars" :key="`b${bi}`" :class="{ 'g-shown': seriesShown(bi) }" class="reveal-g">
-              <rect
-                :x="b.x" :y="b.y" :width="b.w" :height="b.h"
-                :fill="b.color" rx="3" ry="3"
+      <div class="chart-plot-wrap">
+        <svg
+          :viewBox="`0 0 ${1000} ${620}`"
+          preserveAspectRatio="xMidYMid meet"
+          xmlns="http://www.w3.org/2000/svg"
+          class="chart-svg"
+        >
+          <!-- ── Axes + gridlines (all non-pie/quadrant variants) ── -->
+          <template v-if="model.hasYAxis">
+            <g class="chart-grid">
+              <line
+                v-for="(g, i) in model.grid"
+                :key="`g${i}`"
+                :x1="96" :x2="96 + (1000 - 96 - 48)"
+                :y1="g.y" :y2="g.y"
               />
-              <text class="chart-bar-value" :x="b.labelX" :y="b.labelY" text-anchor="middle">{{ b.label }}</text>
             </g>
-            <text class="chart-cat" :x="grp.labelX" :y="40 + (620 - 40 - 92) + 34" text-anchor="middle">{{ grp.label }}</text>
-          </g>
-        </template>
-
-        <!-- ── LINE / AREA ── -->
-        <template v-if="model.variant === 'line' || model.variant === 'area'">
-          <text
-            v-for="(t, ti) in model.xticks"
-            :key="`xt${ti}`"
-            class="chart-cat" :x="t.x" :y="40 + (620 - 40 - 92) + 34" text-anchor="middle"
-          >{{ t.label }}</text>
-          <g
-            v-for="(ln, li) in model.lines"
-            :key="`ln${li}`"
-            class="reveal-g"
-            :class="{ 'g-shown': seriesShown(li) }"
-          >
-            <path v-if="model.fill && ln.area" :d="ln.area" :fill="ln.color" class="chart-area" />
-            <polyline :points="ln.poly" :stroke="ln.color" fill="none" class="chart-line" />
-            <circle
-              v-for="(d, di) in ln.dots" :key="`d${di}`"
-              :cx="d.x" :cy="d.y" r="5" :fill="ln.color" class="chart-dot"
-            />
-          </g>
-        </template>
-
-        <!-- ── SCATTER ── -->
-        <template v-if="model.variant === 'scatter'">
-          <text
-            v-for="(t, ti) in model.xticks"
-            :key="`sxt${ti}`"
-            class="chart-cat" :x="t.x" :y="40 + (620 - 40 - 92) + 34" text-anchor="middle"
-          >{{ t.label }}</text>
-          <g
-            v-for="(grp, gi) in model.groups"
-            :key="`sg${gi}`"
-            class="reveal-g"
-            :class="{ 'g-shown': seriesShown(gi) }"
-          >
-            <circle
-              v-for="(d, di) in grp.dots" :key="`sd${di}`"
-              :cx="d.x" :cy="d.y" r="9" :fill="grp.color" class="chart-scatter-dot"
-            />
-          </g>
-        </template>
-
-        <!-- ── PIE ── -->
-        <template v-if="model.variant === 'pie'">
-          <g
-            v-for="(sl, si) in model.slices"
-            :key="`pie${si}`"
-            class="reveal-g"
-            :class="{ 'g-shown': seriesShown(0) }"
-          >
-            <path :d="sl.d" :fill="sl.color" class="chart-slice" />
-            <text class="chart-slice-pct" :x="sl.labelX" :y="sl.labelY" text-anchor="middle" dominant-baseline="middle">{{ sl.pct }}%</text>
-          </g>
-        </template>
-
-        <!-- ── QUADRANT ── -->
-        <template v-if="model.variant === 'quadrant'">
-          <g class="reveal-g g-shown">
-            <!-- frame -->
-            <rect
-              class="chart-quad-frame"
-              :x="96" :y="40"
-              :width="1000 - 96 - 48" :height="620 - 40 - 92"
-              fill="none"
-            />
-            <!-- divider lines -->
-            <line class="chart-quad-div" :x1="model.quadrant.midX" :y1="40" :x2="model.quadrant.midX" :y2="40 + (620 - 40 - 92)" />
-            <line class="chart-quad-div" :x1="96" :y1="model.quadrant.midY" :x2="96 + (1000 - 96 - 48)" :y2="model.quadrant.midY" />
-            <!-- axis titles: x along bottom, y up the left -->
-            <text v-if="model.axes && model.axes.x" class="chart-axis-title" :x="96 + (1000 - 96 - 48) / 2" :y="600" text-anchor="middle" data-edit-path='["axes","x"]'>{{ model.axes.x }}</text>
+            <g class="chart-axis-labels">
+              <text
+                v-for="(g, i) in model.grid"
+                :key="`gl${i}`"
+                :x="88" :y="g.y" text-anchor="end" dominant-baseline="middle"
+              >{{ g.label }}</text>
+            </g>
+            <!-- axis lines -->
+            <line class="chart-axis" :x1="96" :y1="40" :x2="96" :y2="40 + (620 - 40 - 92)" />
+            <line class="chart-axis" :x1="96" :y1="40 + (620 - 40 - 92)" :x2="96 + (1000 - 96 - 48)" :y2="40 + (620 - 40 - 92)" />
+            <!-- axis titles -->
             <text
               v-if="model.axes && model.axes.y"
               class="chart-axis-title"
-              :x="40" :y="40 + (620 - 40 - 92) / 2" text-anchor="middle"
-              :transform="`rotate(-90 40 ${40 + (620 - 40 - 92) / 2})`"
+              :x="28" :y="40 + (620 - 40 - 92) / 2"
+              text-anchor="middle"
+              :transform="`rotate(-90 28 ${40 + (620 - 40 - 92) / 2})`"
               data-edit-path='["axes","y"]'
             >{{ model.axes.y }}</text>
-          </g>
-          <g
-            v-for="(d, di) in model.dots"
-            :key="`qd${di}`"
-            class="reveal-g"
-            :class="{ 'g-shown': seriesShown(0) }"
-          >
-            <circle :cx="d.x" :cy="d.y" r="11" :fill="d.color" class="chart-scatter-dot" />
-            <text class="chart-quad-label" :x="d.lx" :y="d.ly" :text-anchor="d.anchor">{{ d.label }}</text>
-          </g>
-        </template>
+            <text
+              v-if="model.axes && model.axes.x"
+              class="chart-axis-title"
+              :x="96 + (1000 - 96 - 48) / 2" :y="600"
+              text-anchor="middle"
+              data-edit-path='["axes","x"]'
+            >{{ model.axes.x }}</text>
+          </template>
 
-        <!-- ── Legend (top-right, on a backing panel so data never blurs into it) ── -->
-        <g v-if="LEGEND" class="chart-legend">
-          <rect
-            class="chart-legend-bg"
-            :x="LEGEND.x" :y="LEGEND.y" :width="LEGEND.w" :height="LEGEND.h"
-            rx="8" ry="8"
-          />
-          <g
-            v-for="(lg, i) in LEGEND.items"
-            :key="`lg${i}`"
-            :transform="`translate(${LEGEND.x + LEGEND.padX}, ${LEGEND.y + LEGEND.padY + 14 + i * LEGEND.rowH})`"
-          >
-            <rect x="0" y="-13" :width="LEGEND.swatch" height="16" :fill="lg.color" rx="2" />
-            <text :x="LEGEND.swatch + LEGEND.gap" y="0" text-anchor="start" class="chart-legend-text">{{ lg.name }}</text>
-          </g>
-        </g>
-      </svg>
+          <!-- ── BAR ── -->
+          <template v-if="model.variant === 'bar'">
+            <g
+              v-for="(grp, gi) in model.groups"
+              :key="`grp${gi}`"
+              class="chart-group"
+            >
+              <g v-for="(b, bi) in grp.bars" :key="`b${bi}`" :class="{ 'g-shown': seriesShown(bi) }" class="reveal-g">
+                <rect
+                  :x="b.x" :y="b.y" :width="b.w" :height="b.h"
+                  :fill="b.color" rx="3" ry="3"
+                />
+                <text class="chart-bar-value" :x="b.labelX" :y="b.labelY" text-anchor="middle">{{ b.label }}</text>
+              </g>
+              <text class="chart-cat" :x="grp.labelX" :y="40 + (620 - 40 - 92) + 34" text-anchor="middle">{{ grp.label }}</text>
+            </g>
+          </template>
+
+          <!-- ── LINE / AREA ── -->
+          <template v-if="model.variant === 'line' || model.variant === 'area'">
+            <text
+              v-for="(t, ti) in model.xticks"
+              :key="`xt${ti}`"
+              class="chart-cat" :x="t.x" :y="40 + (620 - 40 - 92) + 34" text-anchor="middle"
+            >{{ t.label }}</text>
+            <g
+              v-for="(ln, li) in model.lines"
+              :key="`ln${li}`"
+              class="reveal-g"
+              :class="{ 'g-shown': seriesShown(li) }"
+            >
+              <path v-if="model.fill && ln.area" :d="ln.area" :fill="ln.color" class="chart-area" />
+              <polyline :points="ln.poly" :stroke="ln.color" fill="none" class="chart-line" />
+              <circle
+                v-for="(d, di) in ln.dots" :key="`d${di}`"
+                :cx="d.x" :cy="d.y" r="5" :fill="ln.color" class="chart-dot"
+              />
+            </g>
+          </template>
+
+          <!-- ── SCATTER ── -->
+          <template v-if="model.variant === 'scatter'">
+            <text
+              v-for="(t, ti) in model.xticks"
+              :key="`sxt${ti}`"
+              class="chart-cat" :x="t.x" :y="40 + (620 - 40 - 92) + 34" text-anchor="middle"
+            >{{ t.label }}</text>
+            <g
+              v-for="(grp, gi) in model.groups"
+              :key="`sg${gi}`"
+              class="reveal-g"
+              :class="{ 'g-shown': seriesShown(gi) }"
+            >
+              <circle
+                v-for="(d, di) in grp.dots" :key="`sd${di}`"
+                :cx="d.x" :cy="d.y" r="9" :fill="grp.color" class="chart-scatter-dot"
+              />
+            </g>
+          </template>
+
+          <!-- ── PIE ── -->
+          <template v-if="model.variant === 'pie'">
+            <g
+              v-for="(sl, si) in model.slices"
+              :key="`pie${si}`"
+              class="reveal-g"
+              :class="{ 'g-shown': seriesShown(0) }"
+            >
+              <path :d="sl.d" :fill="sl.color" class="chart-slice" />
+              <text class="chart-slice-pct" :x="sl.labelX" :y="sl.labelY" text-anchor="middle" dominant-baseline="middle">{{ sl.pct }}%</text>
+            </g>
+          </template>
+
+          <!-- ── QUADRANT ── -->
+          <template v-if="model.variant === 'quadrant'">
+            <g class="reveal-g g-shown">
+              <!-- frame -->
+              <rect
+                class="chart-quad-frame"
+                :x="96" :y="40"
+                :width="1000 - 96 - 48" :height="620 - 40 - 92"
+                fill="none"
+              />
+              <!-- divider lines -->
+              <line class="chart-quad-div" :x1="model.quadrant.midX" :y1="40" :x2="model.quadrant.midX" :y2="40 + (620 - 40 - 92)" />
+              <line class="chart-quad-div" :x1="96" :y1="model.quadrant.midY" :x2="96 + (1000 - 96 - 48)" :y2="model.quadrant.midY" />
+              <!-- axis titles: x along bottom, y up the left -->
+              <text v-if="model.axes && model.axes.x" class="chart-axis-title" :x="96 + (1000 - 96 - 48) / 2" :y="600" text-anchor="middle" data-edit-path='["axes","x"]'>{{ model.axes.x }}</text>
+              <text
+                v-if="model.axes && model.axes.y"
+                class="chart-axis-title"
+                :x="40" :y="40 + (620 - 40 - 92) / 2" text-anchor="middle"
+                :transform="`rotate(-90 40 ${40 + (620 - 40 - 92) / 2})`"
+                data-edit-path='["axes","y"]'
+              >{{ model.axes.y }}</text>
+            </g>
+            <g
+              v-for="(d, di) in model.dots"
+              :key="`qd${di}`"
+              class="reveal-g"
+              :class="{ 'g-shown': seriesShown(0) }"
+            >
+              <circle :cx="d.x" :cy="d.y" r="11" :fill="d.color" class="chart-scatter-dot" />
+              <text class="chart-quad-label" :x="d.lx" :y="d.ly" :text-anchor="d.anchor">{{ d.label }}</text>
+            </g>
+          </template>
+        </svg>
+      </div>
+
+      <div v-if="LEGEND" class="chart-legend" aria-label="Chart legend">
+        <div v-for="(lg, i) in LEGEND" :key="`lg${i}`" class="chart-legend-item">
+          <span class="chart-legend-swatch" :style="{ backgroundColor: lg.color }"></span>
+          <span class="chart-legend-text">{{ lg.name }}</span>
+        </div>
+      </div>
     </div>
 
     <div
@@ -592,7 +579,14 @@ const LEGEND = computed(() => {
 #chart-frame {
   width: 100%;
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+}
+.chart-plot-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 .chart-svg {
   width: 100%;
@@ -628,8 +622,37 @@ const LEGEND = computed(() => {
 .chart-quad-frame { stroke: #30363d; stroke-width: 2; }
 .chart-quad-div { stroke: #484f58; stroke-width: 1.5; stroke-dasharray: 6 6; }
 .chart-quad-label { fill: #e6edf3; font-size: 24px; }
-.chart-legend-bg { fill: #161b22; fill-opacity: 0.95; stroke: #30363d; stroke-width: 1.5; }
-.chart-legend-text { fill: #e6edf3; font-size: 24px; }
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 18px;
+  max-width: 1300px;
+  margin: 12px auto 0;
+  padding: 10px 16px;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #161b22;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 24px;
+}
+.chart-legend-swatch {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 2px;
+}
+.chart-legend-text {
+  color: #e6edf3;
+  font-size: 20px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
 
 /* Per-series reveal — groups fade/grow in once their step fires. */
 .reveal-g {

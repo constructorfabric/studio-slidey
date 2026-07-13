@@ -41,6 +41,9 @@ export function installAdapter() {
     showDiagramSvg(scene) { store.showScene('diagram-svg', scene); },
     hideDiagramSvg() { store.hidePitch(); },
 
+    showGraph(scene, projectionData) { store.showGraph(scene, projectionData); },
+    hideGraph() { store.hidePitch(); },
+
     showMermaid(scene) { store.showScene('mermaid', scene); },
     hideMermaid() { store.hidePitch(); },
 
@@ -49,6 +52,9 @@ export function installAdapter() {
       store.gifDataUri = dataUri || '';
     },
     hideTerminalGif() { store.hidePitch(); store.gifDataUri = ''; },
+
+    showKitsokiTui(scene) { store.showScene('kitsoki-tui', scene); },
+    hideKitsokiTui() { store.hidePitch(); },
 
     showStat(scene) { store.showScene('stat', scene); },
     hideStat() { store.hidePitch(); },
@@ -123,6 +129,9 @@ export function installAdapter() {
     // loaded log. Headless render + PDF/PNG export handle video scenes natively.
     showVideo(scene, data) { store.showVideo(scene, data); },
     hideVideo() { store.hidePitch(); store.rrwebEvents = []; store.rrwebChapters = []; },
+
+    showReference(scene) { store.showScene('reference', scene); },
+    hideReference() { store.hidePitch(); },
   };
 
   // Settle barrier: flush Vue's async DOM patch before the renderer captures, so

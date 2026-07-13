@@ -1,0 +1,57 @@
+states:
+  capture:
+    description: "Capturing rrweb clips against the real app"
+    relevant_world: [node_id, manifest_path, status]
+    on_enter:
+      - invoke: host.demo
+        id: capture_record
+        with:
+          op: record
+          manifest_path: "{{ world.manifest_path }}"
+        bind: { record_stdout: stdout }
+        on_error: failed
+      - set: { status: "captured" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - prose: "record-tour.mjs launched the manifest's target once, captured every tour against the live app (contract §6, unmodified for real targets), re-estimated narration timing, and ran demo-doctor as its own closing check."
+          - kv:
+              pairs:
+                Manifest: "{{ world.manifest_path }}"
+                Status: "{{ world.status }}"
+        choices:
+          - list:
+              items:
+                - { label: "next", hint: "review the doctor report" }
+                - { label: "restart" }
+                - { label: "look" }
+    on:
+      next:
+        - target: doctor
+      restart:
+        - target: plan
+          effects:
+            - set: { status: "", target_ready: false, doctor_ok: false, doctor_report: "" }
+      look:
+        - target: capture
+
+  failed:
+    description: "A pipeline stage failed"
+    relevant_world: [node_id, status]
+    on_enter:
+      - set: { status: "failed" }
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - prose: "One of the host.demo.* verbs reported an error. See the room's on_error target for detail."
+        choices:
+          - list:
+              items:
+                - { label: "restart" }
+    on:
+      restart:
+        - target: plan
+          effects:
+            - set: { status: "", target_ready: false, doctor_ok: false, doctor_report: "" }

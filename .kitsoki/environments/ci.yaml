@@ -1,0 +1,12 @@
+schema: capsule-environment/v1
+id: ci
+source:
+  host_probe: true
+toolchains:
+  node: ">=20.19.0 <23"
+lockfiles:
+  - package-lock.json
+bootstrap:
+  command: npm install
+network: live
+sandbox: supervised

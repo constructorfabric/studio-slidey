@@ -60,6 +60,17 @@ function sceneShowOpts(scene, specPath) {
   // visually QA'd. Best-effort: a missing/unreadable log just falls back to the
   // placeholder rather than failing the render. (MP4 `src` videos have no
   // headless poster path and are left to the placeholder.)
+  // graph (projection input mode): resolve the projection JSON server-side so
+  // the MP4/PDF/PNG/MCP render paths (no browser fetch available) see the same
+  // data the interactive viewer fetches client-side via web/useDeck.js.
+  if (scene.type === 'graph' && scene.projection) {
+    try {
+      const projectionAbs = resolveAsset(specPath, scene.projection);
+      if (projectionAbs && !/^(data:|https?:)/i.test(projectionAbs) && fs.existsSync(projectionAbs)) {
+        opts.projectionData = JSON.parse(fs.readFileSync(projectionAbs, 'utf8'));
+      }
+    } catch (_) { /* best-effort; the scene shows its no-data fallback */ }
+  }
   if (scene.type === 'video' && scene.rrweb) {
     try {
       const rrwebAbs = resolveAsset(specPath, scene.rrweb);

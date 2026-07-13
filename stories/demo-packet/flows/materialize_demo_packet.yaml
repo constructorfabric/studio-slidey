@@ -1,0 +1,63 @@
+test_kind: flow
+app: ../app.yaml
+initial_state: plan
+initial_world:
+  node_id: uc-pm-reviews-roadmap
+  target_url: "http://127.0.0.1:5183"
+
+# Cassette the host.demo.* exec verbs (C2, use-case-loop-plan §3.5: "cassette
+# these verbs") — same mechanism stories/mockup-packet's
+# materialize_packet.yaml and stories/ci-status's check_native.yaml use to
+# stub host.demo/host.git. No live node/chromium runs in this test.
+host_handlers:
+  host.demo:
+    by_call:
+      capture_record:
+        data:
+          stdout: "launched target once; captured 1 tour; re-estimate: 0 flags; doctor: ok\n"
+      packet_doctor:
+        data:
+          report:
+            ok: true
+            checks:
+              - { name: states, ok: true }
+              - { name: deck paths, ok: true }
+              - { name: freshness, ok: true }
+              - { name: chapters, ok: true }
+              - { name: estimate, ok: true }
+
+turns:
+  - intent: { name: look, slots: {} }
+    expect_state: plan
+    expect_world:
+      node_id: uc-pm-reviews-roadmap
+      manifest_path: ".artifacts/uc-pm-reviews-roadmap/demo-packet.demo.json"
+      status: "planning"
+
+  - intent: { name: next, slots: {} }
+    expect_state: launch
+    expect_world:
+      target_ready: true
+      status: "target-ready"
+
+  - intent: { name: next, slots: {} }
+    expect_state: capture
+    expect_world:
+      status: "captured"
+      record_stdout: "launched target once; captured 1 tour; re-estimate: 0 flags; doctor: ok\n"
+
+  - intent: { name: next, slots: {} }
+    expect_state: doctor
+    expect_world:
+      status: "complete"
+      doctor_ok: true
+    expect_view_matches: "all pass"
+
+  - intent: { name: restart, slots: {} }
+    expect_state: plan
+    expect_world:
+      status: "planning"
+      target_ready: false
+      doctor_ok: false
+
+expect_no_errors: true

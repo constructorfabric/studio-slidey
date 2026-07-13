@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[ "${1:-}" = prepared ] || exit 0
+gitdir="$(git rev-parse --git-dir 2>/dev/null || true)"
+commondir="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+[ "$gitdir" = "$commondir" ] || exit 0
+parent="$(ps -o command= -p "$PPID" 2>/dev/null || true)"
+case "$parent" in *git*worktree*) exit 0 ;; esac
+branch="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@' || true)"
+[ -n "$branch" ] || branch=main
+tip="$(git rev-parse --verify --quiet "refs/heads/$branch" 2>/dev/null || true)"
+zero=0000000000000000000000000000000000000000
+while read -r _old new ref; do
+  [ "$ref" = HEAD ] || continue
+  case "$new" in
+    "$zero"|ref:refs/heads/"$branch") ;;
+    ref:*) echo "Blocked: primary checkout may only point at '$branch'." >&2; exit 1 ;;
+    *) [ "$new" = "$tip" ] || { echo "Blocked: primary checkout may only be '$branch' at its tip." >&2; exit 1; } ;;
+  esac
+done

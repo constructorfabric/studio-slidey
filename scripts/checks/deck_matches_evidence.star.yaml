@@ -1,0 +1,11 @@
+# Sidecar for deck_matches_evidence.star — authoritative over the script's
+# interface (kitsoki internal/host/starlark/schema.go): required inputs are
+# validated before eval, and every declared output must be present in
+# main()'s return dict.
+inputs:
+  deck: { type: string, required: true }
+  registries: { type: list, required: true }
+outputs:
+  ok: { type: bool }
+  reasons: { type: list }
+  evidence: { type: list }

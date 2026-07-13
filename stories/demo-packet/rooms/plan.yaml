@@ -1,0 +1,28 @@
+states:
+  plan:
+    description: "Planning the real-app demo target"
+    relevant_world: [node_id, target_url, manifest_path, status]
+    on_enter:
+      - set:
+          status: "planning"
+          manifest_path: "{{ '.artifacts/' + world.node_id + '/demo-packet.demo.json' }}"
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - prose: "Same storyboard/chapter ids/deck shape as the mockup packet — the manifest points at the pilot use case's real-app manifest (sources+states in place of a generated mockup.html, per demo-manifest.mjs's real-app mode, C2)."
+          - kv:
+              pairs:
+                Node: "{{ world.node_id|default:'(unset)' }}"
+                Target: "{{ world.target_url }}"
+                Manifest: "{{ world.manifest_path }}"
+        choices:
+          - list:
+              items:
+                - { label: "next", hint: "confirm the target is launchable" }
+                - { label: "look" }
+    on:
+      next:
+        - target: launch
+      look:
+        - target: plan

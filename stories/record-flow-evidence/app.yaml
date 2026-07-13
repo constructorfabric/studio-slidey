@@ -1,0 +1,53 @@
+# POG record-flow-evidence — deterministic story bound to the test-suite
+# deliverable type's `materialize:` declaration in pog/catalog.yaml
+# (materialization-first taxonomy, .context/materialization-first.md).
+# One producing room: `record` runs the node's evidence recorder (the
+# `record_command` materialize param, default scripts/record-flow-evidence.sh)
+# via host.run — the recorder writes pog/evidence/flows-<repo>.json even when
+# the suites fail (exit != 0, report: null), so the evidence always reflects
+# recorded reality. The judging half is NOT here: the engine's materialize
+# driver runs the test-suite type's flows_recorded.star gate check as a real
+# "check:gate" stage after these rooms, against the evidence this story just
+# recorded — a false assertion fails the whole job. The recorder exiting
+# non-zero does NOT fail the record room (evidence-of-failure is still
+# evidence); honesty is enforced by the gate check, not the exec exit code.
+#
+# Flow tests cassette host.run (same mechanism as
+# stories/qa-compliance-gate-runner/flows/gate_run.yaml) — no live suite
+# runs in CI.
+app:
+  id: pog-record-flow-evidence
+  version: 0.1.0
+  title: "POG test-suite — record flow evidence"
+  author: "pog"
+  license: "CC0"
+
+hosts:
+  - host.run
+
+world:
+  node_id: { type: string, default: "" }
+  record_command: { type: string, default: "scripts/record-flow-evidence.sh" }
+  repo_root: { type: string, default: "." }
+  record_ok: { type: bool, default: false }
+  record_stdout: { type: string, default: "" }
+  record_exit: { type: int, default: 0 }
+  status: { type: string, default: "" }
+
+intents:
+  next:
+    description: "Advance to the next stage."
+    examples: ["next", "continue"]
+    priority: 80
+  restart:
+    description: "Re-record the evidence."
+    examples: ["restart", "start over"]
+    priority: 40
+  look:
+    description: "Re-render the current stage."
+    examples: ["look", "?"]
+    priority: 10
+
+root: record
+include:
+  - rooms/*.yaml

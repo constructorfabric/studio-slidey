@@ -26,11 +26,11 @@ function makeWindow({ embedded }) {
 }
 
 const DECK = {
-  meta: { mode: 'pitch' },
+  meta: { mode: 'pitch', artifact: { id: 'gx10-proof-deck', revision: 'r7', contentDigest: 'sha256:deck-r7' } },
   scenes: [
-    { type: 'title', title: 'Intro' },
-    { type: 'cards', title: 'One anchor', cards: [{ label: 'a' }] },
-    { type: 'image', title: 'Cat Wrangling', src: 'cats.png' },
+    { id: 'intro', type: 'title', title: 'Intro' },
+    { id: 'one-anchor', type: 'cards', title: 'One anchor', cards: [{ label: 'a' }] },
+    { id: 'cat-wrangling', type: 'image', title: 'Cat Wrangling', src: 'cats.png' },
   ],
 };
 
@@ -53,14 +53,43 @@ test('embedded deck posts the current scene to the parent on navigation', async 
   assert.equal(first.step, '0', 'step is the reveal transition within that scene');
   assert.equal(first.label, 'Intro');
   assert.equal(first.count, 3);
+  assert.deepEqual(first.anchor, {
+    artifact: { id: 'gx10-proof-deck', revision: 'r7', contentDigest: 'sha256:deck-r7' },
+    deck: null, scene: 'intro', sceneIndex: 0, step: 0,
+  });
 
   const last = posted[posted.length - 1];
   assert.equal(last.scope, '2', 'navigation landed on scene 2');
   assert.equal(last.step, '0', 'navigation reports the exact reveal transition too');
   assert.equal(last.label, 'Cat Wrangling', 'parent learns WHICH slide is on screen');
+  assert.equal(last.anchor.scene, 'cat-wrangling', 'canonical anchor is a stable scene id, not the mutable scope');
 
   // A slidey-aware consumer can still use the namespaced event.
   assert.ok(global.window.posted.some((m) => m && m.type === 'slidey:scene'));
+});
+
+test('semantic anchors survive a reorder and reject stale artifact revisions', async (t) => {
+  const { createDeck } = await import('../web/useDeck.js');
+  global.window = makeWindow({ embedded: true });
+  t.after(() => { delete global.window; });
+
+  const first = createDeck(DECK, 'http://localhost:4321/');
+  await first.gotoScene(2);
+  const anchor = first.anchorForScene();
+
+  const reordered = {
+    ...DECK,
+    scenes: [DECK.scenes[2], DECK.scenes[0], DECK.scenes[1]],
+  };
+  const second = createDeck(reordered, 'http://localhost:4321/');
+  await second.gotoAnchor(anchor);
+  assert.equal(second.state.sceneIndex, 0, 'stable scene id resolves after its numeric index changes');
+
+  const stale = {
+    ...anchor,
+    artifact: { ...anchor.artifact, revision: 'r8', contentDigest: 'sha256:deck-r8' },
+  };
+  await assert.rejects(second.gotoAnchor(stale), /stale artifact identity/);
 });
 
 test('top-window (non-embedded) deck does not post to a parent', async (t) => {

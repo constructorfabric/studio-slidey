@@ -1,0 +1,29 @@
+schema: capsule-ci/v1
+project_profile: .kitsoki/project-profile.yaml
+default_environment: ci
+cleanup:
+  keep_runs: 20
+  require_hygiene_check: true
+pipelines:
+  change:
+    story: .kitsoki/stories/capsule-ci/app.yaml
+    triggers: [local, branch_update, pull_request, staging]
+    environment: ci
+    executor: host
+    mode: one-shot
+    required: true
+    permissions:
+      network: live
+      external_write: allow
+    agents:
+      policy: deny
+    path_scope:
+      - paths: [src/**, web/**, tools/**, test/**, scripts/**, package.json, package-lock.json, Makefile]
+        checks: [test, build]
+      - paths: [.kitsoki/**, .claude/**, scripts/git-hooks/**]
+        checks: [test]
+    result:
+      schema: capsule-ci-verdict/v1
+      pass_exits: [passed]
+      fail_exits: [failed]
+      park_exits: [needs_input]

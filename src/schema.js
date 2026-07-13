@@ -3,13 +3,171 @@
 // JSON Schema for a slidey spec.
 // Exported for --schema (LLM/tooling) and used by --validate and startup validation.
 
+const LIBRARY_LINK = {
+  type: 'object',
+  additionalProperties: true,
+  properties: {
+    label: { type: 'string', description: 'Button text for a navigation link shown in the interactive viewer' },
+    title: { type: 'string', description: 'Alternate navigation label' },
+    deck: { type: 'string', description: 'Target deck id inside library.decks' },
+    deckId: { type: 'string', description: 'Alias for deck' },
+    scene: { type: 'string', description: 'Optional target source scene id in the destination deck' },
+    sceneId: { type: 'string', description: 'Alias for scene' },
+    targetScene: { type: 'string', description: 'Alias for scene' },
+    section: { type: 'string', description: 'Optional target section id in the destination deck' },
+    sectionId: { type: 'string', description: 'Alias for section' },
+  },
+};
+
+const LIBRARY_SELECTOR = {
+  type: 'object',
+  additionalProperties: true,
+  properties: {
+    ids: { type: 'array', items: { type: 'string' }, description: 'Include scenes with these ids' },
+    sceneIds: { type: 'array', items: { type: 'string' }, description: 'Alias for ids' },
+    tags: { type: 'array', items: { type: 'string' }, description: 'Include scenes with any of these tags' },
+    anyTags: { type: 'array', items: { type: 'string' }, description: 'Alias for tags' },
+    allTags: { type: 'array', items: { type: 'string' }, description: 'Require every listed tag' },
+    excludeTags: { type: 'array', items: { type: 'string' }, description: 'Omit scenes with any of these tags' },
+    sections: { type: 'array', items: { type: 'string' }, description: 'Include scenes in these sections' },
+    types: { type: 'array', items: { type: 'string' }, description: 'Include scenes with these scene types' },
+    deck: { type: 'string', description: 'Restrict a subset selector to scenes from this deck, within the subset parent scope' },
+    decks: { type: 'array', items: { type: 'string' }, description: 'Restrict a subset selector to scenes from these decks, within the subset parent scope' },
+    fromDeck: { type: 'string', description: 'Alias for deck in subset selectors' },
+  },
+};
+
+const LIBRARY_DECK = {
+  type: 'object',
+  required: ['id'],
+  additionalProperties: true,
+  properties: {
+    id: { type: 'string', description: 'Stable deck id used by --deck, the viewer deck picker, and navigation links' },
+    deckType: { type: 'string', enum: ['hierarchy', 'subset'], description: 'hierarchy decks are separate child presentations with local scenes; subset decks are synced views of scenes from their parent deck and descendants' },
+    kind: { type: 'string', description: 'Alias for deckType; accepted values include deck/hierarchy and subset/view' },
+    title: { type: 'string', description: 'Deck title shown in the picker and applied to meta.title for this view' },
+    purpose: { type: 'string', description: 'Purpose label, e.g. executive, workshop, training, sales' },
+    theme: { type: 'string', description: 'Theme label used to describe this subset deck' },
+    audience: { type: 'string', description: 'Audience label for this subset deck' },
+    description: { type: 'string' },
+    parent: { type: 'string', description: 'Parent deck id for hierarchical navigation and sidebar nesting' },
+    meta: { type: 'object', additionalProperties: true, description: 'Metadata merged into the resolved deck' },
+    src: { type: 'string', description: 'Path (relative to the file that declares this deck) to another .slidey.json child-deck file; its top-level scenes[] become this deck\'s local scenes, and its own library.decks[] (if any) become nested children. Lets a directory of decks compose one master + sibling files instead of inlining every child.' },
+    file: { type: 'string', description: 'Alias for src' },
+    path: { type: 'string', description: 'Alias for src' },
+    scenes: {
+      type: 'array',
+      description: 'For subset decks: synced scene refs by id/index or objects like {fromDeck, ref, overrides}; refs can only target the subset parent deck or descendants. For hierarchy decks: inline scene objects that belong to this child deck.',
+      items: {
+        oneOf: [
+          { type: 'string' },
+          { type: 'integer', minimum: 0 },
+          {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              ref: { type: 'string' },
+              scene: { type: 'string' },
+              id: { type: 'string' },
+              fromDeck: { type: 'string', description: 'Origin deck id for a subset scene ref' },
+              sourceDeck: { type: 'string', description: 'Alias for fromDeck' },
+              select: LIBRARY_SELECTOR,
+              overrides: { type: 'object', additionalProperties: true },
+            },
+          },
+        ],
+      },
+    },
+    select: LIBRARY_SELECTOR,
+    selector: LIBRARY_SELECTOR,
+    exclude: LIBRARY_SELECTOR,
+    children: {
+      oneOf: [
+        { type: 'array', items: { type: 'object', additionalProperties: true } },
+        { type: 'object', additionalProperties: { type: 'object', additionalProperties: true } },
+      ],
+      description: 'Nested hierarchy child decks and scoped subset views; children inherit this deck as parent unless parent is set explicitly',
+    },
+  },
+};
+
 const COMMON = {
   _comment: { type: 'string', description: 'Optional human comment; ignored by the renderer' },
-  narration: { type: 'string', description: 'Text synthesized to speech audio via edge-tts' },
+  id: { type: 'string', description: 'Stable scene id for library subset decks and hierarchical navigation links' },
+  tags: { type: 'array', items: { type: 'string' }, description: 'Scene tags used by library deck selectors' },
+  section: { type: 'string', description: 'Section id used by collection navigation and subset selectors' },
+  sections: { type: 'array', items: { type: 'string' }, description: 'Additional section ids represented by this scene; useful when one parent slide links to multiple child decks' },
+  purpose: { type: 'string', description: 'Scene-level purpose tag used by subset deck selectors' },
+  theme: { type: 'string', description: 'Scene-level theme tag used by subset deck selectors' },
+  links: { type: 'array', items: LIBRARY_LINK, description: 'Interactive navigation links to other decks or sections in the same library' },
+  nav: {
+    oneOf: [
+      { type: 'array', items: LIBRARY_LINK },
+      {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          links: { type: 'array', items: LIBRARY_LINK },
+        },
+      },
+    ],
+    description: 'Alternate navigation-link container for hierarchical deck navigation',
+  },
+  narration: { type: 'string', description: 'Text spoken by Edge TTS in the live viewer / VS Code preview and synthesized into MP4 exports' },
   hold: { type: 'integer', minimum: 0, description: 'Extra frames to hold after the last reveal step' },
   instant: { type: 'boolean', description: 'Reveal the whole scene at once (no progressive build / no title-only first page) — one PDF page / nav advance for the scene' },
   seamless: { type: 'boolean', description: 'Keep diagram continuity across adjacent scenes when supported by the renderer' },
+  continues: { type: 'boolean', description: 'Cut straight into this scene from the previous one: the preceding inter-scene gap is skipped and this scene’s reveals apply instantly (all content on the first frame / one nav step). Designed for consecutive graph scenes sharing a projection, so the graph never leaves the screen between titles.' },
   skipTitle: { type: 'boolean', description: 'Suppress repeated scene title chrome when supported by the renderer' },
+};
+
+const REFERENCE = {
+  type: 'object',
+  additionalProperties: true,
+  description: 'Workspace file or media reference opened in the interactive viewer overlay. Markdown, source files, diffs, JSON/text, images, and videos are handled by built-in viewers; plugins can key off `kind`.',
+  properties: {
+    src: { type: 'string', description: 'Path or URL to inspect. Relative paths resolve against the slidey spec.' },
+    path: { type: 'string', description: 'Alias for src, for tool-generated specs.' },
+    href: { type: 'string', description: 'Alias for src, for externally generated refs.' },
+    label: { type: 'string', description: 'Short label shown in the reference chip and modal title.' },
+    kind: { type: 'string', description: 'Optional media kind override such as markdown, code, diff, json, text, image, video, html, mermaid, graph, or file. "html" opens the file in a sandboxed iframe (a rendered page/demo/mockup, not source view).' },
+    lang: { type: 'string', description: 'Optional language tag for code/text rendering.' },
+    lines: {
+      type: 'array',
+      items: { type: 'integer', minimum: 1 },
+      minItems: 1,
+      maxItems: 2,
+      description: 'Optional 1-based line range preview/highlight, e.g. [12, 24].',
+    },
+    lineStart: { type: 'integer', minimum: 1, description: 'Optional first 1-based line to preview/highlight.' },
+    lineEnd: { type: 'integer', minimum: 1, description: 'Optional last 1-based line to preview/highlight.' },
+    section: { type: 'string', description: 'Optional Markdown heading text to preview on-slide.' },
+    heading: { type: 'string', description: 'Alias for section.' },
+  },
+};
+
+COMMON.references = {
+  oneOf: [
+    REFERENCE,
+    { type: 'string' },
+    {
+      type: 'array',
+      items: {
+        oneOf: [REFERENCE, { type: 'string' }],
+      },
+    },
+  ],
+  description: 'Files or media linked to this scene for inline inspection in the web viewer. '
+    + 'Any `*Html` companion field (bodyHtml, ledeHtml, labelHtml, subHtml, introHtml, outroHtml, '
+    + 'linesHtml, subtitleHtml, ...) may additionally embed inline `<a data-slidey-ref="target">label</a>` '
+    + 'links — written as Markdown `[label](target)` when authoring/converting from Markdown, or by hand. '
+    + 'Clicking one in the web viewer opens `target` in whichever modal already owns that kind: '
+    + '"deck:<id>" or "deck:<id>#<sceneId>" switches to another library deck/scene; a target ending in '
+    + '".rrweb.json" opens the rrweb replay modal; anything else opens the reference viewer modal with its '
+    + 'kind inferred the same way references[] entries are (image, video, markdown, code, json, diff, text, '
+    + 'or html — html targets render in a sandboxed iframe). Static PNG/PDF/MP4 exports never intercept the '
+    + 'click, so the link renders as plain visible chrome (an underline plus a small ↗ marker); set '
+    + 'meta.linkMarkers:false to hide that marker deck-wide.',
 };
 
 const CARDS_ITEM = {
@@ -23,6 +181,15 @@ const CARDS_ITEM = {
     linesHtml: { type: 'array', items: { type: 'string' }, description: 'Sanitized inline HTML for imported Markdown bullet lines' },
     icon: { type: 'string', description: 'Icon prefix (icon-row variant)' },
     style: { type: 'string', enum: ['primary', 'secondary', 'default'], description: 'Accent tint' },
+    deck: { type: 'string', description: 'Make this card clickable and navigate to this library deck id' },
+    deckId: { type: 'string', description: 'Alias for deck' },
+    targetDeck: { type: 'string', description: 'Alias for deck' },
+    scene: { type: 'string', description: 'Optional destination scene id' },
+    sceneId: { type: 'string', description: 'Alias for scene' },
+    targetScene: { type: 'string', description: 'Alias for scene' },
+    section: { type: 'string', description: 'Optional destination section id' },
+    sectionId: { type: 'string', description: 'Alias for section' },
+    link: LIBRARY_LINK,
   },
 };
 
@@ -96,6 +263,15 @@ const NODE = {
     slot: { type: 'string', enum: ['top', 'right', 'bottom', 'left', 'top-right', 'bottom-right', 'bottom-left', 'top-left'], description: 'Position around a diagram-svg panel with layout:"cycle"' },
     cycle: { type: 'boolean', description: 'Set false to exclude this node from layout:"cycle" placement' },
     style: { type: 'string', enum: ['primary', 'secondary'], description: 'Node colour accent' },
+    deck: { type: 'string', description: 'Make this diagram node clickable and navigate to this library deck id' },
+    deckId: { type: 'string', description: 'Alias for deck' },
+    targetDeck: { type: 'string', description: 'Alias for deck' },
+    scene: { type: 'string', description: 'Optional destination scene id' },
+    sceneId: { type: 'string', description: 'Alias for scene' },
+    targetScene: { type: 'string', description: 'Alias for scene' },
+    section: { type: 'string', description: 'Optional destination section id' },
+    sectionId: { type: 'string', description: 'Alias for section' },
+    link: LIBRARY_LINK,
   },
 };
 
@@ -120,6 +296,107 @@ const EDGE = {
     highlighted: { type: 'boolean', description: 'Accent this edge in the rendered diagram' },
     agent: { type: 'boolean', description: 'Mark this gate/edge as agent-mediated rather than deterministic' },
   },
+};
+
+const GRAPH_NODE = {
+  type: 'object',
+  required: ['id'],
+  additionalProperties: true,
+  properties: {
+    id: { type: 'string', description: 'Unique node identifier referenced by graph edges and focus path entries' },
+    label: { type: 'string', description: 'Primary text shown inside the Cytoscape node' },
+    sub: { type: 'string', description: 'Secondary line shown under the node label and in the focus card' },
+    kind: { type: 'string', description: 'Semantic node type such as requirement, dependency, environment, application, substrate, or proof' },
+    weight: { type: 'number', description: 'Relative importance used by layouts and emphasis' },
+    color: { type: 'string', description: 'CSS color for the node fill' },
+    textColor: { type: 'string', description: 'CSS color for the node label' },
+    w: { type: 'number', description: 'Node width in Cytoscape layout units' },
+    h: { type: 'number', description: 'Node height in Cytoscape layout units' },
+    width: { type: 'number', description: 'Alias for w' },
+    height: { type: 'number', description: 'Alias for h' },
+    x: { type: 'number', description: 'Pinned x coordinate for layout:"preset"' },
+    y: { type: 'number', description: 'Pinned y coordinate for layout:"preset"' },
+    col: { type: 'number', description: 'One-indexed graph template column' },
+    column: { type: 'number', description: 'Alias for col' },
+    gridColumn: { type: 'number', description: 'Alias for col' },
+    row: { type: 'number', description: 'One-indexed graph template row or lane' },
+    lane: { type: 'number', description: 'Alias for row' },
+    gridRow: { type: 'number', description: 'Alias for row' },
+    xOffset: { type: 'number', description: 'Template-position x nudge in graph layout units' },
+    yOffset: { type: 'number', description: 'Template-position y nudge in graph layout units' },
+    dx: { type: 'number', description: 'Alias for xOffset' },
+    dy: { type: 'number', description: 'Alias for yOffset' },
+    grid: {
+      type: 'object',
+      description: 'Per-node graph-template slot and optional nudges',
+      properties: {
+        col: { type: 'number' },
+        column: { type: 'number' },
+        row: { type: 'number' },
+        lane: { type: 'number' },
+        xOffset: { type: 'number' },
+        yOffset: { type: 'number' },
+        dx: { type: 'number' },
+        dy: { type: 'number' },
+      },
+    },
+    position: {
+      type: 'object',
+      description: 'Pinned Cytoscape position for layout:"preset"',
+      properties: {
+        x: { type: 'number' },
+        y: { type: 'number' },
+      },
+    },
+    classes: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }], description: 'Extra Cytoscape classes' },
+    className: { type: 'string', description: 'Extra Cytoscape class string' },
+  },
+};
+
+const GRAPH_EDGE = {
+  type: 'object',
+  required: ['from', 'to'],
+  additionalProperties: true,
+  properties: {
+    id: { type: 'string', description: 'Stable edge id, useful for focus-path edge highlighting' },
+    from: { type: 'string', description: 'Source node id' },
+    to: { type: 'string', description: 'Target node id' },
+    label: { type: 'string', description: 'Text shown along the edge' },
+    weight: { type: 'number', description: 'Line thickness / influence weight' },
+    influence: { type: 'number', description: 'Alias for weight' },
+    color: { type: 'string', description: 'CSS line and arrow color' },
+    curve: { type: 'string', enum: ['bezier', 'unbundled-bezier', 'haystack', 'segments', 'taxi', 'straight'], description: 'Cytoscape curve-style for this edge' },
+    labelMarginX: { type: 'number', description: 'Horizontal offset for the Cytoscape edge label' },
+    labelMarginY: { type: 'number', description: 'Vertical offset for the Cytoscape edge label' },
+    labelX: { type: 'number', description: 'Alias for labelMarginX' },
+    labelY: { type: 'number', description: 'Alias for labelMarginY' },
+    kind: { type: 'string', description: 'Semantic edge type' },
+    classes: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }], description: 'Extra Cytoscape classes' },
+    className: { type: 'string', description: 'Extra Cytoscape class string' },
+  },
+};
+
+const GRAPH_FOCUS = {
+  oneOf: [
+    { type: 'string', description: 'Node id to center on this reveal' },
+    {
+      type: 'object',
+      required: ['node'],
+      additionalProperties: true,
+      properties: {
+        node: { type: 'string', description: 'Node id to center on this reveal' },
+        note: { type: 'string', description: 'Focus-card explanation for this navigation step' },
+        edge: { type: 'string', description: 'Edge id to highlight on this step' },
+        edges: { type: 'array', items: { type: 'string' }, description: 'Edge ids to highlight on this step' },
+        zoom: { type: 'number', exclusiveMinimum: 0, description: 'Camera zoom for this focus step' },
+        view: { type: 'string', enum: ['overview'], description: 'Use overview to fit the whole graph on this focus step' },
+        overview: { type: 'boolean', description: 'Fit the whole graph on this focus step' },
+        fit: { type: 'boolean', description: 'Alias for overview' },
+        padding: { type: 'number', minimum: 0, description: 'Camera padding for overview or neighborhood focus steps' },
+        durationMs: { type: 'integer', minimum: 0, description: 'Camera animation duration for this focus step' },
+      },
+    },
+  ],
 };
 
 const SCHEMA = {
@@ -154,7 +431,7 @@ const SCHEMA = {
             rate: { type: 'string', description: 'Speech rate offset, e.g. "+0%" or "+10%"' },
             pronunciations: {
               type: 'object',
-              description: 'Map of term → phonetic respelling, applied whole-word and case-insensitively to the SPOKEN narration only (the text shown in specs/--list is unchanged). Fixes TTS mispronunciations of brand names, acronyms, and jargon. e.g. { "Anthropic": "an-THROP-ik", "SDLC": "S D L C", "kitsoki": "kit-SOH-kee" }',
+              description: 'Map of term → phonetic respelling, applied whole-word and case-insensitively to the SPOKEN narration only (the text shown in specs/--list is unchanged). Fixes TTS mispronunciations of brand names, acronyms, and jargon. Use lower-case pronounceable syllables for words; use spaced capitals only for acronyms you want spelled out. Avoid uncommon tokens like "soh" that some voices spell out. e.g. { "Anthropic": "an throp ik", "SDLC": "S D L C", "kitsoki": "kit so key" }',
               additionalProperties: { type: 'string' },
             },
           },
@@ -163,6 +440,29 @@ const SCHEMA = {
           type: 'object',
           description: 'Template variable values; referenced in scenes as {{varName}} (Postman-compatible)',
           additionalProperties: { type: 'string' },
+        },
+        locale: {
+          type: 'string',
+          description: 'Source locale tag for this canonical deck, e.g. "en". Resolved localized decks set this to the selected locale.',
+        },
+        locales: {
+          type: 'object',
+          description: 'Deterministic locale overlays available for this deck. Keys are locale tags; values are overlay paths or { label, path } objects resolved relative to the spec.',
+          additionalProperties: {
+            oneOf: [
+              { type: 'string' },
+              {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  label: { type: 'string', description: 'Human label for the locale, e.g. "Thai".' },
+                  path: { type: 'string', description: 'Locale overlay JSON path, relative to the deck spec.' },
+                  file: { type: 'string', description: 'Alias for path.' },
+                  src: { type: 'string', description: 'Alias for path.' },
+                },
+              },
+            ],
+          },
         },
         personas: {
           type: 'array',
@@ -187,6 +487,11 @@ const SCHEMA = {
           enum: ['api', 'pitch'],
           description: '"api" enables request scenes with live/mock/playback HTTP; "pitch" is default slides mode',
         },
+        linkMarkers: {
+          type: 'boolean',
+          default: true,
+          description: 'Show a small reference-marker glyph after inline `[text](target)` / `<a data-slidey-ref>` links (see COMMON.references). Applies in the web viewer and in exported PNG/PDF/MP4 renders alike, since only the web viewer can actually open the target on click. Set false to hide the glyph deck-wide.',
+        },
         theme: {
           oneOf: [
             { type: 'string', description: 'Built-in theme name, e.g. "rose-pine-moon"' },
@@ -208,6 +513,77 @@ const SCHEMA = {
             },
           ],
           description: 'Optional deck theme; imported Marp themes are preserved here when supported',
+        },
+        themePacks: {
+          type: 'array',
+          description: 'Reusable Slidey pack references. String entries resolve to JSON files relative to the spec; inline objects can define themes and layouts directly.',
+          items: {
+            oneOf: [
+              { type: 'string' },
+              {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  themes: { type: 'object', additionalProperties: true },
+                  layouts: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+    library: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Collection metadata. Source scenes remain in scenes[] for the root deck and synced subset views; hierarchy decks are separate child presentations with local scenes.',
+      properties: {
+        title: { type: 'string', description: 'Collection/library title' },
+        sourceTitle: { type: 'string', description: 'Label for the full source deck in the viewer picker' },
+        defaultDeck: { type: 'string', description: 'Default library deck id when no --deck/query deck is provided' },
+        activeDeck: { type: 'string', description: 'Alias for defaultDeck' },
+        meta: { type: 'object', additionalProperties: true, description: 'Metadata merged into every resolved child deck' },
+        decks: {
+          oneOf: [
+            { type: 'array', items: LIBRARY_DECK },
+            { type: 'object', additionalProperties: { type: 'object', additionalProperties: true } },
+          ],
+          description: 'Named collection decks. Use deckType "hierarchy" with inline scenes for child presentations, or deckType "subset" with scenes/select for synced source views.',
+        },
+        sections: {
+          oneOf: [
+            {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['id'],
+                additionalProperties: true,
+                properties: {
+                  id: { type: 'string' },
+                  title: { type: 'string' },
+                  deck: { type: 'string', description: 'Deck opened from source scenes with this section id' },
+                  parent: { type: 'string', description: 'Parent section id' },
+                  cta: { type: 'string', description: 'Link label shown on matching summary scenes' },
+                },
+              },
+            },
+            {
+              type: 'object',
+              additionalProperties: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  title: { type: 'string' },
+                  deck: { type: 'string' },
+                  parent: { type: 'string' },
+                  cta: { type: 'string' },
+                },
+              },
+            },
+          ],
+          description: 'Section map for automatic hierarchical navigation links.',
         },
       },
     },
@@ -244,7 +620,9 @@ const SCHEMA = {
               type: { const: 'narrative' },
               eyebrow: { type: 'string', description: 'Category label at the top' },
               body: { type: 'string', description: 'Main prose paragraph' },
+              bodyHtml: { type: 'string', description: 'Sanitized inline HTML companion for body — emphasis/code plus `<a data-slidey-ref="target">` links (see COMMON.references). Set by `slidey convert` from Markdown; renders in place of body when present.' },
               lede: { type: 'string', description: 'Highlighted pull-quote / summary line' },
+              ledeHtml: { type: 'string', description: 'Sanitized inline HTML companion for lede, same convention as bodyHtml.' },
               ...COMMON,
             },
           },
@@ -332,6 +710,89 @@ const SCHEMA = {
                 },
               },
               caption: { type: 'string' },
+              ...COMMON,
+            },
+          },
+          // ── graph ─────────────────────────────────────────────────────────
+          {
+            type: 'object',
+            required: ['type'],
+            description: 'Graph viewer. Default input mode is nodes/edges (Cytoscape.js; reveals can navigate a path by centering one node at a time). Set `projection` + `state` instead to render a graph-projection v1 JSON through the shared graph-projection renderer (rounded-rect nodes on a lane/row grid, per-state status overlays) — see ~/code/POG/.context/mockup-demo-tooling-contract.md #7.',
+            properties: {
+              type: { const: 'graph' },
+              title: { type: 'string' },
+              projection: { type: 'string', description: 'Path (relative to the spec) to a graph-projection v1 JSON. When set, this scene renders that projection instead of nodes/edges/layout below; `state` selects which projection state to show.' },
+              state: { type: 'string', description: 'A key of the projection\'s `states` map (or a bare graph id), selecting which projection state/graph to render. Required (and only meaningful) when `projection` is set.' },
+              layout: {
+                type: 'string',
+                enum: ['preset', 'cose', 'breadthfirst', 'circle', 'concentric', 'grid', 'random'],
+                description: 'Initial Cytoscape layout. Use preset with node x/y or position for hand-tuned investor diagrams.',
+              },
+              layoutTemplate: {
+                type: 'string',
+                enum: ['lane-grid', 'lane-grid-3x5', 'grid-3x5'],
+                description: 'Reusable deterministic graph layout template. Use lane-grid with node row/col slots for investor-style evidence flows.',
+              },
+              template: {
+                type: 'string',
+                enum: ['lane-grid', 'lane-grid-3x5', 'grid-3x5'],
+                description: 'Alias for layoutTemplate',
+              },
+              grid: {
+                type: 'object',
+                description: 'Grid geometry for layoutTemplate:"lane-grid". Nodes use one-indexed row/col slots.',
+                properties: {
+                  columns: { type: 'number', minimum: 1 },
+                  cols: { type: 'number', minimum: 1 },
+                  rows: { type: 'number', minimum: 1 },
+                  lanes: { type: 'number', minimum: 1 },
+                  x: { type: 'number' },
+                  y: { type: 'number' },
+                  left: { type: 'number' },
+                  top: { type: 'number' },
+                  width: { type: 'number', exclusiveMinimum: 0 },
+                  w: { type: 'number', exclusiveMinimum: 0 },
+                  height: { type: 'number', exclusiveMinimum: 0 },
+                  h: { type: 'number', exclusiveMinimum: 0 },
+                },
+              },
+              focusLayout: {
+                type: 'string',
+                enum: ['preset', 'cose', 'breadthfirst', 'circle', 'concentric', 'grid', 'random'],
+                description: 'Optional layout to rerun while navigating focus steps; omit to keep the initial layout and animate camera movement.',
+              },
+              nodes: { type: 'array', minItems: 1, items: GRAPH_NODE, description: 'Graph nodes rendered by Cytoscape' },
+              edges: { type: 'array', items: GRAPH_EDGE, description: 'Directed graph edges rendered by Cytoscape' },
+              path: { type: 'array', items: GRAPH_FOCUS, description: 'Per-reveal navigation path; each item centers a node and can add explanatory focus text' },
+              focus: { type: 'array', items: GRAPH_FOCUS, description: 'Alias for path' },
+              roots: { type: 'array', items: { type: 'string' }, description: 'Root node ids for breadthfirst layout' },
+              directed: { type: 'boolean', description: 'Treat edges as directed in layouts that support it; default true' },
+              padding: { type: 'number', minimum: 0, description: 'Viewport padding when fitting the graph' },
+              spacingFactor: { type: 'number', exclusiveMinimum: 0, description: 'Cytoscape breadthfirst spacing factor' },
+              idealEdgeLength: { type: 'number', exclusiveMinimum: 0, description: 'Cytoscape cose ideal edge length' },
+              nodeOverlap: { type: 'number', minimum: 0, description: 'Cytoscape cose node overlap value' },
+              gravity: { type: 'number', minimum: 0, description: 'Cytoscape cose gravity value' },
+              componentSpacing: { type: 'number', minimum: 0, description: 'Cytoscape cose spacing between disconnected components' },
+              nestingFactor: { type: 'number', minimum: 0, description: 'Cytoscape cose nesting factor' },
+              numIter: { type: 'integer', minimum: 1, description: 'Cytoscape cose iteration count' },
+              layoutWidth: { type: 'number', exclusiveMinimum: 0, description: 'Cytoscape force-layout bounding-box width' },
+              layoutHeight: { type: 'number', exclusiveMinimum: 0, description: 'Cytoscape force-layout bounding-box height' },
+              minNodeSpacing: { type: 'number', minimum: 0, description: 'Cytoscape concentric minimum node spacing' },
+              randomize: { type: 'boolean', description: 'Allow randomized cose layout starts; default false for deterministic render output' },
+              floatMotion: { type: 'boolean', description: 'Add subtle idle node motion in the live viewer; disabled by instant/export mode' },
+              idleMotion: { type: 'boolean', description: 'Alias for floatMotion' },
+              floatAmplitude: { type: 'number', minimum: 0, description: 'Pixel amplitude for live idle node motion' },
+              floatSpeed: { type: 'number', minimum: 0, description: 'Speed multiplier for live idle node motion' },
+              focusZoom: { type: 'number', exclusiveMinimum: 0, description: 'Default camera zoom for focus-path reveals' },
+              focusMode: { type: 'string', enum: ['center', 'neighborhood'], description: 'Camera mode for focus reveals. center pans/zooms to the active node; neighborhood fits the active node and adjacent edges.' },
+              focusPadding: { type: 'number', minimum: 0, description: 'Viewport padding used by focusMode:"neighborhood"' },
+              animationMs: { type: 'integer', minimum: 0, description: 'Default Cytoscape camera/layout animation duration' },
+              nodeFontSize: { type: 'number', minimum: 1, description: 'Node label font size in pixels' },
+              edgeFontSize: { type: 'number', minimum: 1, description: 'Edge label font size in pixels' },
+              interactive: { type: 'boolean', description: 'Enable mouse pan/zoom in the live viewer; exports remain deterministic' },
+              caption: { type: 'string' },
+              narrateCaption: { type: 'boolean', description: 'Set false to reveal the graph caption visually without using it as narration fallback.' },
+              captionNarration: { type: 'boolean', description: 'Alias for narrateCaption.' },
               ...COMMON,
             },
           },
@@ -485,6 +946,49 @@ const SCHEMA = {
               ...COMMON,
             },
           },
+          // ── kitsoki-tui ───────────────────────────────────────────────────
+          {
+            type: 'object',
+            required: ['type'],
+            description: 'Static Kitsoki TUI welcome/onboarding screen with Mesa startup chrome and a selectable action menu.',
+            properties: {
+              type: { const: 'kitsoki-tui' },
+              title: { type: 'string', description: 'Terminal window title bar text' },
+              appTitle: { type: 'string', description: 'Welcome banner title, e.g. "kitsoki · project onboarding"' },
+              subtitle: { type: 'string', description: 'Welcome banner subtitle/version line' },
+              hints: {
+                type: 'array',
+                maxItems: 5,
+                items: { type: 'string' },
+                description: 'Command hint lines shown in the welcome block.',
+              },
+              status: { type: 'string', description: 'Session/state footer line' },
+              choicePrompt: { type: 'string', description: 'Menu prompt shown above the selectable rows.' },
+              menuItems: {
+                type: 'array',
+                maxItems: 6,
+                items: {
+                  oneOf: [
+                    { type: 'string' },
+                    {
+                      type: 'object',
+                      required: ['label'],
+                      properties: {
+                        label: { type: 'string' },
+                        hint: { type: 'string' },
+                      },
+                      additionalProperties: false,
+                    },
+                  ],
+                },
+                description: 'Selectable menu rows. The active row is marked with a caret.',
+              },
+              selectedIndex: { type: 'integer', minimum: 0, description: 'Zero-based selected menu row.' },
+              footer: { type: 'string', description: 'Menu keybinding footer.' },
+              caption: { type: 'string' },
+              ...COMMON,
+            },
+          },
           // ── cards ──────────────────────────────────────────────────────────
           {
             type: 'object',
@@ -633,6 +1137,8 @@ const SCHEMA = {
               title: { type: 'string', description: 'Filename shown in the chrome bar' },
               lang: { type: 'string', description: 'Language tag shown at right of the bar, e.g. "javascript"' },
               code: { type: 'string', description: 'The artifact body (\\n-separated lines)' },
+              sourceRef: { ...REFERENCE, description: 'Full source reference opened when clicking the code scene in the interactive viewer. Use lines/lineStart/lineEnd to highlight the linked range.' },
+              reference: { ...REFERENCE, description: 'Alias for sourceRef.' },
               highlight: {
                 type: 'array',
                 items: { type: 'integer', minimum: 1 },
@@ -652,6 +1158,21 @@ const SCHEMA = {
               call: { type: 'string', description: 'Function invocation expression (function-io variant)' },
               returns: { type: 'string', description: 'Return value display (function-io variant)' },
               tree: { type: 'string', description: 'Indented file tree text (tree variant)' },
+              caption: { type: 'string' },
+              ...COMMON,
+            },
+          },
+          // ── reference preview ─────────────────────────────────────────────
+          {
+            type: 'object',
+            required: ['type'],
+            description: 'On-slide preview of a referenced file or media asset. Click the preview in the interactive viewer to open the full reference modal.',
+            properties: {
+              type: { const: 'reference' },
+              title: { type: 'string', description: 'Title shown above the preview.' },
+              reference: REFERENCE,
+              ref: REFERENCE,
+              previewLines: { type: 'integer', minimum: 1, description: 'Fallback number of lines to show when no line range or Markdown section is specified.' },
               caption: { type: 'string' },
               ...COMMON,
             },
@@ -937,8 +1458,12 @@ const SCHEMA = {
               src: { type: 'string', description: 'Path to a pre-rendered demo MP4 (relative to the spec). A sibling <src>.chapters.json is used for auto captions when present.' },
               rrweb: { type: 'string', description: 'Path to an rrweb event log (*.rrweb.json) relative to the spec. Baked output seek-rasterizes the log to frames; the web viewer mounts a live scrubbable player. Chapters come from in-log slidey.chapter custom events (or a sibling <rrweb>.chapters.json).' },
               capture: { type: 'string', description: 'Path to a tour spec (relative to the spec) captured on the fly via the slidey tour engine, then embedded.' },
+              audio: { type: 'string', description: 'Optional audio file (mp3/m4a/wav/ogg) synced to the rrweb or MP4 playback in the web viewer. Single-file bundles inline it as a data URI.' },
               mode: { type: 'string', enum: ['fullscreen', 'embedded'], description: '"fullscreen" (default) fills the frame; "embedded" insets the video in a deck slide with title/caption chrome.' },
+              cinematic: { type: 'boolean', description: 'Embedded-scene web viewer choreography: expand to fullscreen during playback. Defaults true; set false to keep the player inline.' },
+              introMs: { type: 'integer', minimum: 0, description: 'Milliseconds to hold the embedded thumbnail before cinematic expansion.' },
               fit: { type: 'string', enum: ['contain', 'cover'], description: '"contain" (default) letterboxes on the deck background; "cover" crops to fill.' },
+              cinematic: { type: 'boolean', description: 'Embedded viewer only: set false to keep the video inline instead of expanding fullscreen before playback.' },
               start: { type: 'number', minimum: 0, description: 'Trim start (seconds into the source).' },
               end: { type: 'number', minimum: 0, description: 'Trim end (seconds into the source).' },
               speed: { type: 'number', exclusiveMinimum: 0, description: 'Playback speed multiplier (>1 faster).' },

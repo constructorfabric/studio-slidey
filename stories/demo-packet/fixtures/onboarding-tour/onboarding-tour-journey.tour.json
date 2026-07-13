@@ -1,0 +1,47 @@
+{
+  "_comment": "Real capture of uc-click-through-deck: the interactive viewer served by `slidey examples/hello.slidey.json`, driven with the same keyboard/click navigation a user has. Guarded window.storyboard evals are no-ops kept for demo-doctor's static states scan.",
+  "target": {
+    "launch": "node src/index.js examples/hello.slidey.json --port 7895 --no-open",
+    "addr": "127.0.0.1:7895",
+    "readyPath": "/",
+    "cwd": "../../../..",
+    "timeoutMs": 30000
+  },
+  "startPath": "/",
+  "viewport": { "width": 1600, "height": 900 },
+  "deviceScaleFactor": 1,
+  "pace": 1,
+  "readySelector": "#app",
+  "steps": [
+    {
+      "id": "step_0_open_the_viewer_the_deck_loads",
+      "label": "Open the viewer; the deck loads with its scenes ready to click through.",
+      "before": [
+        { "waitFor": "#app" },
+        { "eval": "window.storyboard && window.storyboard.setStep('step_0_open_the_viewer_the_deck_loads')" }
+      ],
+      "dwellMs": 3000,
+      "kind": "explain"
+    },
+    {
+      "id": "step_1_step_forward_through_the_scenes",
+      "label": "Arrow keys step forward through the same scenes video and PDF output render.",
+      "before": [
+        { "eval": "for (const _ of [1,2]) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))" },
+        { "eval": "window.storyboard && window.storyboard.setStep('step_1_step_forward_through_the_scenes')" }
+      ],
+      "dwellMs": 3000,
+      "kind": "explain"
+    },
+    {
+      "id": "step_2_jump_back_and_replay_a_scene",
+      "label": "Step back to replay a scene — navigation is free, nothing is a baked video.",
+      "before": [
+        { "eval": "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }))" },
+        { "eval": "window.storyboard && window.storyboard.setStep('step_2_jump_back_and_replay_a_scene')" }
+      ],
+      "dwellMs": 3000,
+      "kind": "explain"
+    }
+  ]
+}

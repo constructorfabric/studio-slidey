@@ -1,14 +1,37 @@
 VSCODE_DIR     := tools/vscode-slidey
 VSCODE_DIST    := $(VSCODE_DIR)/.slidey-dist
 VSCODE_RUNTIME := $(VSCODE_DIR)/.slidey-runtime/src
+NPM_USER_PREFIX ?= $(HOME)/.local
 
-.PHONY: test test-render test-vscode test-all ci \
+.PHONY: setup doctor test test-render test-vscode test-all ci \
         build-web vscode-stage vscode-package vscode-install-local vscode-clean \
         install
 
 # ── Installation ─────────────────────────────────────────────────────────────
+setup:
+	npm install
+	npm run build:render
+	$(MAKE) doctor
+
+doctor:
+	npm run doctor
+
 install:
-	npm install -g .
+	@mkdir -p "$(NPM_USER_PREFIX)/bin" "$(NPM_USER_PREFIX)/lib"
+	@set -eu; \
+	for entry in "slidey:src/index.js" "slidey-mcp:src/mcp.js"; do \
+		name="$${entry%%:*}"; \
+		rel="$${entry#*:}"; \
+		bin="$(NPM_USER_PREFIX)/bin/$$name"; \
+		target="$(CURDIR)/$$rel"; \
+		if [ -L "$$bin" ] && [ "$$(readlink "$$bin")" = "$$target" ]; then \
+			echo "[install] replacing existing $$bin -> $$target"; \
+			rm -f "$$bin"; \
+		fi; \
+	done
+	npm install --global --prefix "$(NPM_USER_PREFIX)" .
+	@echo "[install] installed slidey and slidey-mcp into $(NPM_USER_PREFIX)/bin"
+	@echo "[install] make sure $(NPM_USER_PREFIX)/bin is on PATH"
 
 # ── Testing ───────────────────────────────────────────────────────────────────
 # `make test` is the everyday target: the fast Node unit suite (no browser, no
@@ -44,7 +67,9 @@ vscode-stage: build-web
 	@rm -rf $(VSCODE_DIST) $(VSCODE_DIR)/.slidey-runtime
 	@mkdir -p $(VSCODE_DIST) $(VSCODE_RUNTIME)
 	cp -R dist/. $(VSCODE_DIST)/
-	cp src/schema.js src/trace.js $(VSCODE_RUNTIME)/
+	# Keep the complete transitive runtime for rrweb-viewer.  It imports
+	# collections.js for collection/stack deck expansion during activation.
+	cp src/schema.js src/trace.js src/rrweb-viewer.js src/collections.js src/narration.js src/narration-preview.js src/feedback-config.js $(VSCODE_RUNTIME)/
 
 # Output: tools/vscode-slidey/slidey-vscode-<version>.vsix.
 vscode-package: vscode-stage
@@ -55,7 +80,10 @@ vscode-package: vscode-stage
 CODE_CLI ?= code
 vscode-install-local:
 	@command -v $(CODE_CLI) >/dev/null 2>&1 || { \
-		echo "error: $(CODE_CLI) not found — install the VS Code shell command or run CODE_CLI=/path/to/code make vscode-install-local." >&2; \
+		echo "error: $(CODE_CLI) not found." >&2; \
+		echo "To install it from VS Code: open the Command Palette and run \"Shell Command: Install 'code' command in PATH\"." >&2; \
+		echo "Then rerun: make vscode-install-local" >&2; \
+		echo "Or run: CODE_CLI=/path/to/code make vscode-install-local" >&2; \
 		exit 1; \
 	}
 	@rm -f $(VSCODE_DIR)/*.vsix

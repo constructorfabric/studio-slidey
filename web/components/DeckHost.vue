@@ -10,8 +10,10 @@ import { themeConfig } from '../theme.js';
 import NarrativeScene from './NarrativeScene.vue';
 import DiagramScene from './DiagramScene.vue';
 import DiagramSvgScene from './DiagramSvgScene.vue';
+import GraphScene from './GraphScene.vue';
 import MermaidScene from './MermaidScene.vue';
 import TerminalGifScene from './TerminalGifScene.vue';
+import KitsokiTuiScene from './KitsokiTuiScene.vue';
 import StatScene from './StatScene.vue';
 import CtaScene from './CtaScene.vue';
 import TraceScene from './TraceScene.vue';
@@ -30,13 +32,16 @@ import BookScene from './BookScene.vue';
 import MemeScene from './MemeScene.vue';
 import VideoScene from './VideoScene.vue';
 import PersonasScene from './PersonasScene.vue';
+import ReferencePreviewScene from './ReferencePreviewScene.vue';
 
 const PITCH_COMPONENTS = {
   narrative: NarrativeScene,
   diagram: DiagramScene,
   'diagram-svg': DiagramSvgScene,
+  graph: GraphScene,
   mermaid: MermaidScene,
   'terminal-gif': TerminalGifScene,
+  'kitsoki-tui': KitsokiTuiScene,
   stat: StatScene,
   cta: CtaScene,
   trace: TraceScene,
@@ -55,6 +60,7 @@ const PITCH_COMPONENTS = {
   meme: MemeScene,
   video: VideoScene,
   personas: PersonasScene,
+  reference: ReferencePreviewScene,
 };
 
 // Toggle body classes for mode, mirroring slidey.setMode. body.instant is owned
@@ -65,7 +71,15 @@ watchEffect(() => {
   document.body.classList.toggle('mode-api', !pitch);
 });
 
-const activeTheme = computed(() => themeConfig(store.meta && store.meta.theme));
+// Inline `[data-slidey-ref]` links (see markdown.js / inline-links.js) show a
+// small reference-marker glyph by default in every render mode — including
+// static PNG/PDF/MP4 exports, which mount this component directly with no
+// click routing at all. `meta.linkMarkers: false` hides that glyph deck-wide.
+watchEffect(() => {
+  document.body.classList.toggle('slidey-no-link-markers', store.meta && store.meta.linkMarkers === false);
+});
+
+const activeTheme = computed(() => themeConfig(store.meta && store.meta.theme, store.meta || {}));
 
 watchEffect(() => {
   const id = 'slidey-runtime-theme';

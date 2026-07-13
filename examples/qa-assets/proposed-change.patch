@@ -1,0 +1,23 @@
+diff --git a/web/reference-viewer.js b/web/reference-viewer.js
+index 2a4b91d..7c51ad0 100644
+--- a/web/reference-viewer.js
++++ b/web/reference-viewer.js
+@@ -1,7 +1,10 @@
+ import { escapeHTML, highlightJSON } from './format.js';
+ 
+ const IMAGE_EXT = new Set(['.apng', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp']);
++const DIFF_EXT = new Set(['.diff', '.patch']);
+ const VIDEO_EXT = new Set(['.mp4', '.m4v', '.mov', '.webm']);
+ const MARKDOWN_EXT = new Set(['.md', '.markdown', '.mdown']);
+-const TEXT_EXT = new Set(['.csv', '.diff', '.ini', '.log', '.patch', '.text', '.toml', '.txt']);
++const TEXT_EXT = new Set(['.csv', '.ini', '.log', '.text', '.toml', '.txt']);
+ 
+ export function inferReferenceKind(ref = {}) {
+   const ext = referenceExtension(ref.src || ref.path || ref.href || '');
+@@ -10,6 +13,7 @@ export function inferReferenceKind(ref = {}) {
+   if (VIDEO_EXT.has(ext)) return 'video';
+   if (MARKDOWN_EXT.has(ext)) return 'markdown';
++  if (DIFF_EXT.has(ext)) return 'diff';
+   if (ext === '.json') return 'json';
+   return 'file';
+ }

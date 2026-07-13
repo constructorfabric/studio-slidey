@@ -4,11 +4,13 @@
 // point at a real element on the slide on screen and posts a precise anchor back:
 //
 //   host → deck:  { type: 'embed:annotate', enabled: boolean }
-//   deck → host:  { type: 'embed:pick', producer:'slidey', scope, ref, label, bbox }
+//   deck → host:  { type: 'embed:pick', producer:'slidey', scope, ref, label, bbox, anchor }
 //
-// `ref` is the opaque element id `<sceneIndex>/<field>` the host round-trips into
-// a refine; `scope` is the scene index; `bbox` is the element's on-screen rect.
-// The host needs NO slidey knowledge — slidey owns the element model here.
+// `ref`/`scope` are legacy numeric compatibility fields. `anchor` is the
+// canonical producer-owned identity: opaque artifact revision/digests plus a
+// source deck/scene id, reveal step, optional field, and rrweb time. A host
+// stores and round-trips that object unchanged; it never translates Slidey's
+// address into host-specific coordinates or IDs.
 //
 // Fidelity: rather than a hand-maintained per-scene-type element map (which only
 // ever covered a handful of the ~20 scene types and drifted from the templates),
@@ -108,6 +110,10 @@ export function installEmbedAnnotate(ctx, win, doc) {
   }
 
   function postPick(t) {
+    const baseAnchor = typeof ctx.getAnchor === 'function' ? ctx.getAnchor() : null;
+    const anchor = baseAnchor && typeof baseAnchor === 'object'
+      ? { ...baseAnchor, field: t.ref.slice(t.ref.indexOf('/') + 1) }
+      : null;
     const payload = {
       type: 'embed:pick',
       producer: 'slidey',
@@ -115,6 +121,7 @@ export function installEmbedAnnotate(ctx, win, doc) {
       ref: t.ref,
       label: t.label,
       bbox: t.bbox,
+      anchor,
     };
     try { win.parent.postMessage(payload, '*'); } catch (_) { /* no parent */ }
   }
@@ -143,7 +150,29 @@ export function installEmbedAnnotate(ctx, win, doc) {
     doc.body.appendChild(overlay);
   }
 
+  function postStale(d, err) {
+    const current = typeof ctx.getAnchor === 'function' ? ctx.getAnchor() : null;
+    try {
+      win.parent.postMessage({
+        type: 'embed:stale',
+        producer: 'slidey',
+        reason: err && err.message ? err.message : String(err || 'stale embed anchor'),
+        requested: d && d.anchor ? d.anchor : null,
+        current,
+      }, '*');
+    } catch (_) { /* no parent */ }
+  }
+
   async function restoreRequestedView(d) {
+    if (d.anchor && typeof ctx.gotoAnchor === 'function') {
+      try {
+        await ctx.gotoAnchor(d.anchor);
+        return true;
+      } catch (err) {
+        postStale(d, err);
+        return false;
+      }
+    }
     if (!ctx.gotoView || d.scope === undefined || d.scope === null) return;
     const sceneIndex = Number(d.scope);
     const stepIndex = d.step === undefined || d.step === null || d.step === ''
@@ -152,6 +181,7 @@ export function installEmbedAnnotate(ctx, win, doc) {
     if (!Number.isInteger(sceneIndex) || sceneIndex < 0) return;
     if (!Number.isInteger(stepIndex) || stepIndex < 0) return;
     await ctx.gotoView(sceneIndex, stepIndex);
+    return true;
   }
 
   function onMessage(ev) {
@@ -162,7 +192,9 @@ export function installEmbedAnnotate(ctx, win, doc) {
       clearOverlay();
       return;
     }
-    Promise.resolve(restoreRequestedView(d)).finally(scheduleRender);
+    Promise.resolve(restoreRequestedView(d)).then((restored) => {
+      if (restored !== false) scheduleRender();
+    });
   }
 
   // While annotation mode is on, rebuild the markers when the deck advances to a

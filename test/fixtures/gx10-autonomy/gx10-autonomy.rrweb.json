@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "events": [
+    { "type": 4, "timestamp": 0, "data": { "href": "about:blank", "width": 1280, "height": 720 } },
+    { "type": 2, "timestamp": 1, "data": { "node": { "type": 0, "childNodes": [] }, "initialOffset": { "left": 0, "top": 0 } } }
+  ]
+}

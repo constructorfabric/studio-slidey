@@ -35,8 +35,10 @@ const SCENE_MODULES = {
   narrative:      require('./scenes/narrative'),
   diagram:        require('./scenes/diagram'),
   'diagram-svg':  require('./scenes/diagram-svg'),
+  graph:          require('./scenes/graph'),
   mermaid:        require('./scenes/mermaid'),
   'terminal-gif': require('./scenes/terminal-gif'),
+  'kitsoki-tui':  require('./scenes/kitsoki-tui'),
   trace:          require('./scenes/trace'),
   transcript:     require('./scenes/transcript'),
   thread:         require('./scenes/thread'),
@@ -55,6 +57,7 @@ const SCENE_MODULES = {
   book:           require('./scenes/book'),
   meme:           require('./scenes/meme'),
   video:          require('./scenes/video'),
+  reference:      require('./scenes/reference'),
 };
 
 function inferMode(spec) {
@@ -166,15 +169,24 @@ async function generateFrames(spec, framesDir, fps = 30, onProgress = null, capt
       // scene.seamless: per-scene equivalent of --no-gaps (skip inter_scene,
       // suppress reveal animations). body.instant is toggled around each such
       // scene so transitions elsewhere in the video are unaffected.
-      const isSeamless = noGaps || scene.seamless;
-      if (!noGaps && scene.seamless) {
+      //
+      // scene.continues (on the NEXT scene): a seamless cut INTO that scene —
+      // this scene keeps its normal reveal build but drops its trailing
+      // inter_scene gap, and the continuing scene applies its own reveals
+      // instantly so its first captured frame is fully assembled. Two adjacent
+      // graph scenes sharing a projection therefore hand off with the graph
+      // never leaving the screen.
+      const nextContinues = !!(((spec.scenes || [])[sceneIndex + 1] || {}).continues);
+      const instantReveals = noGaps || scene.seamless || scene.continues;
+      const skipInterScene = noGaps || scene.seamless || nextContinues;
+      if (!noGaps && instantReveals) {
         await page.evaluate(() => document.body.classList.add('instant'));
       }
 
-      const sceneHold = isSeamless
+      const sceneHold = skipInterScene
         ? async (n, label) => { if (label !== 'inter_scene') await hold(n, label); }
         : hold;
-      const sceneStateSet = isSeamless
+      const sceneStateSet = instantReveals
         ? async stepName => { await page.evaluate(s => window.slidey.setState(s), stepName); }
         : setState;
       const ctx = {
@@ -204,7 +216,7 @@ async function generateFrames(spec, framesDir, fps = 30, onProgress = null, capt
 
       await mod.render(page, scene, ctx);
 
-      if (!noGaps && scene.seamless) {
+      if (!noGaps && instantReveals) {
         await page.evaluate(() => document.body.classList.remove('instant'));
       }
     }

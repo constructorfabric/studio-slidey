@@ -1,0 +1,9 @@
+{
+  "deck": "embed-qa",
+  "viewers": ["markdown", "code", "json", "image", "video", "rrweb"],
+  "expected": {
+    "modal": true,
+    "closeable": true,
+    "assetBase": "spec-relative"
+  }
+}

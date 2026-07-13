@@ -1,0 +1,69 @@
+{
+  "_comment": "QA deck for Edge TTS narration in the web viewer and VS Code preview. It covers per-slide Listen, live narrated deck playback, pronunciation replacements, editable narration text, and fullscreen rrweb timed narration cues.",
+  "meta": {
+    "title": "Edge TTS Narration QA",
+    "resolution": { "width": 1920, "height": 1080 },
+    "narration": {
+      "voice": "en-AU-NatashaNeural",
+      "rate": "+0%",
+      "pronunciations": {
+        "Slidey": "slide ee",
+        "rrweb": "R R web",
+        "SDLC": "S D L C",
+        "Kitsoki": "kit so key"
+      }
+    }
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "eyebrow": "QA fixture",
+      "title": "Edge TTS narration",
+      "subtitle": "Listen per slide, then play the deck live",
+      "narration": "This opening slide should speak when you press Listen. Slidey uses Edge TTS for quick review."
+    },
+    {
+      "type": "narrative",
+      "eyebrow": "Edit loop",
+      "body": "Narration can be edited in the deck source or the scene editor, then previewed without rendering an MP4.",
+      "lede": "Use this slide to check clean text edits, stop behavior, and replay from the current slide.",
+      "hold": 90,
+      "narration": "This slide checks the edit loop. Change this sentence, press Listen again, and confirm Edge TTS speaks the latest text without an MP4 render."
+    },
+    {
+      "type": "cards",
+      "variant": "numbered",
+      "title": "Pronunciation checks",
+      "cards": [
+        { "label": "Slidey", "sub": "Brand name replacement" },
+        { "label": "rrweb", "sub": "Spelled as R R web" },
+        { "label": "SDLC", "sub": "Acronym spelled out" },
+        { "label": "Kitsoki", "sub": "Project name respelling" }
+      ],
+      "caption": "The visible text stays unchanged; only spoken text is respelled.",
+      "narration": "This slide checks pronunciations. Slidey, rrweb, SDLC, and Kitsoki should use the deck pronunciation table, while the written text remains unchanged."
+    },
+    {
+      "type": "video",
+      "rrweb": "demos/sample-tour.rrweb.json",
+      "mode": "fullscreen",
+      "fit": "contain",
+      "chapters": "auto",
+      "cinematic": false,
+      "duration": 5.5,
+      "narration": [
+        { "at": 0, "text": "The rrweb recording starts as a live DOM replay inside the deck." },
+        { "chapter": "story", "text": "Chapter cues can trigger narration as the captured story view appears." },
+        { "chapter": "open", "text": "The panel opens while live narration stays synchronized to the rrweb player." },
+        { "chapter": "compose", "text": "The composer appears near the end of the replay, then the live deck can advance." }
+      ]
+    },
+    {
+      "type": "cta",
+      "wordmark": "Slidey",
+      "tagline": "Edge TTS narration QA complete",
+      "url": "examples/narration-demo.slidey.json",
+      "narration": "The final slide confirms live narrated deck playback advances after normal slides and the fullscreen rrweb replay."
+    }
+  ]
+}

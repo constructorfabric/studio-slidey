@@ -1,0 +1,26 @@
+{
+  "meta": { "title": "Kitsoki deep dive", "mode": "pitch" },
+  "scenes": [
+    { "id": "kit-title", "type": "title", "title": "Kitsoki", "subtitle": "The execution engine", "tags": ["pitch"] },
+    {
+      "id": "kit-detail",
+      "type": "narrative",
+      "eyebrow": "Progressive determinism",
+      "body": "Repeated LLM reasoning hardens into deterministic, cheaper, auditable process -- with sandboxing, human gates, and evidence capture at every step.",
+      "narration": "Kitsoki is the answer to 'why build this instead of python scripts and claude -p' -- bounded agent workflows that get cheaper and more auditable the more they run.",
+      "tags": ["detail"]
+    },
+    {
+      "id": "kit-arch",
+      "type": "cards",
+      "variant": "grid",
+      "title": "Execution primitives",
+      "section": "kitsoki-architecture",
+      "cards": [
+        { "label": "Bounded workflows" },
+        { "label": "Human gates" },
+        { "label": "Evidence capture" }
+      ]
+    }
+  ]
+}

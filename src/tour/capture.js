@@ -193,7 +193,11 @@ async function clickSel(page, sel, text) {
  *
  * @param {object} tour
  * @param {string} framesDir
- * @param {object} opts  { fps=30, startFrame=0, pace, onProgress, headless=true, adapter? }
+ * @param {object} opts  { fps=30, startFrame=0, pace, onProgress, onStepSettled?, headless=true, adapter? }
+ *   `onStepSettled(page, step, index)` — optional; called right after a
+ *   step's `before` evals + `waitFor` settle (pre-dwell, pre-spotlight), so a
+ *   caller (e.g. the tour-set runner's poster capture) can screenshot the
+ *   clean page without perturbing the freeze-frame hold that follows.
  * @returns {Promise<{ frameCount, chapters, viewport, startFrame }>}
  */
 async function captureTour(tour, framesDir, opts = {}) {
@@ -203,6 +207,7 @@ async function captureTour(tour, framesDir, opts = {}) {
   const viewport   = Object.assign({ width: 1600, height: 900 }, tour.viewport || {});
   const dsf        = tour.deviceScaleFactor || 1;
   const onProgress = opts.onProgress || null;
+  const onStepSettled = opts.onStepSettled || null;
   const specPath   = tour.specPath || '';
 
   fs.mkdirSync(framesDir, { recursive: true });
@@ -260,6 +265,10 @@ async function captureTour(tour, framesDir, opts = {}) {
       // Off-camera setup for this step.
       for (const act of step.before || []) await runAction(page, base, act, ctx);
       if (step.waitFor) await waitSel(page, step.waitFor);
+
+      // Settled hook (e.g. tour-set poster capture) — right after `before` +
+      // `waitFor`, before spotlight/caption/dwell so the screenshot is clean.
+      if (onStepSettled) await onStepSettled(page, step, i);
 
       // Frame the step: spotlight + caption.
       const wantSpot = step.spotlight !== false && !!step.target;

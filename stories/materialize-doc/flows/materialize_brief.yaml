@@ -1,0 +1,46 @@
+test_kind: flow
+app: ../app.yaml
+initial_state: gather
+initial_world:
+  node_id: wi-3-1
+  depth: 3
+  audience: public
+  gate: "reviewers assigned"
+host_handlers: {}
+turns:
+  - intent: { name: look, slots: {} }
+    expect_state: gather
+    expect_world:
+      node_id: wi-3-1
+      depth: 3
+      audience: public
+      gate: "reviewers assigned"
+      context_gathered: true
+      status: "gathering"
+  - intent: { name: next, slots: {} }
+    expect_state: draft
+    expect_world:
+      draft_written: true
+      artifact_path: ".artifacts/wi-3-1/brief.md"
+      status: "drafted"
+  - intent: { name: next, slots: {} }
+    expect_state: verify
+    expect_world:
+      verified: true
+      status: "verified"
+    expect_view_matches: "Deterministic checks"
+  - intent: { name: next, slots: {} }
+    expect_state: done
+    expect_world:
+      status: "complete"
+      artifact_path: ".artifacts/wi-3-1/brief.md"
+    expect_view_matches: ".artifacts/wi-3-1/brief.md"
+  - intent: { name: restart, slots: {} }
+    expect_state: gather
+    expect_world:
+      context_gathered: true
+      draft_written: false
+      verified: false
+      artifact_path: ""
+      status: "gathering"
+expect_no_errors: true

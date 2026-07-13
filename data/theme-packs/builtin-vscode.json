@@ -1,0 +1,196 @@
+{
+  "id": "builtin-vscode",
+  "name": "Built-in VS Code Color Schemes",
+  "themes": {
+    "github-dark-default": {
+      "label": "GitHub Dark Default",
+      "background": "#0d1117",
+      "colors": {
+        "base": "#0d1117",
+        "surface": "#161b22",
+        "overlay": "#21262d",
+        "muted": "#6e7681",
+        "subtle": "#8b949e",
+        "text": "#e6edf3",
+        "accent": "#58a6ff",
+        "accent2": "#3fb950",
+        "accent3": "#d29922",
+        "danger": "#f85149",
+        "highlightLow": "#161b22",
+        "highlightMuted": "#30363d",
+        "highlightHigh": "#484f58"
+      }
+    },
+    "one-dark-pro": {
+      "label": "One Dark Pro",
+      "background": "#282c34",
+      "colors": {
+        "base": "#282c34",
+        "surface": "#21252b",
+        "overlay": "#2c313c",
+        "muted": "#5c6370",
+        "subtle": "#abb2bf",
+        "text": "#dcdfe4",
+        "accent": "#61afef",
+        "accent2": "#98c379",
+        "accent3": "#e5c07b",
+        "danger": "#e06c75",
+        "highlightLow": "#2c313a",
+        "highlightMuted": "#3e4451",
+        "highlightHigh": "#4b5263"
+      }
+    },
+    "dracula": {
+      "label": "Dracula",
+      "background": "#282a36",
+      "colors": {
+        "base": "#282a36",
+        "surface": "#343746",
+        "overlay": "#44475a",
+        "muted": "#6272a4",
+        "subtle": "#bd93f9",
+        "text": "#f8f8f2",
+        "accent": "#bd93f9",
+        "accent2": "#50fa7b",
+        "accent3": "#f1fa8c",
+        "danger": "#ff5555",
+        "highlightLow": "#343746",
+        "highlightMuted": "#44475a",
+        "highlightHigh": "#6272a4"
+      }
+    },
+    "ayu-dark": {
+      "label": "Ayu Dark",
+      "background": "#0f1419",
+      "colors": {
+        "base": "#0f1419",
+        "surface": "#14191f",
+        "overlay": "#1f2430",
+        "muted": "#5c6773",
+        "subtle": "#b3b1ad",
+        "text": "#e6e1cf",
+        "accent": "#39bae6",
+        "accent2": "#aad94c",
+        "accent3": "#ffb454",
+        "danger": "#f07178",
+        "highlightLow": "#14191f",
+        "highlightMuted": "#253340",
+        "highlightHigh": "#33415e"
+      }
+    },
+    "monokai-pro": {
+      "label": "Monokai Pro",
+      "background": "#2d2a2e",
+      "colors": {
+        "base": "#2d2a2e",
+        "surface": "#363337",
+        "overlay": "#403e41",
+        "muted": "#727072",
+        "subtle": "#c1c0c0",
+        "text": "#fcfcfa",
+        "accent": "#78dce8",
+        "accent2": "#a9dc76",
+        "accent3": "#ffd866",
+        "danger": "#ff6188",
+        "highlightLow": "#363337",
+        "highlightMuted": "#5b595c",
+        "highlightHigh": "#727072"
+      }
+    },
+    "night-owl": {
+      "label": "Night Owl",
+      "background": "#011627",
+      "colors": {
+        "base": "#011627",
+        "surface": "#0b2942",
+        "overlay": "#103a5c",
+        "muted": "#637777",
+        "subtle": "#7fdbca",
+        "text": "#d6deeb",
+        "accent": "#82aaff",
+        "accent2": "#addb67",
+        "accent3": "#ecc48d",
+        "danger": "#ef5350",
+        "highlightLow": "#0b2942",
+        "highlightMuted": "#1d3b53",
+        "highlightHigh": "#5f7e97"
+      }
+    },
+    "tokyo-night": {
+      "label": "Tokyo Night",
+      "background": "#1a1b26",
+      "colors": {
+        "base": "#1a1b26",
+        "surface": "#24283b",
+        "overlay": "#292e42",
+        "muted": "#565f89",
+        "subtle": "#a9b1d6",
+        "text": "#c0caf5",
+        "accent": "#7aa2f7",
+        "accent2": "#9ece6a",
+        "accent3": "#e0af68",
+        "danger": "#f7768e",
+        "highlightLow": "#24283b",
+        "highlightMuted": "#3b4261",
+        "highlightHigh": "#565f89"
+      }
+    },
+    "palenight": {
+      "label": "Palenight",
+      "background": "#292d3e",
+      "colors": {
+        "base": "#292d3e",
+        "surface": "#303447",
+        "overlay": "#3a3f58",
+        "muted": "#676e95",
+        "subtle": "#a6accd",
+        "text": "#d0d0d0",
+        "accent": "#82aaff",
+        "accent2": "#c3e88d",
+        "accent3": "#ffcb6b",
+        "danger": "#f07178",
+        "highlightLow": "#303447",
+        "highlightMuted": "#444267",
+        "highlightHigh": "#676e95"
+      }
+    },
+    "synthwave-84": {
+      "label": "SynthWave '84",
+      "background": "#2b213a",
+      "colors": {
+        "base": "#2b213a",
+        "surface": "#332b4d",
+        "overlay": "#463465",
+        "muted": "#848bbd",
+        "subtle": "#f97e72",
+        "text": "#f2f2f2",
+        "accent": "#ff7edb",
+        "accent2": "#72f1b8",
+        "accent3": "#fede5d",
+        "danger": "#fe4450",
+        "highlightLow": "#332b4d",
+        "highlightMuted": "#495495",
+        "highlightHigh": "#848bbd"
+      }
+    },
+    "atom-one-light": {
+      "label": "Atom One Light",
+      "background": "#fafafa",
+      "colors": {
+        "base": "#fafafa",
+        "surface": "#ffffff",
+        "overlay": "#f0f0f0",
+        "muted": "#a0a1a7",
+        "subtle": "#696c77",
+        "text": "#383a42",
+        "accent": "#4078f2",
+        "accent2": "#50a14f",
+        "accent3": "#c18401",
+        "danger": "#e45649",
+        "highlightLow": "#f0f0f0",
+        "highlightMuted": "#d0d0d0",
+        "highlightHigh": "#a0a1a7"
+      }
+    }
+  }
+}

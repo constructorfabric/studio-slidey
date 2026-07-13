@@ -184,3 +184,33 @@ test('enabling annotation mode restores the requested scene and transition befor
   assert.deepEqual(calls, [{ sceneIndex: 9, stepIndex: 2 }]);
   assert.equal(body.children.length, 1, 'markers are drawn after the requested view is restored');
 });
+
+test('a stale semantic annotation anchor is surfaced and never falls back to a numeric scope', async (t) => {
+  const { installEmbedAnnotate } = await import('../web/embed-annotate.js');
+  const posted = [];
+  const listeners = {};
+  const win = {
+    parent: { postMessage: (m) => posted.push(m) },
+    requestAnimationFrame: (fn) => fn(),
+    addEventListener: (type, h) => { listeners[type] = h; },
+    removeEventListener: (type) => { delete listeners[type]; },
+  };
+  const body = { children: [], appendChild(n) { this.children.push(n); }, removeChild(n) { this.children = this.children.filter((c) => c !== n); } };
+  const doc = { body, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {}, addEventListener() {} }), querySelectorAll: () => [] };
+  const teardown = installEmbedAnnotate({
+    getRoot: () => doc,
+    getSceneIndex: () => 4,
+    getAnchor: () => ({ artifact: { id: 'deck', revision: 'r2' }, scene: 'now' }),
+    gotoAnchor: async () => { throw new Error('stale artifact identity'); },
+    gotoView: async () => { throw new Error('numeric fallback must not run'); },
+  }, win, doc);
+  t.after(teardown);
+
+  listeners.message({ data: { type: 'embed:annotate', enabled: true, scope: '4', anchor: { artifact: { id: 'deck', revision: 'r1' }, scene: 'then' } } });
+  await Promise.resolve();
+  await Promise.resolve();
+  const stale = posted.find((m) => m.type === 'embed:stale');
+  assert.ok(stale, 'producer reports a visible stale identity failure');
+  assert.match(stale.reason, /stale artifact identity/);
+  assert.equal(body.children.length, 0, 'no annotation overlay is attached to a different revision');
+});

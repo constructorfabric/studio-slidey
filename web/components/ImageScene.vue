@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { store } from '../store.js';
+import { normalizeReference } from '../reference-viewer.js';
 
 const sc = computed(() => store.scene || {});
 const shown = name => store.isRevealed(name);
@@ -13,6 +14,15 @@ const mediaStyle = computed(() => ({
   background: sc.value.mediaBackground || undefined,
   padding: sc.value.mediaPadding || undefined,
 }));
+const refsApi = inject('slideyReferences', null);
+const imageReference = computed(() => normalizeReference(
+  sc.value.reference || { src: sc.value.src, label: sc.value.alt || sc.value.title || 'image', kind: 'image' },
+));
+const hasImageReference = computed(() => !!imageReference.value && !!refsApi && !!refsApi.open);
+
+function openImageReference() {
+  if (hasImageReference.value) refsApi.open(imageReference.value);
+}
 </script>
 
 <template>
@@ -28,10 +38,17 @@ const mediaStyle = computed(() => ({
     <div
       id="image-frame"
       class="image-frame reveal"
-      :class="{ shown: shown('image-frame') }"
+      :class="{ shown: shown('image-frame'), 'is-clickable-reference': hasImageReference }"
       data-embed-field="src"
       data-embed-label="image"
       :style="frameStyle"
+      :title="hasImageReference ? `Open ${imageReference.label}` : undefined"
+      role="button"
+      tabindex="0"
+      data-slidey-reference-trigger
+      @click.stop="openImageReference"
+      @keydown.enter.stop.prevent="openImageReference"
+      @keydown.space.stop.prevent="openImageReference"
     >
       <img
         v-if="src"
@@ -82,6 +99,13 @@ const mediaStyle = computed(() => ({
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+.image-frame.is-clickable-reference {
+  cursor: zoom-in;
+}
+.image-frame.is-clickable-reference:hover {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 2px rgb(88 166 255 / 20%);
 }
 
 .image-media {

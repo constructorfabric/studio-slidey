@@ -1,0 +1,27 @@
+{
+  "meta": { "title": "POG deep dive", "mode": "pitch" },
+  "scenes": [
+    { "id": "pog-title", "type": "title", "title": "POG", "subtitle": "The Product Value Graph", "tags": ["pitch"] },
+    {
+      "id": "pog-detail",
+      "type": "narrative",
+      "eyebrow": "How it works",
+      "body": "Personas, capabilities, features, requirements, and evidence all live in one typed graph. Roadmap is the delta between current and ideal graph state.",
+      "narration": "POG models the product as a typed graph, so the roadmap is never a guess -- it's the delta between where the graph is today and where it needs to be.",
+      "tags": ["detail"]
+    },
+    {
+      "id": "pog-arch",
+      "type": "cards",
+      "variant": "grid",
+      "title": "Graph node types",
+      "section": "pog-architecture",
+      "cards": [
+        { "label": "Personas" },
+        { "label": "Capabilities" },
+        { "label": "Requirements" },
+        { "label": "See Kitsoki", "deck": "kitsoki", "section": "kitsoki-architecture" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "target": {
+    "launch": "node src/index.js examples/hello.slidey.json --port 7895 --no-open",
+    "addr": "127.0.0.1:7895",
+    "readyPath": "/",
+    "cwd": "../../../..",
+    "timeoutMs": 30000
+  },
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "tours": [
+    {
+      "tour": "/Users/brad/code/slidey/stories/demo-packet/fixtures/onboarding-tour/onboarding-tour-journey.tour.json",
+      "out": "/Users/brad/code/slidey/stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json",
+      "format": "rrweb",
+      "pace": 1,
+      "postersDir": "/Users/brad/code/slidey/stories/demo-packet/fixtures/onboarding-tour/clips/posters",
+      "dwellOverrides": {
+        "step_0_open_the_viewer_the_deck_loads": 6900,
+        "step_1_step_forward_through_the_scenes": 8000,
+        "step_2_jump_back_and_replay_a_scene": 6900
+      }
+    }
+  ]
+}

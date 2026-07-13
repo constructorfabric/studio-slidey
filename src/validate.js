@@ -3,11 +3,12 @@
 const fs = require('fs');
 const { SCHEMA } = require('./schema');
 const { resolveAsset } = require('./assets');
+const { linkTargetForItem, normalizeDeckDefinitions, normalizeSections, resolveDeckSpec, SOURCE_DECK_ID } = require('./collections');
 
 const VALID_TYPES = [
   'title', 'narrative', 'diagram', 'diagram-svg', 'mermaid', 'trace', 'transcript',
-  'thread', 'stat', 'cta', 'terminal-gif', 'cards', 'objectives', 'code', 'table', 'chart',
-  'mcp-drive', 'evidence', 'image', 'image-compare', 'book', 'meme', 'request',
+  'thread', 'stat', 'cta', 'terminal-gif', 'kitsoki-tui', 'cards', 'objectives', 'code', 'table', 'chart',
+  'mcp-drive', 'evidence', 'image', 'image-compare', 'book', 'meme', 'video', 'reference', 'request',
 ];
 
 let _validate;
@@ -28,17 +29,50 @@ function getValidate() {
 function validateSpec(spec, opts = {}) {
   const validate = getValidate();
   const valid = validate(spec);
+  // Capture the root pass's errors BEFORE the library-deck pass below reuses
+  // the same compiled validator (each Ajv run replaces `validate.errors`).
+  const rootErrors = validate.errors;
+  const deckScenes = validateLibraryDeckScenes(spec);
   const semantic = validateSemantics(spec, opts);
-  if (valid && semantic.errors.length === 0) {
+  if (valid && deckScenes.count === 0 && semantic.errors.length === 0) {
     return { valid: true, errors: [], warnings: semantic.warnings, count: 0 };
   }
-  const { lines, count } = formatErrors(validate.errors, spec);
+  const { lines, count } = formatErrors(rootErrors, spec);
   return {
     valid: false,
-    errors: [...lines, ...semantic.errors],
+    errors: [...lines, ...deckScenes.errors, ...semantic.errors],
     warnings: semantic.warnings,
-    count: count + semantic.errors.length,
+    count: count + deckScenes.count + semantic.errors.length,
   };
+}
+
+// The root JSON-Schema pass only shallow-checks `library.decks[].scenes[]`
+// (the deck schema allows arbitrary scene-shaped objects so subset REFS and
+// inline scenes can share the field). A hierarchy deck's inline scenes are
+// real scenes that render exactly like top-level scenes[], so validate each
+// deck's local scene list against the same schema by wrapping it in a
+// synthetic `{ scenes }` spec, and rewrite the error paths to name the deck
+// (`library.decks["<id>"].scenes[<i>]`). Subset/view decks are skipped: their
+// scenes[] entries are id/index/{ref,fromDeck} REFERENCES to scenes that are
+// already validated where they live (and resolveDeckSpec/validateLibrary
+// already reports broken refs) — re-validating them here would double-report.
+function validateLibraryDeckScenes(spec) {
+  const out = { errors: [], count: 0 };
+  if (!spec || !spec.library || typeof spec.library !== 'object') return out;
+  const validate = getValidate();
+  for (const deck of normalizeDeckDefinitions(spec)) {
+    if (deck.source || deck.deckType !== 'hierarchy') continue;
+    const scenes = deck.raw && Array.isArray(deck.raw.scenes) ? deck.raw.scenes : [];
+    if (!scenes.length) continue;
+    const synthetic = { scenes };
+    if (validate(synthetic)) continue;
+    const { lines, count } = formatErrors(validate.errors, synthetic, {
+      sceneLabel: (idx) => `library.decks["${deck.id}"].scenes[${idx}]`,
+    });
+    out.errors.push(...lines);
+    out.count += count;
+  }
+  return out;
 }
 
 function validateSemantics(spec, opts = {}) {
@@ -72,6 +106,7 @@ function validateSemantics(spec, opts = {}) {
   });
 
   validateRequiredScenes(spec, errors);
+  if (!opts.skipLibrary) validateLibrary(spec, errors, warnings);
   return { errors, warnings };
 }
 
@@ -93,6 +128,101 @@ function validateRequiredScenes(spec, errors) {
     if (Number.isInteger(req.max) && count > req.max) {
       errors.push(`  meta.required_scenes[${i}]: allows at most ${req.max} scene(s) of type "${req.type}" (found ${count})`);
     }
+  });
+}
+
+function validateLibrary(spec, errors, warnings) {
+  if (!spec || !spec.library || typeof spec.library !== 'object') return;
+
+  const rawDecks = spec.library.decks || [];
+  const rawList = Array.isArray(rawDecks)
+    ? rawDecks
+    : Object.entries(rawDecks).map(([id, value]) => ({ id, ...(value || {}) }));
+  const seen = new Set([SOURCE_DECK_ID]);
+  rawList.forEach((deck, i) => {
+    if (!deck || typeof deck !== 'object') return;
+    const id = deck.id != null ? String(deck.id) : '';
+    if (!id) {
+      errors.push(`  library.decks[${i}]: missing required field "id"`);
+      return;
+    }
+    if (seen.has(id)) errors.push(`  library.decks[${i}]: duplicate deck id "${id}"`);
+    seen.add(id);
+  });
+
+  const decks = normalizeDeckDefinitions(spec);
+  const deckIds = new Set(decks.map(deck => deck.id));
+  decks
+    .filter(deck => !deck.source)
+    .forEach(deck => {
+      const resolved = resolveDeckSpec(spec, { deckId: deck.id });
+      for (const line of resolved.errors || []) errors.push(`  ${line}`);
+      for (const line of resolved.warnings || []) warnings.push(`  ${line}`);
+      if (deck.parent && !deckIds.has(deck.parent)) {
+        errors.push(`  library.decks["${deck.id}"]: unknown parent deck "${deck.parent}"`);
+      }
+    });
+
+  for (const section of normalizeSections(spec)) {
+    if (section.deck && !deckIds.has(section.deck)) {
+      errors.push(`  library.sections["${section.id}"]: unknown deck "${section.deck}"`);
+    }
+  }
+
+  const checkLinks = (links, owner, prefix) => {
+    if (!links) return;
+    const list = Array.isArray(links)
+      ? links
+      : typeof links === 'object' ? Object.values(links) : [];
+    list.forEach((link, i) => {
+      if (!link || typeof link !== 'object') return;
+      const target = linkTargetForItem(link);
+      const deck = target && target.deck;
+      if (deck && !deckIds.has(deck)) {
+        errors.push(`  ${owner} — ${prefix}[${i}]: unknown deck "${deck}"`);
+      }
+    });
+  };
+  const checkItemLinks = (items, owner, prefix) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item, i) => {
+      const link = linkTargetForItem(item);
+      if (link && link.deck && !deckIds.has(link.deck)) {
+        errors.push(`  ${owner} — ${prefix}[${i}]: unknown deck "${link.deck}"`);
+      }
+    });
+  };
+  const checkSceneItemLinks = (scene, owner) => {
+    checkItemLinks(scene.cards, owner, 'cards');
+    if (Array.isArray(scene.panels)) {
+      scene.panels.forEach((panel, panelIdx) => {
+        checkItemLinks(panel && panel.nodes, owner, `panels[${panelIdx}].nodes`);
+      });
+    }
+  };
+
+  (Array.isArray(spec.scenes) ? spec.scenes : []).forEach((scene, sceneIdx) => {
+    if (!scene || typeof scene !== 'object') return;
+    const owner = `Scene ${sceneIdx}`;
+    checkLinks(scene.links, owner, 'links');
+    checkLinks(scene.children, owner, 'children');
+    if (scene.nav) checkLinks(scene.nav.links || scene.nav, owner, 'nav.links');
+    if (scene.navigation) checkLinks(scene.navigation.links || scene.navigation, owner, 'navigation.links');
+    checkSceneItemLinks(scene, owner);
+  });
+
+  decks
+    .filter(deck => deck.deckType === 'hierarchy' && deck.raw && Array.isArray(deck.raw.scenes))
+    .forEach(deck => {
+      deck.raw.scenes.forEach((scene, sceneIdx) => {
+        if (!scene || typeof scene !== 'object') return;
+        const owner = `library.decks["${deck.id}"].scenes[${sceneIdx}]`;
+        checkLinks(scene.links, owner, 'links');
+        checkLinks(scene.children, owner, 'children');
+        if (scene.nav) checkLinks(scene.nav.links || scene.nav, owner, 'nav.links');
+        if (scene.navigation) checkLinks(scene.navigation.links || scene.navigation, owner, 'navigation.links');
+        checkSceneItemLinks(scene, owner);
+      });
   });
 }
 
@@ -120,7 +250,11 @@ function imageSize(file) {
 
 // ── Error formatting ────────────────────────────────────────────────────────
 
-function formatErrors(rawErrors, spec) {
+function formatErrors(rawErrors, spec, opts = {}) {
+  // `sceneLabel(idx)` names a scene block in the output; the default is the
+  // top-level "Scene N", validateLibraryDeckScenes passes a deck-qualified
+  // label like `library.decks["exec"].scenes[3]`.
+  const sceneLabel = opts.sceneLabel || ((idx) => `Scene ${idx}`);
   // Split errors into scene-level and global
   const byScene = {};
   const global = [];
@@ -153,7 +287,7 @@ function formatErrors(rawErrors, spec) {
     const typeLabel = scene && scene.type ? ` — type: "${scene.type}"` : '';
     const unknownType = scene && scene.type && !VALID_TYPES.includes(scene.type);
 
-    lines.push(`\n  Scene ${idx}${typeLabel}:`);
+    lines.push(`\n  ${sceneLabel(idx)}${typeLabel}:`);
 
     if (unknownType) {
       lines.push(`    • unknown type "${scene.type}". Valid types: ${VALID_TYPES.join(', ')}`);

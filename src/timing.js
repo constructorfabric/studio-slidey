@@ -43,6 +43,13 @@ const TIMING = {
   termgif_caption:     20,
   termgif_hold:       360,  // 12.0 s default — covers one gif loop
 
+  // ── Kitsoki TUI scene ───────────────────────────────────────────
+  kitsokitui_frame:    20,
+  kitsokitui_welcome:  30,
+  kitsokitui_menu:     24,
+  kitsokitui_caption:  24,
+  kitsokitui_hold:    220,
+
   // ── Stat scene ──────────────────────────────────────────────────
   stat_value:          30,
   stat_label:          20,
@@ -62,6 +69,22 @@ const TIMING = {
   diagramsvg_panel_2:  30,
   diagramsvg_caption:  30,
   diagramsvg_hold:    210,  // 7.0 s default dwell
+
+  // ── Cytoscape graph scene ────────────────────────────────────────────────
+  graph_title:         18,
+  graph_frame:         36,
+  graph_focus_0:       48,
+  graph_focus_1:       48,
+  graph_focus_2:       48,
+  graph_focus_3:       48,
+  graph_focus_4:       48,
+  graph_focus_5:       48,
+  graph_focus_6:       48,
+  graph_focus_7:       48,
+  graph_focus_8:       48,
+  graph_focus_9:       48,
+  graph_caption:       28,
+  graph_hold:         180,
 
   // ── Mermaid scene ───────────────────────────────────────────────────────
   mermaid_title:       20,
@@ -127,6 +150,12 @@ const TIMING = {
   code_body:           40,
   code_notes:          30,
   code_hold:          180,  // 6.0 s
+
+  // ── Reference preview scene ─────────────────────────────────────
+  reference_title:     20,
+  reference_frame:     40,
+  reference_caption:   30,
+  reference_hold:     180,
 
   // ── MCP drive scene ─────────────────────────────────────────────
   mcpdrive_prompt:     20,
@@ -277,12 +306,14 @@ function estimateScene(scene, opts = {}) {
   // hold() calls produce frames. title uses ctx.hold directly so is unchanged.
   if (opts.noGaps) {
     switch (scene.type) {
-      case 'title':        return T.title_card;
+      case 'title':        return hold('title_card', scene.hold);
       case 'narrative':    return hold('narrative_hold',   scene.hold);
       case 'diagram':      return hold('diagram_hold',     scene.hold);
       case 'diagram-svg':  return hold('diagramsvg_hold',  scene.hold);
+      case 'graph':        return hold('graph_hold',       scene.hold);
       case 'mermaid':      return hold('mermaid_hold',     scene.hold);
       case 'terminal-gif': return hold('termgif_hold',     scene.hold);
+      case 'kitsoki-tui':  return hold('kitsokitui_hold',  scene.hold);
       case 'trace':        return hold('trace_hold',       scene.hold);
       case 'transcript': {
         const cards = (scene.cards || []).length;
@@ -291,9 +322,11 @@ function estimateScene(scene, opts = {}) {
       }
       case 'thread':       return hold('thread_hold',      scene.hold);
       case 'cards':        return scene.hold ?? T.cards_hold ?? T.thread_hold;
+      case 'personas':     return scene.hold ?? T.cards_hold ?? T.thread_hold;
       case 'objectives':   return scene.hold ?? T.objectives_hold ?? T.cards_hold;
       case 'evidence':     return scene.hold ?? T.evidence_hold ?? T.cards_hold;
       case 'code':         return scene.hold ?? T.code_hold ?? T.narrative_hold;
+      case 'reference':    return scene.hold ?? T.reference_hold ?? T.code_hold ?? T.narrative_hold;
       case 'table':        return scene.hold ?? T.table_hold ?? T.trace_hold;
       case 'chart':        return scene.hold ?? T.chart_hold ?? T.diagramsvg_hold;
       case 'image':        return scene.hold ?? T.image_hold ?? T.diagramsvg_hold;
@@ -308,9 +341,17 @@ function estimateScene(scene, opts = {}) {
     }
   }
 
+  // scene.continues: reveals apply instantly (same frame math as --no-gaps),
+  // but the scene keeps its own trailing inter_scene gap. The skipped gap on
+  // the PREVIOUS scene is subtracted in estimateBoundaries, which can see
+  // adjacency.
+  if (scene.continues) {
+    return estimateScene(scene, { ...opts, noGaps: true }) + T.inter_scene;
+  }
+
   switch (scene.type) {
     case 'title':
-      return T.title_card;
+      return hold('title_card', scene.hold);
 
     case 'narrative': {
       let f = T.narrative_eyebrow + T.narrative_body;
@@ -340,6 +381,19 @@ function estimateScene(scene, opts = {}) {
       return f;
     }
 
+    case 'graph': {
+      const path = Array.isArray(scene.path) && scene.path.length
+        ? scene.path
+        : (Array.isArray(scene.focus) ? scene.focus : []);
+      let f = scene.title ? T.graph_title : 0;
+      f += T.graph_frame;
+      for (let i = 0; i < path.length; i++) f += T[`graph_focus_${i}`] ?? 48;
+      if (scene.caption) f += T.graph_caption;
+      f += hold('graph_hold', scene.hold);
+      f += T.inter_scene;
+      return f;
+    }
+
     case 'mermaid': {
       let f = scene.title ? T.mermaid_title : 0;
       f += T.mermaid_frame;
@@ -352,6 +406,14 @@ function estimateScene(scene, opts = {}) {
     case 'terminal-gif':
       return T.termgif_frame + T.termgif_caption
            + hold('termgif_hold', scene.hold) + T.inter_scene;
+
+    case 'kitsoki-tui': {
+      let f = T.kitsokitui_frame + T.kitsokitui_welcome + T.kitsokitui_menu;
+      if (scene.caption) f += T.kitsokitui_caption;
+      f += hold('kitsokitui_hold', scene.hold);
+      f += T.inter_scene;
+      return f;
+    }
 
     case 'trace': {
       let f = T.trace_title;
@@ -399,6 +461,17 @@ function estimateScene(scene, opts = {}) {
       return f;
     }
 
+    case 'personas': {
+      const n = (scene.variant === 'use-cases' ? (scene.cases || []) : (scene.personas || [])).length;
+      let f = 0;
+      if (scene.title) f += 20;
+      for (let i = 0; i < n; i++) f += 20;
+      if (scene.caption) f += 20;
+      f += scene.hold ?? T.cards_hold ?? T.thread_hold;
+      f += T.inter_scene;
+      return f;
+    }
+
     case 'objectives': {
       const MAX_ITEMS = 6;
       const n = Math.min(MAX_ITEMS, (scene.items || []).length);
@@ -427,6 +500,16 @@ function estimateScene(scene, opts = {}) {
       let f = T.code_header + T.code_body;
       if (Array.isArray(scene.annotations) && scene.annotations.length) f += T.code_notes;
       f += scene.hold ?? T.code_hold ?? T.narrative_hold;
+      f += T.inter_scene;
+      return f;
+    }
+
+    case 'reference': {
+      let f = 0;
+      if (scene.title) f += T.reference_title;
+      f += T.reference_frame;
+      if (scene.caption) f += T.reference_caption;
+      f += scene.hold ?? T.reference_hold ?? T.code_hold ?? T.narrative_hold;
       f += T.inter_scene;
       return f;
     }
@@ -544,7 +627,13 @@ function estimateBoundaries(spec, selectedScenes = null, opts = {}) {
   const out = [];
   (spec.scenes || []).forEach((scene, i) => {
     if (selectedScenes && !selectedScenes.has(i)) return;
-    const durationFrames = estimateScene(scene, opts);
+    let durationFrames = estimateScene(scene, opts);
+    // The scene before a `continues` scene drops its trailing inter_scene gap
+    // (the renderer cuts straight into the continuing scene).
+    const next = (spec.scenes || [])[i + 1];
+    if (!opts.noGaps && next && next.continues && scene.type !== 'video') {
+      durationFrames = Math.max(0, durationFrames - TIMING.inter_scene);
+    }
     out.push({
       sceneIndex: i,
       startFrame: frame,

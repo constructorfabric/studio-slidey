@@ -1,0 +1,47 @@
+app:
+  id: capsule-ci
+  version: 0.1.0
+  title: Slidey Capsule CI
+world:
+  ci_job_id: { type: string, default: "" }
+  ci_pipeline: { type: string, default: "" }
+  ci_trigger: { type: object, default: {} }
+  ci_source: { type: object, default: {} }
+  ci_workspace: { type: object, default: {} }
+  ci_environment: { type: object, default: {} }
+  ci_policy: { type: object, default: {} }
+  ci_verdict: { type: object, default: {} }
+hosts:
+  - host.capsule_ci.project_checks
+intents:
+  run:
+    description: Run Slidey's deterministic project checks.
+    examples: [run, start]
+    priority: 90
+root: idle
+states:
+  idle:
+    relevant_world: [ci_pipeline, ci_job_id]
+    view:
+      - heading: Slidey Capsule CI
+      - prose: Run the checked-in project profile against the immutable capsule.
+    on:
+      run:
+        - target: project_checks
+          effects:
+            - invoke: host.capsule_ci.project_checks
+              with:
+                workdir: "{{ world.ci_workspace.path }}"
+                job_id: "{{ world.ci_job_id }}"
+                pipeline: "{{ world.ci_pipeline }}"
+                source_digest: "{{ world.ci_source.digest }}"
+                story_digest: "{{ world.ci_trigger.story_digest }}"
+                environment_digest: "{{ world.ci_environment.digest }}"
+                envelope_digest: "{{ world.ci_trigger.envelope_digest }}"
+              bind:
+                ci_verdict: verdict
+  project_checks:
+    relevant_world: [ci_pipeline, ci_job_id, ci_verdict]
+    view:
+      - heading: Project checks
+      - prose: The host returned a typed capsule-ci-verdict/v1 result.

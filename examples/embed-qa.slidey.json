@@ -1,0 +1,155 @@
+{
+  "_comment": "Manual QA deck for inline reference viewers and media embeds. Keep this deck up to date whenever Slidey adds a new reference kind, media viewer, or embeddable scene source.",
+  "meta": {
+    "mode": "pitch",
+    "title": "Embed QA",
+    "narration": {
+      "voice": "en-AU-NatashaNeural"
+    }
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "title": "Embed QA",
+      "subtitle": "single deck for inline references and media viewers",
+      "references": [
+        { "label": "QA notes", "src": "qa-assets/notes.md", "kind": "markdown" },
+        { "label": "QA manifest", "src": "qa-assets/data.json", "kind": "json" }
+      ]
+    },
+    {
+      "type": "cards",
+      "variant": "grid",
+      "title": "Reference viewer matrix",
+      "columns": 3,
+      "cards": [
+        { "label": "Markdown", "sub": "headings, lists, fences" },
+        { "label": "Code", "sub": ".js, .py, .go" },
+        { "label": "Diff", "sub": "proposed patch viewer" },
+        { "label": "Data", "sub": "JSON and logs" },
+        { "label": "Images", "sub": "SVG/image modal" },
+        { "label": "Video", "sub": "MP4 and rrweb" },
+        { "label": "Plugin fallback", "sub": "unknown kind as text" }
+      ],
+      "caption": "The rest of this deck embeds concrete references inline. The rail remains as a secondary navigation path.",
+      "references": [
+        { "label": "Markdown fixture", "src": "qa-assets/notes.md", "kind": "markdown" },
+        { "label": "JavaScript fixture", "src": "qa-assets/sample.js", "kind": "code", "lang": "javascript" },
+        { "label": "Python fixture", "src": "qa-assets/sample.py", "kind": "code", "lang": "python" },
+        { "label": "Go fixture", "src": "qa-assets/sample.go", "kind": "code", "lang": "go" },
+        { "label": "Proposed patch", "src": "qa-assets/proposed-change.patch", "kind": "diff" },
+        { "label": "JSON fixture", "src": "qa-assets/data.json", "kind": "json" },
+        { "label": "Log fixture", "src": "qa-assets/trace.log", "kind": "text" },
+        { "label": "Graph plugin fallback", "src": "qa-assets/graph.mmd", "kind": "graph", "lang": "mermaid" }
+      ]
+    },
+    {
+      "type": "narrative",
+      "eyebrow": "Inline links open a modal",
+      "body": "Click the underlined words: a Markdown link opens the reference viewer, and an HTML link renders in a sandboxed iframe instead of as source. Escape or a backdrop click dismisses either. A deck: target (see README) would switch slides instead of opening a modal.",
+      "bodyHtml": "Click the underlined words: a <a data-slidey-ref=\"qa-assets/notes.md\">Markdown link</a> opens the reference viewer, and an <a data-slidey-ref=\"qa-assets/mockup.html\">HTML link</a> renders in a sandboxed iframe instead of as source. Escape or a backdrop click dismisses either. A <code>deck:</code> target (see README) would switch slides instead of opening a modal."
+    },
+    {
+      "type": "reference",
+      "title": "Markdown section preview",
+      "reference": {
+        "label": "QA notes",
+        "src": "qa-assets/notes.md",
+        "kind": "markdown",
+        "section": "Expandable section"
+      },
+      "caption": "Click the Markdown preview: the slide shows one section, the modal opens the full Markdown file."
+    },
+    {
+      "type": "code",
+      "variant": "source",
+      "title": "sample.js",
+      "lang": "javascript",
+      "code": "export function summarizeReferences(scene) {\n  const refs = Array.isArray(scene.references) ? scene.references : [];\n  return refs.map((ref) => {\n    const value = typeof ref === 'string' ? { src: ref } : ref;\n    return {\n      label: labelFor(value),\n      kind: KNOWN_KINDS.has(value.kind) ? value.kind : 'file',\n      src: value.src || value.path || value.href,\n    };\n  });\n}",
+      "highlight": [4, 5, 6, 7, 8],
+      "annotations": [
+        { "line": 7, "text": "The slide shows a linked line range from the full file." }
+      ],
+      "sourceRef": { "label": "Full sample.js", "src": "qa-assets/sample.js", "kind": "code", "lang": "javascript", "lines": [8, 18] },
+      "caption": "Click the code block: the modal opens the complete source and highlights the linked lines.",
+      "references": [
+        { "label": "JavaScript", "src": "qa-assets/sample.js", "kind": "code", "lang": "javascript", "lines": [8, 18] },
+        { "label": "Python", "src": "qa-assets/sample.py", "kind": "code", "lang": "python" },
+        { "label": "Go", "src": "qa-assets/sample.go", "kind": "code", "lang": "go" }
+      ]
+    },
+    {
+      "type": "reference",
+      "title": "Proposed code change",
+      "reference": {
+        "label": "Reference viewer patch",
+        "src": "qa-assets/proposed-change.patch",
+        "kind": "diff",
+        "lines": [1, 18]
+      },
+      "previewLines": 18,
+      "caption": "Click the diff preview: the modal shows the full unified diff, and View Diff opens the patch through the current host."
+    },
+    {
+      "type": "mermaid",
+      "title": "Graph reference",
+      "source": "flowchart LR\n  A[Scene] --> B[Reference chips]\n  B --> C[Inline viewer]\n  C --> D[Close and return]",
+      "caption": "The rendered graph is a Mermaid scene; the chip opens the source file as a graph/plugin-style reference.",
+      "references": [
+        { "label": "Mermaid source", "src": "qa-assets/graph.mmd", "kind": "graph", "lang": "mermaid" }
+      ]
+    },
+    {
+      "type": "image",
+      "title": "Image media",
+      "src": "qa-assets/architecture.svg",
+      "alt": "Reference viewer architecture diagram",
+      "caption": "Click the image itself to open it larger in the modal; the rail chip is only a secondary path.",
+      "references": [
+        { "label": "Architecture SVG", "src": "qa-assets/architecture.svg", "kind": "image" },
+        { "label": "Markdown notes", "src": "qa-assets/notes.md", "kind": "markdown" }
+      ]
+    },
+    {
+      "type": "image-compare",
+      "title": "Image comparison media",
+      "left": { "label": "Before", "src": "qa-assets/before.svg" },
+      "right": { "label": "After", "src": "qa-assets/after.svg" },
+      "fit": "contain",
+      "caption": "Click either comparison panel to inspect that image independently in the modal."
+    },
+    {
+      "type": "video",
+      "src": "qa-assets/demo.mp4",
+      "mode": "embedded",
+      "eyebrow": "MP4",
+      "title": "Local video fixture",
+      "caption": "The MP4 scene and reference chip should both play the same tiny fixture.",
+      "chapters": false,
+      "cinematic": false,
+      "references": [
+        { "label": "MP4 fixture", "src": "qa-assets/demo.mp4", "kind": "video" }
+      ]
+    },
+    {
+      "type": "video",
+      "rrweb": "demos/sample-tour.rrweb.json",
+      "mode": "embedded",
+      "eyebrow": "rrweb",
+      "title": "DOM session fixture",
+      "caption": "The scene should mount the rrweb player; the chip should open the rrweb JSON source.",
+      "chapters": "auto",
+      "cinematic": false,
+      "references": [
+        { "label": "rrweb source", "src": "demos/sample-tour.rrweb.json", "kind": "json" },
+        { "label": "chapters sidecar", "src": "demos/sample-tour.rrweb.json.chapters.json", "kind": "json" }
+      ]
+    },
+    {
+      "type": "cta",
+      "wordmark": "slidey",
+      "tagline": "Keep examples/embed-qa.slidey.json current with every new embed or reference viewer.",
+      "url": ""
+    }
+  ]
+}

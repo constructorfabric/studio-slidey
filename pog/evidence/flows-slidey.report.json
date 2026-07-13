@@ -1,0 +1,355 @@
+{
+  "Results": [
+    {
+      "File": "stories/materialize-doc/flows/materialize_brief.yaml",
+      "Passed": true,
+      "Turns": [
+        {
+          "TurnIndex": 0,
+          "Passed": true,
+          "Failures": null,
+          "NewState": "gather",
+          "View": "POG · materialize doc · wi-3-1 · Gathering context\nGathering context\nWalking the node's transitive context (depth 3) for the public audience.\n\nNode:  wi-3-1\nGate:  reviewers assigned\n• next  draft the brief\n• look\n\n",
+          "Events": [
+            {
+              "turn": 0,
+              "seq": 3,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.transition",
+              "payload": {
+                "from": "gather",
+                "intent": "look",
+                "slots": {},
+                "to": "gather"
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 1,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "context_gathered": true
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 2,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "status": "gathering"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "TurnIndex": 1,
+          "Passed": true,
+          "Failures": null,
+          "NewState": "draft",
+          "View": "POG · materialize doc · wi-3-1 · Drafting the implementation brief\nDrafting the implementation brief\nDrafting the implementation brief from the gathered context.\n\nArtifact:  \u001b]8;;file:///Users/brad/code/slidey/.artifacts/wi-3-1/brief.md\u001b\\.artifacts/wi-3-1/brief.md\u001b]8;;\u001b\\\nStatus:    drafted\n• next     verify the brief\n• restart\n• look\n\n",
+          "Events": [
+            {
+              "turn": 0,
+              "seq": 7,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.transition",
+              "payload": {
+                "from": "gather",
+                "intent": "next",
+                "slots": {},
+                "to": "draft"
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 4,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "artifact_path": ".artifacts/wi-3-1/brief.md"
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 5,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "draft_written": true
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 6,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "status": "drafted"
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 8,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.state_exited",
+              "payload": {
+                "state": "gather"
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 9,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.state_entered",
+              "payload": {
+                "state": "draft"
+              }
+            }
+          ]
+        },
+        {
+          "TurnIndex": 2,
+          "Passed": true,
+          "Failures": null,
+          "NewState": "verify",
+          "View": "POG · materialize doc · wi-3-1 · Verifying the drafted brief\nVerifying the drafted brief\nDeterministic checks confirm the brief covers the gathered context and matches\nthe gate.\n\nArtifact:  \u001b]8;;file:///Users/brad/code/slidey/.artifacts/wi-3-1/brief.md\u001b\\.artifacts/wi-3-1/brief.md\u001b]8;;\u001b\\\nStatus:    verified\n• next     finish\n• restart\n• look\n\n",
+          "Events": [
+            {
+              "turn": 0,
+              "seq": 12,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.transition",
+              "payload": {
+                "from": "draft",
+                "intent": "next",
+                "slots": {},
+                "to": "verify"
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 10,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "status": "verified"
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 11,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "verified": true
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 13,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.state_exited",
+              "payload": {
+                "state": "draft"
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 14,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.state_entered",
+              "payload": {
+                "state": "verify"
+              }
+            }
+          ]
+        },
+        {
+          "TurnIndex": 3,
+          "Passed": true,
+          "Failures": null,
+          "NewState": "done",
+          "View": "POG · materialize doc · wi-3-1 · Implementation brief complete\nImplementation brief complete\nNode:      wi-3-1\nArtifact:  \u001b]8;;file:///Users/brad/code/slidey/.artifacts/wi-3-1/brief.md\u001b\\.artifacts/wi-3-1/brief.md\u001b]8;;\u001b\\\nStatus:    complete\n\nRun `restart` to materialize this document again.\n• restart\n• look\n\n",
+          "Events": [
+            {
+              "turn": 0,
+              "seq": 16,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.transition",
+              "payload": {
+                "from": "verify",
+                "intent": "next",
+                "slots": {},
+                "to": "done"
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 15,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "status": "complete"
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 17,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.state_exited",
+              "payload": {
+                "state": "verify"
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 18,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.state_entered",
+              "payload": {
+                "state": "done"
+              }
+            }
+          ]
+        },
+        {
+          "TurnIndex": 4,
+          "Passed": true,
+          "Failures": null,
+          "NewState": "gather",
+          "View": "POG · materialize doc · wi-3-1 · Gathering context\nGathering context\nWalking the node's transitive context (depth 3) for the public audience.\n\nNode:  wi-3-1\nGate:  reviewers assigned\n• next  draft the brief\n• look\n\n",
+          "Events": [
+            {
+              "turn": 0,
+              "seq": 26,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.transition",
+              "payload": {
+                "from": "done",
+                "intent": "restart",
+                "slots": {},
+                "to": "gather"
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 19,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "artifact_path": ""
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 20,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "context_gathered": false
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 21,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "draft_written": false
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 22,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "status": ""
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 23,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "verified": false
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 24,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "context_gathered": true
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 25,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "world.update",
+              "payload": {
+                "set": {
+                  "status": "gathering"
+                }
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 27,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.state_exited",
+              "payload": {
+                "state": "done"
+              }
+            },
+            {
+              "turn": 0,
+              "seq": 28,
+              "ts": "0001-01-01T00:00:00Z",
+              "kind": "machine.state_entered",
+              "payload": {
+                "state": "gather"
+              }
+            }
+          ]
+        }
+      ],
+      "Skipped": false
+    }
+  ],
+  "Passed": 1,
+  "Failed": 0
+}

@@ -21,6 +21,11 @@ export const PITCH_REVEALS = {
   diagram_caption:   ['diagram-caption'],
   termgif_frame:     ['termgif-frame'],
   termgif_caption:   ['termgif-caption'],
+  // ── Kitsoki TUI ──
+  kitsokitui_frame:   ['kitsokitui-frame'],
+  kitsokitui_welcome: ['kitsokitui-welcome'],
+  kitsokitui_menu:    ['kitsokitui-menu'],
+  kitsokitui_caption: ['kitsokitui-caption'],
   stat_value:        ['stat-value'],
   stat_label:        ['stat-label'],
   stat_detail:       ['stat-detail'],
@@ -32,6 +37,9 @@ export const PITCH_REVEALS = {
   diagramsvg_panel_1:  ['diagramsvg-panel-1'],
   diagramsvg_panel_2:  ['diagramsvg-panel-2'],
   diagramsvg_caption:  ['diagramsvg-caption'],
+  graph_title:         ['graph-title'],
+  graph_frame:         ['graph-frame'],
+  graph_caption:       ['graph-caption'],
   mermaid_title:       ['mermaid-title'],
   mermaid_frame:       ['mermaid-frame'],
   mermaid_caption:     ['mermaid-caption'],
@@ -144,6 +152,10 @@ export const PITCH_REVEALS = {
   book_item_1:  ['book-item-1'],
   book_item_2:  ['book-item-2'],
   book_caption: ['book-caption'],
+  // ── Reference preview ──
+  reference_title:   ['reference-title'],
+  reference_frame:   ['reference-frame'],
+  reference_caption: ['reference-caption'],
 };
 
 // API/request-mode ids cleared on a scene reset (verbatim from _resetScene).
@@ -179,6 +191,11 @@ export const store = reactive({
   // Transcript: index of the turn card currently on screen (the scene shows one
   // card at a time; the renderers advance it via the transcript_card_<n> step).
   transcriptCard: 0,
+  // Graph scene: index into scene.path/focus for the node currently centered.
+  graphFocus: -1,
+  // Graph scene (projection input mode): the resolved graph-projection v1 JSON
+  // for the current scene (null unless scene.projection was set and resolved).
+  graphProjectionData: null,
   // visibility / reveal sets
   visible: new Set(),
   revealed: new Set(),
@@ -326,18 +343,27 @@ export const store = reactive({
     this.bookCoverDataUris = [];
     this.memeDataUri = '';
     this.memeTemplate = null;
+    this.graphProjectionData = null;
   },
 
   setPitchSteps(steps) {
     this.revealed = new Set();
     this.revealAll = false;
     this.transcriptCard = 0;
+    this.graphFocus = -1;
     for (const step of steps || []) {
       const m = /^transcript_card_(\d+)$/.exec(step);
       if (m) {
         this.transcriptCard = parseInt(m[1], 10);
         continue;
       }
+      const g = /^graph_focus_(\d+)$/.exec(step);
+      if (g) {
+        this.graphFocus = parseInt(g[1], 10);
+        this.revealed.add('graph-frame');
+        continue;
+      }
+      if (step === 'graph_caption') this.graphFocus = -1;
       if (step === 'reveal_all') {
         this.revealAll = true;
         continue;
@@ -354,6 +380,7 @@ export const store = reactive({
     this.scene = scene;
     this.sceneType = type;
     this.transcriptCard = 0;     // start a transcript at its first turn card
+    this.graphFocus = -1;
   },
   // video (live rrweb player in the interactive viewer): the loaded rrweb log
   // (events + derived chapters) is held here for VideoScene → RrwebPlayer.
@@ -362,6 +389,13 @@ export const store = reactive({
     this.rrwebEvents = (data && data.events) || [];
     this.rrwebChapters = (data && data.chapters) || [];
   },
+  // graph (projection input mode): the resolved graph-projection JSON is held
+  // separately from `scene` (mirrors showVideo) so GraphScene.vue can render it
+  // through the shared renderer without waiting on a second fetch.
+  showGraph(scene, projectionData) {
+    this.showScene('graph', scene);
+    this.graphProjectionData = projectionData || null;
+  },
   hidePitch() { this._resetPitch(); },
 
   // setState dispatch: transcript card step → swap the on-screen turn card;
@@ -369,6 +403,13 @@ export const store = reactive({
   setState(step) {
     const m = /^transcript_card_(\d+)$/.exec(step);
     if (m) { this.transcriptCard = parseInt(m[1], 10); return; }
+    const g = /^graph_focus_(\d+)$/.exec(step);
+    if (g) {
+      this.graphFocus = parseInt(g[1], 10);
+      this.revealed.add('graph-frame');
+      return;
+    }
+    if (step === 'graph_caption') this.graphFocus = -1;
     if (step === 'reveal_all') { this.revealAll = true; return; }
     const ids = PITCH_REVEALS[step];
     if (ids) { ids.forEach(id => this.revealed.add(id)); return; }

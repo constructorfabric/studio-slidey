@@ -1,0 +1,30 @@
+{
+  "scenes": [
+    {
+      "type": "title",
+      "title": "PM reviews the roadmap as a computed diff"
+    },
+    {
+      "type": "video",
+      "mode": "fullscreen",
+      "fit": "contain",
+      "rrweb": "clips/pm-reviews-the-roadmap-as-a-computed-diff-journey.rrweb.json",
+      "chapters": "auto",
+      "title": "journey",
+      "narration": [
+        {
+          "chapter": "step_0_open_the_portal_the_catalog_view_loads_t",
+          "text": "The PM sees exactly what moved since last look, with provenance for every change, and can drill into any node's history."
+        },
+        {
+          "chapter": "step_1_switch_to_the_roadmap_diff_view_desired_",
+          "text": "The PM sees exactly what moved since last look, with provenance for every change, and can drill into any node's history."
+        },
+        {
+          "chapter": "step_2_drill_into_a_changed_node_its_decision_c",
+          "text": "The PM sees exactly what moved since last look, with provenance for every change, and can drill into any node's history."
+        }
+      ]
+    }
+  ]
+}

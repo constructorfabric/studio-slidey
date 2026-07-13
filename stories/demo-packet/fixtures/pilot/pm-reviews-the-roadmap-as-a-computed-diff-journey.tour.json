@@ -1,0 +1,69 @@
+{
+  "_comment": "Real capture (C2): drives the live portal through the pog-portal kit UI's hash route (kits/pog-portal/kit.yaml ui id 'portal', served by internal/runstatus/server/kit_ui.go at /#/kit/pog/pog-portal/portal — NOT '/', which is kitsoki web's own Run Status story browser). Same step ids/chapters as the mockup packet's tour (C2 symmetry), but each step now drives real DOM through pog/qa/driver.json's affordances instead of the mockup-only window.storyboard helper (create-mockup.mjs/mockup-template.mjs inject that global on the generated mockup.html; the real portal has no such hook). Steps 1-2 use the lifecycle-pill-roadmap filter + drill-in, NOT the changes-pill/changes-panel the mockup packet's storyboard prose evokes — driver.json's own notes explain why: changes-pill only exists in the standalone Vite dev server (a git-uncommitted-diff feature with no kit-served backend), so a tour against `kitsoki web --kits-dir` cannot reach it. Each step keeps a guarded `window.storyboard && ...setStep(...)` eval purely so demo-doctor.mjs's states check (a static regex scan for setStep('id') calls, tools/frontend-mockup-mcp/lib/demo-manifest.mjs's extractSetStepTargets) still finds every declared state id; the guard makes it a harmless no-op against the real page instead of a ReferenceError. Regenerate with `kitsoki web --kits-dir kits --addr 127.0.0.1:7892` running and `node ~/code/Kitsoki/tools/frontend-mockup-mcp/scripts/record-tour.mjs stories/demo-packet/fixtures/pilot/demo-packet.demo.json`.",
+  "target": {
+    "launch": "kitsoki web --kits-dir kits --addr 127.0.0.1:7892",
+    "addr": "127.0.0.1:7892",
+    "readyPath": "/",
+    "cwd": "../../../..",
+    "timeoutMs": 30000
+  },
+  "startPath": "/#/kit/pog/pog-portal/portal",
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "deviceScaleFactor": 1,
+  "pace": 1,
+  "readySelector": "[data-testid=pog-portal-page]",
+  "steps": [
+    {
+      "id": "step_0_open_the_portal_the_catalog_view_loads_t",
+      "label": "Open the portal; the catalog view loads the current graph.",
+      "before": [
+        {
+          "waitFor": "[data-testid=catalog-panel]"
+        },
+        {
+          "eval": "window.storyboard && window.storyboard.setStep('step_0_open_the_portal_the_catalog_view_loads_t')"
+        }
+      ],
+      "dwellMs": 2500,
+      "kind": "explain"
+    },
+    {
+      "id": "step_1_switch_to_the_roadmap_diff_view_desired_",
+      "label": "Switch to the roadmap diff view; desired vs current subgraphs render as a computed delta, not a hand-maintained list.",
+      "before": [
+        {
+          "click": "[data-testid=lifecycle-pill-roadmap]"
+        },
+        {
+          "waitFor": "[data-testid=object-listing]"
+        },
+        {
+          "eval": "window.storyboard && window.storyboard.setStep('step_1_switch_to_the_roadmap_diff_view_desired_')"
+        }
+      ],
+      "dwellMs": 2500,
+      "kind": "explain"
+    },
+    {
+      "id": "step_2_drill_into_a_changed_node_its_decision_c",
+      "label": "Drill into a changed node; its decision/changeset provenance is one click away.",
+      "before": [
+        {
+          "click": "[data-testid=object-listing] .object-entry button",
+          "text": "Real-app demo"
+        },
+        {
+          "waitFor": "[data-testid=back-to-list]"
+        },
+        {
+          "eval": "window.storyboard && window.storyboard.setStep('step_2_drill_into_a_changed_node_its_decision_c')"
+        }
+      ],
+      "dwellMs": 2500,
+      "kind": "explain"
+    }
+  ]
+}

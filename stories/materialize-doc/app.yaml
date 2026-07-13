@@ -1,0 +1,83 @@
+# POG materialize-doc — deterministic story bound to the doc and tutorial
+# deliverable types' `materialize:` declarations in pog/catalog.yaml
+# (materialization-first taxonomy: the graph holds deliverable specs, and
+# "work" is the act of materializing them; this story projects a node's
+# graph context into the markdown document the node promises). No hosts,
+# agents, or live LLM: every stage advances via templated world-state
+# transitions, matching the shape of stories/product-site.
+#
+# host_interfaces.portal (B2, use-case-loop-plan.md §3.2): declares the
+# kit's one host_interfaces surface, "portal" — kits/pog-portal/kit.yaml's
+# `interfaces: [portal]` resolves to THIS block via
+# internal/kitendpoint.Dispatcher.resolveInterface, exactly the way
+# @kitsoki/object-graph's own pilot story declares "graph" (see
+# ~/code/Kitsoki/kits/object-graph/stories/object-graph/app.yaml — this is a
+# straight crib of that precedent). Every op defaults straight to the
+# engine's generic host.graph.* verbs (D1 — no Go in this kit, the substrate
+# is engine infrastructure); the portal's browser RPC client
+# (portal/src/data/rpc.ts) calls these as `kit.pog-portal.portal.<op>` over
+# POST /rpc. Read-scoped for B2: project/lint/diff are wired; apply stays
+# declared (mirrors object-graph) but the portal does not call it yet —
+# writes remain the dev-topology-only splice routes in vite.config.ts until
+# A1's graph.propose/graph.authorize land (§3.3). materialize is declared
+# separately by materialize-client.ts's own graph.materialize.* RPC family
+# (node-artifact-materialization plan slice 5), not through this interface.
+app:
+  id: pog-materialize-doc
+  version: 0.1.0
+  title: "POG doc deliverable — generated document"
+  author: "pog"
+  license: "CC0"
+
+host_interfaces:
+  portal:
+    description: "The project object graph engine substrate (internal/graph), exposed generically for the POG portal kit UI."
+    operations:
+      load:
+        input: { catalog_path: string, overlay_path: string }
+        output: { node_count: int, node_ids: list, warnings: list }
+      lint:
+        input: { catalog_path: string }
+        output: { issues: list, issue_count: int, clean: bool }
+      diff:
+        input: { catalog_path: string, overlay_path: string }
+        output: { nodes: list }
+      apply:
+        input: { catalog_path: string, changeset_id: string, dry_run: bool }
+        output: { rejected: bool, reject_reasons: list, lint_issues: list, changed_files: list }
+      project:
+        input: { catalog_path: string, overlay_path: string, graph_id: string }
+        output: { graph: object }
+      presentation:
+        input: {}
+        output: { layers: list }
+    default: host.graph
+
+world:
+  node_id: { type: string, default: "" }
+  depth: { type: int, default: 2 }
+  audience: { type: string, default: "internal" }
+  gate: { type: string, default: "" }
+  context_gathered: { type: bool, default: false }
+  draft_written: { type: bool, default: false }
+  verified: { type: bool, default: false }
+  artifact_path: { type: string, default: "" }
+  status: { type: string, default: "" }
+
+intents:
+  next:
+    description: "Advance to the next materialization stage."
+    examples: ["next", "continue"]
+    priority: 80
+  restart:
+    description: "Restart materialization from the gather stage."
+    examples: ["restart", "start over"]
+    priority: 40
+  look:
+    description: "Re-render the current stage."
+    examples: ["look", "?"]
+    priority: 10
+
+root: gather
+include:
+  - rooms/*.yaml

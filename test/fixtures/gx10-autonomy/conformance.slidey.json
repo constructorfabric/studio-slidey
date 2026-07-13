@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "title": "GX10 autonomy evidence conformance",
+    "mode": "pitch",
+    "artifact": {
+      "id": "gx10-autonomy-phase1-evidence",
+      "revision": "2026-07-13.r1",
+      "contentDigest": "sha256:gx10-conformance-deck-r1",
+      "sourceDigest": "sha256:gx10-source-r1",
+      "attemptDigest": "sha256:gx10-attempt-r1"
+    },
+    "report": {
+      "costBasisUsd": "0.034225",
+      "claimCertificate": "https://example.invalid/gx10/claim-certificate.json"
+    }
+  },
+  "scenes": [
+    {
+      "id": "evidence-contract",
+      "type": "title",
+      "title": "GX10 evidence contract",
+      "subtitle": "A frozen source deck remains the review artifact."
+    },
+    {
+      "id": "rrweb-proof",
+      "type": "video",
+      "mode": "embedded",
+      "title": "Recorded deterministic proof",
+      "rrweb": "gx10-autonomy.rrweb.json",
+      "chapters": "auto",
+      "caption": "rrweb time is retained as an opaque producer anchor."
+    },
+    {
+      "id": "cost-and-certificate",
+      "type": "narrative",
+      "lede": "Report data is rendered, never calculated or certified by Slidey.",
+      "body": "Cost basis: $0.034225. Claim certificate: opaque external evidence link."
+    }
+  ],
+  "library": {
+    "title": "GX10 evidence views",
+    "decks": [
+      {
+        "id": "replay-detail",
+        "deckType": "hierarchy",
+        "title": "Replay detail",
+        "scenes": [
+          { "id": "replay-method", "type": "narrative", "lede": "Canonical source identity", "body": "A hierarchy scene owns its deck-qualified address." }
+        ]
+      },
+      {
+        "id": "review-subset",
+        "deckType": "subset",
+        "title": "Review subset",
+        "scenes": ["evidence-contract", "rrweb-proof"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "index": 0,
+    "id": "step_0_open_the_portal_the_catalog_view_loads_t",
+    "label": "Open the portal; the catalog view loads the current graph.",
+    "start_ms": 557,
+    "end_ms": 14066,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "pm-reviews-the-roadmap-as-a-computed-diff-journey.tour.json",
+      "step_id": "step_0_open_the_portal_the_catalog_view_loads_t"
+    }
+  },
+  {
+    "index": 1,
+    "id": "step_1_switch_to_the_roadmap_diff_view_desired_",
+    "label": "Switch to the roadmap diff view; desired vs current subgraphs render as a computed delta, not a hand-maintained list.",
+    "start_ms": 14066,
+    "end_ms": 27572,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "pm-reviews-the-roadmap-as-a-computed-diff-journey.tour.json",
+      "step_id": "step_1_switch_to_the_roadmap_diff_view_desired_"
+    }
+  },
+  {
+    "index": 2,
+    "id": "step_2_drill_into_a_changed_node_its_decision_c",
+    "label": "Drill into a changed node; its decision/changeset provenance is one click away.",
+    "start_ms": 27572,
+    "end_ms": 40472,
+    "source_ref": {
+      "kind": "rrweb",
+      "spec_path": "pm-reviews-the-roadmap-as-a-computed-diff-journey.tour.json",
+      "step_id": "step_2_drill_into_a_changed_node_its_decision_c"
+    }
+  }
+]

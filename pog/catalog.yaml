@@ -1,0 +1,1266 @@
+schema: project-object-graph/seed-catalog/v0
+catalog:
+  id: slidey-catalog
+  title: slidey — product object graph
+  status: active
+  visibility: public
+  purpose: product-catalog
+  # Retrofit catalog for the semi-brownfield track: the shipped capabilities
+  # are mined from README.md; the planned features from ideas.md and
+  # docs/proposals/. Lint arrives with the repo's POG onboarding (wi-1-4).
+  source_window:
+    branch: main
+    sampled_at: "2026-07-05"
+    inputs:
+      - id: source-readme
+        kind: document
+        path: README.md
+      - id: source-ideas
+        kind: document
+        path: ideas.md
+      - id: source-tour-proposal
+        kind: document
+        path: docs/proposals/extensible-tour-engine.md
+type_registry:
+  - id: core-node
+    schema: graph-type/v0
+    extends: null
+    summary: Shared envelope for every slidey product graph node.
+    required_fields:
+      - id
+      - schema
+      - title
+      - status
+      - visibility
+      - sources
+      - edges
+  - id: product
+    schema: graph-type/v0
+    extends: core-node
+    summary: The product root node.
+  # Single-product programs live here, in the product's own catalog (POG
+  # taxonomy 2026-07-12): a program is a scoped initiative with phases;
+  # cross-product programs live in the POG portfolio catalog instead.
+  - id: program
+    schema: graph-type/v0
+    extends: core-node
+    summary: A scoped single-product initiative with its own phases.
+    edge_fields:
+      - id: part_of
+        target_type: product
+        cardinality: one
+  - id: phase
+    schema: graph-type/v0
+    extends: core-node
+    summary: A plan phase of a program; ordered by after.
+    edge_fields:
+      - id: part_of
+        target_type: program
+        cardinality: one
+      - id: after
+        target_type: phase
+        cardinality: one
+        acyclic: true
+  - id: feature
+    schema: graph-type/v0
+    extends: core-node
+    summary: A shipped or planned product capability.
+    edge_fields:
+      - id: part_of
+        target_type: product
+        cardinality: one
+      - id: requirements
+        target_type: requirement
+        cardinality: many
+      - id: use_cases
+        target_type: use-case
+        cardinality: many
+  - id: requirement
+    schema: graph-type/v0
+    extends: core-node
+    summary: Durable, testable statement a feature must satisfy.
+    edge_fields:
+      - id: part_of
+        target_type: product
+        cardinality: one
+      - id: required_by
+        target_type: feature
+        cardinality: many
+      - id: motivated_by
+        target_type: use-case
+        cardinality: many
+  - id: use-case
+    schema: graph-type/v0
+    extends: core-node
+    summary: An actor scenario that motivates features and requirements.
+    edge_fields:
+      - id: part_of
+        target_type: product
+        cardinality: one
+      - id: exercises
+        target_type: feature
+        cardinality: many
+      - id: acceptance
+        target_type: requirement
+        cardinality: many
+  # Deliverable layer — POG materialization-first taxonomy (2026-07-11):
+  # deliverable nodes are SPECS of real evidence/functionality artifacts
+  # (decks, demos, docs, tutorials, test evidence); "work" is the act of
+  # materializing them, and a deliverable is REAL exactly when its latest
+  # materialize run's Starlark gate check passes. Status uses the derived
+  # EvidenceStatus vocabulary (missing | planned | in-progress | failed |
+  # verified | stale) — flipped by runs, never hand-curated. The deck type
+  # carries the full contract (producer story + type-provided assertion);
+  # demo/test-suite/doc/tutorial get their story bindings when this repo's
+  # POG onboarding wires kitsoki stories for them.
+  - id: deck
+    schema: graph-type/v0
+    extends: core-node
+    summary: A slidey deck generated from deterministic data; real when it is 1:1 with its evidence registries per the type-provided deck_matches_evidence assertion.
+    edge_fields:
+      - id: part_of
+        target_type: product
+        cardinality: one
+      - id: demonstrates
+        target_type: feature
+        cardinality: many
+    artifact:
+      schema: slidey/artifact/deck/v0
+      format: json
+      presentation: media
+    materialize:
+      story: stories/render-deck
+      context_edges: [demonstrates]
+      params:
+        - {id: build_command, type: string, default: "node scripts/build-meme-gallery-deck.js"}
+      checks:
+        - id: gate
+          script: scripts/checks/deck_matches_evidence.star
+          inputs_field: check_inputs
+          capabilities: {fs: {read: ["examples/**", "data/**"]}}
+  - id: demo
+    schema: graph-type/v0
+    extends: core-node
+    summary: A recorded demonstration packet (tours + rrweb clips + deck) of a use case; real when the committed packet satisfies the type-provided demo_packet assertion.
+    edge_fields:
+      - id: part_of
+        target_type: product
+        cardinality: one
+      - id: demonstrates
+        target_type: use-case
+        cardinality: many
+    artifact:
+      schema: slidey/artifact/demo-packet/v0
+      format: json
+      presentation: media
+    materialize:
+      checks:
+        - capabilities:
+            fs:
+              read:
+                - stories/**
+                - .artifacts/**
+          id: gate
+          inputs_field: check_inputs
+          script: scripts/checks/demo_packet.star
+      context_edges:
+        - demonstrates
+      params:
+        - default: ""
+          id: target_url
+          type: string
+      story: stories/demo-packet
+  - id: test-suite
+    schema: graph-type/v0
+    extends: core-node
+    summary: Recorded deterministic test/flow evidence; real when the recorded runs are clean per the type-provided flows_recorded assertion.
+    edge_fields:
+      - id: part_of
+        target_type: product
+        cardinality: one
+      - id: proves
+        target_type: requirement
+        cardinality: many
+    artifact:
+      schema: slidey/artifact/flow-evidence/v0
+      format: json
+      presentation: document
+    materialize:
+      checks:
+        - capabilities:
+            fs:
+              read:
+                - pog/evidence/**
+          id: gate
+          inputs_field: check_inputs
+          script: scripts/checks/flows_recorded.star
+      context_edges:
+        - proves
+      params:
+        - default: scripts/record-flow-evidence.sh
+          id: record_command
+          type: string
+        - default: .
+          id: repo_root
+          type: string
+      story: stories/record-flow-evidence
+  - id: doc
+    schema: graph-type/v0
+    extends: core-node
+    summary: A generated document projected from the node's graph context; real when the declared artifact paths exist per the type-provided artifact_exists assertion.
+    edge_fields:
+      - id: part_of
+        target_type: product
+        cardinality: one
+      - id: documents
+        target_type: feature
+        cardinality: many
+    artifact:
+      schema: slidey/artifact/doc/v0
+      format: markdown
+      presentation: document
+    materialize:
+      checks:
+        - capabilities:
+            fs:
+              read:
+                - .artifacts/**
+                - docs/**
+          id: gate
+          inputs_field: check_inputs
+          script: scripts/checks/artifact_exists.star
+      context_edges:
+        - documents
+      params:
+        - default: 2
+          id: depth
+          type: int
+        - id: audience
+          type: enum
+          values:
+            - internal
+            - public
+      story: stories/materialize-doc
+  - id: tutorial
+    schema: graph-type/v0
+    extends: core-node
+    summary: A step-by-step walkthrough teaching a use case; real when the declared artifact paths exist per the type-provided artifact_exists assertion.
+    edge_fields:
+      - id: part_of
+        target_type: product
+        cardinality: one
+      - id: teaches
+        target_type: use-case
+        cardinality: many
+    artifact:
+      schema: slidey/artifact/doc/v0
+      format: markdown
+      presentation: document
+    materialize:
+      checks:
+        - capabilities:
+            fs:
+              read:
+                - .artifacts/**
+                - docs/**
+          id: gate
+          inputs_field: check_inputs
+          script: scripts/checks/artifact_exists.star
+      context_edges:
+        - teaches
+      params:
+        - default: 2
+          id: depth
+          type: int
+        - id: audience
+          type: enum
+          values:
+            - internal
+            - public
+      story: stories/materialize-doc
+  # The structured write primitive (cribbed from the POG program catalog):
+  # system-authored writes — materialize write-backs, derived status flips —
+  # land as changeset nodes, so every catalog mutation has provenance.
+  - id: changeset
+    schema: graph-type/v0
+    extends: core-node
+    summary: A reviewable, structured edit to this catalog; content writes are changesets, lifecycle flips are direct writes with provenance.
+nodes:
+  - schema: slidey/product/v0
+    id: product-slidey
+    title: slidey
+    status: active
+    visibility: public
+    summary: Deterministic, spec-driven declarative scene engine. A JSON spec describes an ordered list of scenes; from that one spec slidey produces video (MP4 with synthesized narration), vector PDF, and an interactive web app — all sharing a single set of Vue 3 scene components so the outputs never drift.
+    sources: [source-readme]
+    edges: {}
+  # --- programs --------------------------------------------------------------
+  - schema: slidey/program/v0
+    id: program-slidey-productization
+    title: slidey productization
+    status: active
+    visibility: internal
+    summary: Single-product program — productize slidey based on pog/gravytanker; product site, feature catalog, demos, decks, packaged onboarding. The 2026-07 product-materialization work (stories/checks, demo packets, product-loop gate) is this program's active thread.
+    edges:
+      part_of: [product-slidey]
+  # --- features ------------------------------------------------------------
+  - schema: slidey/feature/v0
+    id: feature-video-render
+    title: Narrated video rendering
+    status: shipped
+    visibility: public
+    summary: Headless Chrome screenshots each frame, edge-tts synthesizes narration, ffmpeg muxes to out.mp4 — no LLM in the rendering loop.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      requirements: [req-byte-identical-frames, req-no-llm-in-render]
+      use_cases: [uc-demo-video-from-manifest]
+  - schema: slidey/feature/v0
+    id: feature-vector-pdf
+    title: Vector PDF export
+    status: shipped
+    visibility: public
+    summary: One vector page per reveal step; text and SVG stay selectable, with an optional raster mode for slow-repainting viewers.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      requirements: [req-pdf-selectable-text]
+      use_cases: [uc-handout-pdf]
+  - schema: slidey/feature/v0
+    id: feature-web-app
+    title: Interactive web deck
+    status: shipped
+    visibility: public
+    summary: The same scene components navigated by keyboard/click, built by Vite into a self-contained web app.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      requirements: [req-single-spec-three-outputs]
+      use_cases: [uc-click-through-deck]
+  - schema: slidey/feature/v0
+    id: feature-embed-protocol
+    title: Embed protocol (embed:view / embed:annotate / embed:pick)
+    status: shipped
+    visibility: public
+    summary: Host pages drive scope/step and anchor picking — the protocol sassfully uses as its first real host integration.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      use_cases: [uc-sassfully-host]
+  - schema: slidey/feature/v0
+    id: feature-subset-decks
+    title: Subset decks
+    status: proposed
+    visibility: public
+    summary: Mini-versions of a deck (e.g. a pitch cut) generated from the same spec by selecting a scene subset.
+    sources: [source-ideas]
+    edges:
+      part_of: [product-slidey]
+  - schema: slidey/feature/v0
+    id: feature-deck-to-deck-nav
+    title: Deck-to-deck navigation
+    status: proposed
+    visibility: public
+    summary: An exec-summary deck links into detailed decks as a navigable graph — nav history, TOC, and indexes so the user can always find the way back up the chain.
+    sources: [source-ideas]
+    edges:
+      part_of: [product-slidey]
+  - schema: slidey/feature/v0
+    id: feature-extensible-tour-engine
+    title: Extensible tour engine
+    status: proposed
+    visibility: public
+    summary: Proposal to generalize the guided-tour machinery (docs/proposals/extensible-tour-engine.md).
+    sources: [source-tour-proposal]
+    edges:
+      part_of: [product-slidey]
+  - schema: slidey/feature/v0
+    id: feature-viewer-feedback
+    title: Viewer feedback (deck toolbar → kitsoki-test intake)
+    status: shipped
+    visibility: public
+    summary: A Feedback button in the upper-left deck toolbar lets a viewer pick whether a note is about the content or about slidey itself, review the exact app-state-only diagnostic bundle that will be sent (deck/scene/step/viewer version — no HAR, no rrweb, no screenshots, no PII), and submit. Reusable machine/HTTP-sink/Vue-modal/intake-server pieces live in studio-sassfully (packages/feedback-core, feedback-vue, feedback-intake); this repo owns the producer adapter (web/feedback/slideyFeedback.js), the toolbar button (web/components/App.vue), and publish/share/pull tooling (tools/deploy/).
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      requirements: [req-feedback-app-diagnostic-only, req-feedback-reviewed-submit, req-feedback-anonymous-ok, req-feedback-deck-version]
+      use_cases: [uc-viewer-content-feedback, uc-viewer-app-feedback, uc-personalized-share-link]
+  # --- requirements ----------------------------------------------------------
+  - schema: slidey/requirement/v0
+    id: req-single-spec-three-outputs
+    title: One spec drives all three outputs without drift
+    status: satisfied
+    visibility: public
+    summary: Video, PDF, and web app must render from the same spec through the same Vue scene components, so the outputs can never disagree.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      required_by: [feature-video-render, feature-vector-pdf, feature-web-app]
+      motivated_by: [uc-demo-video-from-manifest]
+  - schema: slidey/requirement/v0
+    id: req-byte-identical-frames
+    title: Same bundle + same spec produce byte-identical frames
+    status: satisfied
+    visibility: public
+    summary: Rendering is deterministic — re-rendering an unchanged spec with an unchanged bundle yields byte-identical frames.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      required_by: [feature-video-render]
+  - schema: slidey/requirement/v0
+    id: req-no-llm-in-render
+    title: No LLM in the rendering loop
+    status: satisfied
+    visibility: public
+    summary: The render pipeline is fully deterministic; language models may author specs but never participate in producing frames from them.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      required_by: [feature-video-render]
+  - schema: slidey/requirement/v0
+    id: req-pdf-selectable-text
+    title: PDF pages keep text and SVG selectable
+    status: satisfied
+    visibility: public
+    summary: The default PDF export is vector — one page per reveal step with selectable text — with rasterization only as an explicit opt-in.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      required_by: [feature-vector-pdf]
+  - schema: slidey/requirement/v0
+    id: req-feedback-app-diagnostic-only
+    title: Feedback diagnostics are app-state only — never PII
+    status: satisfied
+    visibility: public
+    summary: The submitted bundle may only carry deck id/title, scene index/id/type/title, step index, steps-in-scene, scene count, viewer version/mode/viewport — no HAR, no rrweb, no screenshots, no user agent, no cookies. Enforced by feedback-core's fail-closed privacy manifest (an unclassified field blocks submit); test/feedback-viewer.test.js's manifest/payload-lockstep case is the regression proof — adding any extra field to context fails the verdict.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      required_by: [feature-viewer-feedback]
+  - schema: slidey/requirement/v0
+    id: req-feedback-reviewed-submit
+    title: Only a reviewed bundle may ever reach a sink
+    status: satisfied
+    visibility: public
+    summary: Draft → review → submit; feedback-core's machine.submit() throws unless the draft is in the reviewed state, so raw evidence and unreviewed text can never leave the browser even for low-friction kinds.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      required_by: [feature-viewer-feedback]
+  - schema: slidey/requirement/v0
+    id: req-feedback-anonymous-ok
+    title: Feedback works anonymously; personalization is opt-in
+    status: satisfied
+    visibility: public
+    summary: A share link's ?u=<hash> rides into context.viewerHash (privacy class high, host policy allow); absent it, the field is omitted entirely and the note is anonymous. The hash->recipient mapping lives only in a gitignored local file (tools/deploy/audience.local.json), never on the VM.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      required_by: [feature-viewer-feedback]
+  - schema: slidey/requirement/v0
+    id: req-feedback-deck-version
+    title: Every bundle records the published deck version that was live
+    status: satisfied
+    visibility: public
+    summary: publish-deck.sh tags HEAD (deck/<slug>/v<n>, annotated, sequential per slug) before building, refusing to run on a dirty tree, then stamps that already-fixed string into the bundle as window.__SLIDEY_DECK_VERSION__ -> context.deck.version — never a SHA computed from the build's own output. pull-feedback.sh's `git show <tag>:<spec>` reproduces exactly what was live when a note was submitted, even after republishing.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      required_by: [feature-viewer-feedback]
+  # --- use cases ---------------------------------------------------------------
+  - schema: slidey/use-case/v0
+    id: uc-demo-video-from-manifest
+    title: Demo video generated from a declarative manifest
+    status: supported
+    visibility: public
+    summary: An author writes a JSON spec and gets a narrated MP4 — the POG program's demo-evidence renderer path.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      exercises: [feature-video-render]
+      acceptance: [req-byte-identical-frames, req-no-llm-in-render]
+  - schema: slidey/use-case/v0
+    id: uc-handout-pdf
+    title: Handout PDF from the same deck
+    status: supported
+    visibility: public
+    summary: The same spec produces a selectable, printable handout without a separate authoring pass.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      exercises: [feature-vector-pdf]
+      acceptance: [req-pdf-selectable-text]
+  - schema: slidey/use-case/v0
+    id: uc-click-through-deck
+    title: Presenter clicks through the interactive deck
+    status: supported
+    visibility: public
+    summary: Keyboard/click navigation over the same scenes used by video and PDF output.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      exercises: [feature-web-app]
+      acceptance: [req-single-spec-three-outputs]
+  - schema: slidey/use-case/v0
+    id: uc-sassfully-host
+    title: slidey hosts sassfully feedback via the embed protocol
+    status: supported
+    visibility: public
+    summary: A viewer anchors feedback at any visible point of a deck through embed:view / embed:pick — sassfully's host-neutrality proof.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      exercises: [feature-embed-protocol]
+  - schema: slidey/use-case/v0
+    id: uc-viewer-content-feedback
+    title: Viewer comments on a slide's content
+    status: supported
+    visibility: public
+    summary: A viewer picks "the content" (comment/copy suggestion/question), types a note anchored to the current scene/step, reviews the app-state-only bundle, and submits — it lands as a JSONL line on kitsoki-test.slothattax.me.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      exercises: [feature-viewer-feedback]
+      acceptance: [req-feedback-app-diagnostic-only, req-feedback-reviewed-submit]
+  - schema: slidey/use-case/v0
+    id: uc-viewer-app-feedback
+    title: Viewer reports a slidey bug or requests an improvement
+    status: supported
+    visibility: public
+    summary: A viewer picks "the slidey app" (bug/suggest an improvement) instead of a content note — same machine, same anchor model, same privacy review; the grouping is presentation only.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      exercises: [feature-viewer-feedback]
+      acceptance: [req-feedback-app-diagnostic-only, req-feedback-reviewed-submit]
+  - schema: slidey/use-case/v0
+    id: uc-personalized-share-link
+    title: Personalized share link attributes feedback to a recipient
+    status: supported
+    visibility: public
+    summary: tools/deploy/share-link.sh mints a ?u=<hash> link per recipient (HMAC over a local-only secret); the hash rides into context.viewerHash and pull-feedback.sh resolves it back to a name from the gitignored audience file. No ?u= means anonymous, which is equally valid.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      exercises: [feature-viewer-feedback]
+      acceptance: [req-feedback-anonymous-ok, req-feedback-deck-version]
+  # --- deliverables (evidence/functionality nodes) --------------------------
+  - schema: slidey/deck/v0
+    id: deck-meme-gallery
+    title: Meme gallery QA deck — 1:1 with the template registries
+    status: verified
+    visibility: public
+    summary: examples/meme-gallery-all.slidey.json, generated from the vendored memegen catalog plus curated extras (data/meme-templates.json + data/meme-templates.custom.json) by scripts/build-meme-gallery-deck.js. The canonical deck-from-deterministic-data deliverable — materializing re-runs the builder and the gate check asserts every registry template has exactly one scene (no missing coverage, no phantom or duplicate scenes).
+    check_inputs:
+      deck: examples/meme-gallery-all.slidey.json
+      registries:
+        - data/meme-templates.json
+        - data/meme-templates.custom.json
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      demonstrates: []
+    evidence:
+      - kind: doc
+        title: Generated gallery deck
+        path: examples/meme-gallery-all.slidey.json
+      - kind: doc
+        title: Template registry (memegen)
+        path: data/meme-templates.json
+      - kind: doc
+        title: Template registry (curated extras)
+        path: data/meme-templates.custom.json
+    materialization:
+      artifacts: []
+      checks:
+        - id: gate
+          ok: true
+          reproduce: kitsoki starlark run scripts/checks/deck_matches_evidence.star --inputs '{"deck":"examples/meme-gallery-all.slidey.json","registries":["data/meme-templates.json","data/meme-templates.custom.json"]}' --capabilities '{"fs":{"read":["examples/**","data/**"]}}'
+          script: scripts/checks/deck_matches_evidence.star
+          script_sha256: bc30a78320291e38f0e985dcfca68cf90c3f9cf53691173a277b0f45ebde82c3
+      job_id: 01KX7SQ2AJ6VBSJVB1ZFQTKHVN
+      stages:
+        - id: render
+          status: complete
+        - id: done
+          status: complete
+        - id: check:gate
+          status: complete
+      status: complete
+      story: stories/render-deck
+  - schema: slidey/demo/v0
+    id: demo-onboarding-tour
+    title: Recorded onboarding tour of a slidey deck
+    status: verified
+    visibility: public
+    summary: 'Captured demo packet walking uc-click-through-deck against a real served deck: the interactive viewer (slidey examples/hello.slidey.json) opened and driven with keyboard navigation, captured via kitsoki record-tour.mjs / slidey capture --tours (the productized mechanism), doctor green. The old examples/demos/sample-tour.rrweb.json note is superseded by this packet.'
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      demonstrates: [uc-click-through-deck]
+    check_inputs:
+      clips:
+        - stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json
+      manifest: stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json
+    materialization:
+      artifacts: []
+      checks:
+        - id: gate
+          ok: true
+          reproduce: kitsoki starlark run scripts/checks/demo_packet.star --inputs '{"clips":["stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json"],"manifest":"stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json"}' --capabilities '{"fs":{"read":["stories/**",".artifacts/**"]}}'
+          script: scripts/checks/demo_packet.star
+          script_sha256: 90381aa7894c2990252dac1f7ff18a02e9e8107ba5a3ad76c7dcd74db76b61ca
+      job_id: 01KXAAHNAQ47VYHF22M5Q5DVVE
+      stages:
+        - id: plan
+          status: complete
+        - id: launch
+          status: complete
+        - id: capture
+          status: complete
+        - id: doctor
+          status: complete
+        - id: check:gate
+          status: complete
+      status: complete
+      story: stories/demo-packet
+    evidence:
+      - kind: doc
+        path: stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json
+        title: Demo packet manifest — real capture of the interactive viewer (slidey serve mode) clicking through examples/hello.slidey.json
+      - kind: video
+        path: stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json
+        title: 'Journey clip (real rrweb capture: open viewer, arrow through scenes, step back and replay)'
+  - schema: slidey/test-suite/v0
+    id: ts-slidey-dev-story-flows
+    title: Recorded no-LLM dev-story flow run against this repo
+    status: verified
+    visibility: public
+    summary: Recorded no-LLM flow run against this repo's flow-bearing story suite (stories/materialize-doc, materialize_brief flow) — green as of 2026-07-12, evidence recorded into THIS repo (pog/evidence/flows-slidey.json) by scripts/record-flow-evidence.sh. The imports.core host drift is fixed in .kitsoki/stories/slidey-dev/app.yaml (host.capsule_workspace). stories/render-deck has no flow fixtures yet; giving the exemplar deck story a recorded flow is follow-on work.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      proves: [req-no-llm-in-render]
+    check_inputs:
+      reports:
+        - path: pog/evidence/flows-slidey.json
+          repo: slidey
+    materialization:
+      artifacts: []
+      checks:
+        - id: gate
+          ok: true
+          reproduce: kitsoki starlark run scripts/checks/flows_recorded.star --inputs '{"reports":[{"path":"pog/evidence/flows-slidey.json","repo":"slidey"}]}' --capabilities '{"fs":{"read":["pog/evidence/**"]}}'
+          script: scripts/checks/flows_recorded.star
+          script_sha256: 34aebdba4eff5b14944ecb1b124a758290e8011ff704d8cf9898aed1c71b9f90
+      job_id: 01KXAA78AY7WQVGP7YH1FXZAJN
+      stages:
+        - id: record
+          status: complete
+        - id: done
+          status: complete
+        - id: check:gate
+          status: complete
+      status: complete
+      story: stories/record-flow-evidence
+  - schema: slidey/tutorial/v0
+    id: tutorial-author-first-deck
+    title: Tutorial — author and render your first deck
+    status: verified
+    visibility: public
+    summary: Spec of a walkthrough from JSON spec to video/PDF/web outputs. Does not exist yet; sits in the derived work queue until materialized.
+    sources: [source-readme]
+    edges:
+      part_of: [product-slidey]
+      teaches: [uc-demo-video-from-manifest]
+    check_inputs:
+      paths:
+        - .artifacts/tutorial-author-first-deck/brief.md
+    evidence:
+      - kind: doc
+        path: .artifacts/tutorial-author-first-deck/brief.md
+        title: Doc
+    materialization:
+      artifacts:
+        - kind: doc
+          path: .artifacts/tutorial-author-first-deck/brief.md
+          produced_at: "2026-07-12T04:07:48Z"
+          title: Doc
+      checks:
+        - id: gate
+          ok: true
+          reproduce: kitsoki starlark run scripts/checks/artifact_exists.star --inputs '{"paths":[".artifacts/tutorial-author-first-deck/brief.md"]}' --capabilities '{"fs":{"read":[".artifacts/**","docs/**"]}}'
+          script: scripts/checks/artifact_exists.star
+          script_sha256: 46ebb871c1b4e6a7e9615c5b01483ba5ee1193289a210d02cbad9bc1f3aa44d6
+      job_id: 01KXA851GA0THKBSBXRM44G04W
+      stages:
+        - id: gather
+          status: complete
+        - id: draft
+          status: complete
+        - id: verify
+          status: complete
+        - id: done
+          status: complete
+        - id: check:gate
+          status: complete
+      status: complete
+      story: stories/materialize-doc
+  - id: cs-1
+    operations:
+      - changes:
+          - after:
+              artifacts: []
+              checks:
+                - id: gate
+                  ok: true
+                  reproduce: kitsoki starlark run scripts/checks/deck_matches_evidence.star --inputs '{"deck":"examples/meme-gallery-all.slidey.json","registries":["data/meme-templates.json","data/meme-templates.custom.json"]}' --capabilities '{"fs":{"read":["examples/**","data/**"]}}'
+                  script: scripts/checks/deck_matches_evidence.star
+                  script_sha256: bc30a78320291e38f0e985dcfca68cf90c3f9cf53691173a277b0f45ebde82c3
+              job_id: 01KX7SQ2AJ6VBSJVB1ZFQTKHVN
+              stages:
+                - id: render
+                  status: complete
+                - id: done
+                  status: complete
+                - id: check:gate
+                  status: complete
+              status: complete
+              story: stories/render-deck
+            path:
+              - fields
+              - materialization
+        kind: modified
+        node: deck-meme-gallery
+    provenance:
+      job_id: 01KX7SQ2AJ6VBSJVB1ZFQTKHVN
+      story: stories/render-deck
+    schema: graph/changeset/v1
+    status: notified
+    title: 'materialize deck-meme-gallery: write back status "complete"'
+    visibility: internal
+  - created_at: "2026-07-12T03:56:21Z"
+    id: cs-2
+    operations:
+      - changes:
+          - after:
+              checks:
+                - capabilities:
+                    fs:
+                      read:
+                        - stories/**
+                        - .artifacts/**
+                  id: gate
+                  inputs_field: check_inputs
+                  script: scripts/checks/demo_packet.star
+              context_edges:
+                - demonstrates
+              params:
+                - default: ""
+                  id: target_url
+                  type: string
+              story: stories/demo-packet
+            path:
+              - materialize
+          - after: A recorded demonstration packet (tours + rrweb clips + deck) of a use case; real when the committed packet satisfies the type-provided demo_packet assertion.
+            before: A recorded demonstration packet (tours + rrweb clips) of a use case; spec-only until its capture story is wired.
+            path:
+              - summary
+        kind: registry_type_modified
+        node: demo
+      - changes:
+          - after:
+              checks:
+                - capabilities:
+                    fs:
+                      read:
+                        - pog/evidence/**
+                  id: gate
+                  inputs_field: check_inputs
+                  script: scripts/checks/flows_recorded.star
+              context_edges:
+                - proves
+              params:
+                - default: scripts/record-flow-evidence.sh
+                  id: record_command
+                  type: string
+              story: stories/record-flow-evidence
+            path:
+              - materialize
+          - after: Recorded deterministic test/flow evidence; real when the recorded runs are clean per the type-provided flows_recorded assertion.
+            before: Recorded deterministic test/flow evidence; spec-only until its recorder story is wired.
+            path:
+              - summary
+        kind: registry_type_modified
+        node: test-suite
+      - changes:
+          - after:
+              checks:
+                - capabilities:
+                    fs:
+                      read:
+                        - .artifacts/**
+                        - docs/**
+                  id: gate
+                  inputs_field: check_inputs
+                  script: scripts/checks/artifact_exists.star
+              context_edges:
+                - documents
+              params:
+                - default: 2
+                  id: depth
+                  type: int
+                - id: audience
+                  type: enum
+                  values:
+                    - internal
+                    - public
+              story: stories/materialize-doc
+            path:
+              - materialize
+          - after: A generated document projected from the node's graph context; real when the declared artifact paths exist per the type-provided artifact_exists assertion.
+            before: A generated document deliverable; spec-only until its producer story is wired.
+            path:
+              - summary
+        kind: registry_type_modified
+        node: doc
+      - changes:
+          - after:
+              checks:
+                - capabilities:
+                    fs:
+                      read:
+                        - .artifacts/**
+                        - docs/**
+                  id: gate
+                  inputs_field: check_inputs
+                  script: scripts/checks/artifact_exists.star
+              context_edges:
+                - teaches
+              params:
+                - default: 2
+                  id: depth
+                  type: int
+                - id: audience
+                  type: enum
+                  values:
+                    - internal
+                    - public
+              story: stories/materialize-doc
+            path:
+              - materialize
+          - after: A step-by-step walkthrough teaching a use case; real when the declared artifact paths exist per the type-provided artifact_exists assertion.
+            before: A step-by-step walkthrough teaching a use case; spec-only until its producer story is wired.
+            path:
+              - summary
+        kind: registry_type_modified
+        node: tutorial
+    schema: graph/changeset/v1
+    status: notified
+    title: 'Wire deliverable materialize contracts: demo/test-suite/doc/tutorial (Stage 3 type wiring)'
+    visibility: internal
+    authorized_at: "2026-07-12T03:56:21Z"
+    applied_at: "2026-07-12T03:56:21Z"
+  - created_at: "2026-07-12T04:01:24Z"
+    id: cs-3
+    operations:
+      - changes:
+          - after:
+              paths:
+                - .artifacts/tutorial-author-first-deck/brief.md
+            path:
+              - fields
+              - check_inputs
+        kind: modified
+        node: tutorial-author-first-deck
+      - changes:
+          - after:
+              clips:
+                - stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json
+              manifest: stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json
+            path:
+              - fields
+              - check_inputs
+        kind: modified
+        node: demo-onboarding-tour
+      - changes:
+          - after:
+              reports:
+                - path: pog/evidence/flows-slidey.json
+                  repo: slidey
+            path:
+              - fields
+              - check_inputs
+        kind: modified
+        node: ts-slidey-dev-story-flows
+    schema: graph/changeset/v1
+    status: notified
+    title: Declare check_inputs for demo/tutorial/test-suite deliverables (Stage 3)
+    visibility: internal
+    authorized_at: "2026-07-12T04:01:24Z"
+    applied_at: "2026-07-12T04:01:24Z"
+  - authored_by: materialize
+    created_at: "2026-07-12T04:07:45Z"
+    id: cs-4
+    operations:
+      - changes:
+          - after:
+              artifacts: []
+              checks:
+                - id: gate
+                  ok: false
+                  reasons:
+                    - manifest stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json does not exist
+                    - clip stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json does not exist (materialize this node to capture it)
+                  reproduce: kitsoki starlark run scripts/checks/demo_packet.star --inputs '{"clips":["stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json"],"manifest":"stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json"}' --capabilities '{"fs":{"read":["stories/**",".artifacts/**"]}}'
+                  script: scripts/checks/demo_packet.star
+                  script_sha256: 837c7aaf5f9f0bfd7d582cbbd7c0aad17eaa9996131532a003102b389695dc73
+              job_id: 01KXA84YSH3QE8BCHAH70964EV
+              stages:
+                - id: plan
+                  status: complete
+                - id: launch
+                  status: complete
+                - id: capture
+                  status: complete
+                - id: doctor
+                  status: complete
+                - id: check:gate
+                  status: failed
+              status: failed
+              story: stories/demo-packet
+            path:
+              - fields
+              - materialization
+        kind: modified
+        node: demo-onboarding-tour
+    provenance:
+      job_id: 01KXA84YSH3QE8BCHAH70964EV
+      story: stories/demo-packet
+    schema: graph/changeset/v1
+    status: notified
+    title: 'materialize demo-onboarding-tour: write back status "failed"'
+    visibility: internal
+    applied_at: "2026-07-12T04:07:45Z"
+  - authored_by: materialize
+    created_at: "2026-07-12T04:07:47Z"
+    id: cs-5
+    operations:
+      - changes:
+          - after:
+              artifacts: []
+              checks:
+                - id: gate
+                  ok: false
+                  reasons:
+                    - 'slidey: no evidence recorded (run scripts/record-flow-evidence.sh)'
+                  reproduce: kitsoki starlark run scripts/checks/flows_recorded.star --inputs '{"reports":[{"path":"pog/evidence/flows-slidey.json","repo":"slidey"}]}' --capabilities '{"fs":{"read":["pog/evidence/**"]}}'
+                  script: scripts/checks/flows_recorded.star
+                  script_sha256: 34aebdba4eff5b14944ecb1b124a758290e8011ff704d8cf9898aed1c71b9f90
+              job_id: 01KXA850YCFMR7ZFMYDWVXZZGA
+              stages:
+                - id: record
+                  status: complete
+                - id: done
+                  status: complete
+                - id: check:gate
+                  status: failed
+              status: failed
+              story: stories/record-flow-evidence
+            path:
+              - fields
+              - materialization
+        kind: modified
+        node: ts-slidey-dev-story-flows
+    provenance:
+      job_id: 01KXA850YCFMR7ZFMYDWVXZZGA
+      story: stories/record-flow-evidence
+    schema: graph/changeset/v1
+    status: notified
+    title: 'materialize ts-slidey-dev-story-flows: write back status "failed"'
+    visibility: internal
+    applied_at: "2026-07-12T04:07:47Z"
+  - authored_by: materialize
+    created_at: "2026-07-12T04:07:48Z"
+    id: cs-6
+    operations:
+      - changes:
+          - after:
+              - kind: doc
+                path: .artifacts/tutorial-author-first-deck/brief.md
+                title: Doc
+            path:
+              - fields
+              - evidence
+        kind: modified
+        node: tutorial-author-first-deck
+    provenance:
+      job_id: 01KXA851GA0THKBSBXRM44G04W
+      story: stories/materialize-doc
+    schema: graph/changeset/v1
+    status: notified
+    title: 'materialize tutorial-author-first-deck: append evidence .artifacts/tutorial-author-first-deck/brief.md'
+    visibility: internal
+    applied_at: "2026-07-12T04:07:48Z"
+  - authored_by: materialize
+    created_at: "2026-07-12T04:07:48Z"
+    id: cs-7
+    operations:
+      - changes:
+          - after:
+              artifacts:
+                - kind: doc
+                  path: .artifacts/tutorial-author-first-deck/brief.md
+                  produced_at: "2026-07-12T04:07:48Z"
+                  title: Doc
+              checks:
+                - id: gate
+                  ok: true
+                  reproduce: kitsoki starlark run scripts/checks/artifact_exists.star --inputs '{"paths":[".artifacts/tutorial-author-first-deck/brief.md"]}' --capabilities '{"fs":{"read":[".artifacts/**","docs/**"]}}'
+                  script: scripts/checks/artifact_exists.star
+                  script_sha256: 46ebb871c1b4e6a7e9615c5b01483ba5ee1193289a210d02cbad9bc1f3aa44d6
+              job_id: 01KXA851GA0THKBSBXRM44G04W
+              stages:
+                - id: gather
+                  status: complete
+                - id: draft
+                  status: complete
+                - id: verify
+                  status: complete
+                - id: done
+                  status: complete
+                - id: check:gate
+                  status: complete
+              status: complete
+              story: stories/materialize-doc
+            path:
+              - fields
+              - materialization
+        kind: modified
+        node: tutorial-author-first-deck
+    provenance:
+      job_id: 01KXA851GA0THKBSBXRM44G04W
+      story: stories/materialize-doc
+    schema: graph/changeset/v1
+    status: notified
+    title: 'materialize tutorial-author-first-deck: write back status "complete"'
+    visibility: internal
+    applied_at: "2026-07-12T04:07:48Z"
+  - created_at: "2026-07-12T04:33:06Z"
+    id: cs-8
+    operations:
+      - changes:
+          - after: verified
+            before: missing
+            path:
+              - status
+        kind: modified
+        node: tutorial-author-first-deck
+    schema: graph/changeset/v1
+    status: notified
+    title: Flip tutorial-author-first-deck to verified (brief generated, artifact_exists re-judged ok)
+    visibility: internal
+    authorized_at: "2026-07-12T04:33:06Z"
+    applied_at: "2026-07-12T04:33:07Z"
+  - created_at: "2026-07-12T04:43:56Z"
+    id: cs-9
+    operations:
+      - changes:
+          - after:
+              checks:
+                - capabilities:
+                    fs:
+                      read:
+                        - pog/evidence/**
+                  id: gate
+                  inputs_field: check_inputs
+                  script: scripts/checks/flows_recorded.star
+              context_edges:
+                - proves
+              params:
+                - default: scripts/record-flow-evidence.sh
+                  id: record_command
+                  type: string
+                - default: .
+                  id: repo_root
+                  type: string
+              story: stories/record-flow-evidence
+            path:
+              - materialize
+        kind: registry_type_modified
+        node: test-suite
+    schema: graph/changeset/v1
+    status: notified
+    title: 'test-suite materialize: declare repo_root param (host.run cwd under federation)'
+    visibility: internal
+    authorized_at: "2026-07-12T04:43:56Z"
+    applied_at: "2026-07-12T04:43:56Z"
+  - authored_by: materialize
+    created_at: "2026-07-12T04:43:57Z"
+    id: cs-10
+    operations:
+      - changes:
+          - after:
+              artifacts: []
+              checks:
+                - id: gate
+                  ok: true
+                  reproduce: kitsoki starlark run scripts/checks/flows_recorded.star --inputs '{"reports":[{"path":"pog/evidence/flows-slidey.json","repo":"slidey"}]}' --capabilities '{"fs":{"read":["pog/evidence/**"]}}'
+                  script: scripts/checks/flows_recorded.star
+                  script_sha256: 34aebdba4eff5b14944ecb1b124a758290e8011ff704d8cf9898aed1c71b9f90
+              job_id: 01KXAA78AY7WQVGP7YH1FXZAJN
+              stages:
+                - id: record
+                  status: complete
+                - id: done
+                  status: complete
+                - id: check:gate
+                  status: complete
+              status: complete
+              story: stories/record-flow-evidence
+            before:
+              artifacts: []
+              checks:
+                - id: gate
+                  ok: false
+                  reasons:
+                    - 'slidey: no evidence recorded (run scripts/record-flow-evidence.sh)'
+                  reproduce: kitsoki starlark run scripts/checks/flows_recorded.star --inputs '{"reports":[{"path":"pog/evidence/flows-slidey.json","repo":"slidey"}]}' --capabilities '{"fs":{"read":["pog/evidence/**"]}}'
+                  script: scripts/checks/flows_recorded.star
+                  script_sha256: 34aebdba4eff5b14944ecb1b124a758290e8011ff704d8cf9898aed1c71b9f90
+              job_id: 01KXA850YCFMR7ZFMYDWVXZZGA
+              stages:
+                - id: record
+                  status: complete
+                - id: done
+                  status: complete
+                - id: check:gate
+                  status: failed
+              status: failed
+              story: stories/record-flow-evidence
+            path:
+              - fields
+              - materialization
+        kind: modified
+        node: ts-slidey-dev-story-flows
+    provenance:
+      job_id: 01KXAA78AY7WQVGP7YH1FXZAJN
+      story: stories/record-flow-evidence
+    schema: graph/changeset/v1
+    status: notified
+    title: 'materialize ts-slidey-dev-story-flows: write back status "complete"'
+    visibility: internal
+    applied_at: "2026-07-12T04:43:57Z"
+  - created_at: "2026-07-12T04:44:30Z"
+    id: cs-11
+    operations:
+      - changes:
+          - after: verified
+            before: failed
+            path:
+              - status
+          - after: Recorded no-LLM flow run against this repo's flow-bearing story suite (stories/materialize-doc, materialize_brief flow) — green as of 2026-07-12, evidence recorded into THIS repo (pog/evidence/flows-slidey.json) by scripts/record-flow-evidence.sh. The imports.core host drift is fixed in .kitsoki/stories/slidey-dev/app.yaml (host.capsule_workspace). stories/render-deck has no flow fixtures yet; giving the exemplar deck story a recorded flow is follow-on work.
+            path:
+              - summary
+        kind: modified
+        node: ts-slidey-dev-story-flows
+    schema: graph/changeset/v1
+    status: notified
+    title: 'ts-slidey-dev-story-flows: verified — imports.core drift fixed, flow-bearing suite records green (0.2)'
+    visibility: internal
+    authorized_at: "2026-07-12T04:44:30Z"
+    applied_at: "2026-07-12T04:44:30Z"
+  - authored_by: materialize
+    created_at: "2026-07-12T04:49:39Z"
+    id: cs-12
+    operations:
+      - changes:
+          - after:
+              artifacts: []
+              checks:
+                - id: gate
+                  ok: true
+                  reproduce: kitsoki starlark run scripts/checks/demo_packet.star --inputs '{"clips":["stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json"],"manifest":"stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json"}' --capabilities '{"fs":{"read":["stories/**",".artifacts/**"]}}'
+                  script: scripts/checks/demo_packet.star
+                  script_sha256: 90381aa7894c2990252dac1f7ff18a02e9e8107ba5a3ad76c7dcd74db76b61ca
+              job_id: 01KXAAHNAQ47VYHF22M5Q5DVVE
+              stages:
+                - id: plan
+                  status: complete
+                - id: launch
+                  status: complete
+                - id: capture
+                  status: complete
+                - id: doctor
+                  status: complete
+                - id: check:gate
+                  status: complete
+              status: complete
+              story: stories/demo-packet
+            before:
+              artifacts: []
+              checks:
+                - id: gate
+                  ok: false
+                  reasons:
+                    - manifest stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json does not exist
+                    - clip stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json does not exist (materialize this node to capture it)
+                  reproduce: kitsoki starlark run scripts/checks/demo_packet.star --inputs '{"clips":["stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json"],"manifest":"stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json"}' --capabilities '{"fs":{"read":["stories/**",".artifacts/**"]}}'
+                  script: scripts/checks/demo_packet.star
+                  script_sha256: 837c7aaf5f9f0bfd7d582cbbd7c0aad17eaa9996131532a003102b389695dc73
+              job_id: 01KXA84YSH3QE8BCHAH70964EV
+              stages:
+                - id: plan
+                  status: complete
+                - id: launch
+                  status: complete
+                - id: capture
+                  status: complete
+                - id: doctor
+                  status: complete
+                - id: check:gate
+                  status: failed
+              status: failed
+              story: stories/demo-packet
+            path:
+              - fields
+              - materialization
+        kind: modified
+        node: demo-onboarding-tour
+    provenance:
+      job_id: 01KXAAHNAQ47VYHF22M5Q5DVVE
+      story: stories/demo-packet
+    schema: graph/changeset/v1
+    status: notified
+    title: 'materialize demo-onboarding-tour: write back status "complete"'
+    visibility: internal
+    applied_at: "2026-07-12T04:49:39Z"
+  - created_at: "2026-07-12T04:49:39Z"
+    id: cs-13
+    operations:
+      - changes:
+          - after: verified
+            before: missing
+            path:
+              - status
+          - after:
+              - kind: doc
+                path: stories/demo-packet/fixtures/onboarding-tour/onboarding-tour.demo.json
+                title: Demo packet manifest — real capture of the interactive viewer (slidey serve mode) clicking through examples/hello.slidey.json
+              - kind: video
+                path: stories/demo-packet/fixtures/onboarding-tour/clips/onboarding-tour-journey.rrweb.json
+                title: 'Journey clip (real rrweb capture: open viewer, arrow through scenes, step back and replay)'
+            path:
+              - fields
+              - evidence
+          - after: 'Captured demo packet walking uc-click-through-deck against a real served deck: the interactive viewer (slidey examples/hello.slidey.json) opened and driven with keyboard navigation, captured via kitsoki record-tour.mjs / slidey capture --tours (the productized mechanism), doctor green. The old examples/demos/sample-tour.rrweb.json note is superseded by this packet.'
+            path:
+              - summary
+        kind: modified
+        node: demo-onboarding-tour
+    schema: graph/changeset/v1
+    status: notified
+    title: 'demo-onboarding-tour: verified — real captured packet of the interactive viewer (Stage 3)'
+    visibility: internal
+    authorized_at: "2026-07-12T04:49:39Z"
+    applied_at: "2026-07-12T04:49:39Z"

@@ -1,0 +1,3 @@
+- control reveals
+- subset decks (kitsoki-pitch mini-versions)
+- deck-to-deck (exec summary deck that links into more detailed decks, as an infinite graph, and lets the user navigate back up the chain when they're done, include nav history, TOC and indexes as critical so navigation is really easy)

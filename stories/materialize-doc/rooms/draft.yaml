@@ -1,0 +1,38 @@
+states:
+  draft:
+    description: "Drafting the implementation brief"
+    relevant_world: [node_id, depth, audience, draft_written, artifact_path, status]
+    on_enter:
+      - set:
+          draft_written: true
+          artifact_path: "{{ '.artifacts/' + world.node_id + '/brief.md' }}"
+          status: "drafted"
+    view:
+      extends: "base"
+      blocks:
+        body:
+          - prose: "Drafting the implementation brief from the gathered context."
+          - kv:
+              pairs:
+                Artifact: "{{ world.artifact_path }}"
+                Status: "{{ world.status }}"
+        choices:
+          - list:
+              items:
+                - { label: "next", hint: "verify the brief" }
+                - { label: "restart" }
+                - { label: "look" }
+    on:
+      next:
+        - target: verify
+      restart:
+        - target: gather
+          effects:
+            - set:
+                context_gathered: false
+                draft_written: false
+                verified: false
+                artifact_path: ""
+                status: ""
+      look:
+        - target: draft

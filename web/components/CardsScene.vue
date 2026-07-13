@@ -18,6 +18,7 @@
 import { computed } from 'vue';
 import { store } from '../store.js';
 import { escapeHTML } from '../format.js';
+import { linkTargetForItem } from '../collections.mjs';
 
 const sc = computed(() => store.scene || {});
 const variant = computed(() => sc.value.variant || 'grid');
@@ -112,6 +113,23 @@ function lineHTML(card, i) {
   const text = Array.isArray(card.lines) ? card.lines[i] : '';
   return inlineHTML(html, text);
 }
+
+function cardLink(card) {
+  return linkTargetForItem(card);
+}
+
+function openCardLink(card, event) {
+  const link = cardLink(card);
+  if (!link) return;
+  event.preventDefault();
+  event.stopPropagation();
+  window.dispatchEvent(new CustomEvent('slidey:library-link', { detail: link }));
+}
+
+function onCardLinkKey(card, event) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  openCardLink(card, event);
+}
 </script>
 
 <template>
@@ -146,7 +164,12 @@ function lineHTML(card, i) {
         :key="i"
         :id="`cards-item-${i}`"
         class="cards-card reveal"
-        :class="[`cards-style-${c.style || 'default'}`, { shown: shown(`cards-item-${i}`) }]"
+        :class="[`cards-style-${c.style || 'default'}`, { shown: shown(`cards-item-${i}`), 'cards-card-link slidey-library-link': cardLink(c) }]"
+        :role="cardLink(c) ? 'button' : null"
+        :tabindex="cardLink(c) ? 0 : null"
+        :title="cardLink(c) ? `Open ${cardLink(c).label}` : null"
+        @click="openCardLink(c, $event)"
+        @keydown="onCardLinkKey(c, $event)"
       >
         <div class="cards-card-head">
           <span v-if="variant === 'numbered'" class="cards-num">{{ i + 1 }}</span>
@@ -283,9 +306,37 @@ function lineHTML(card, i) {
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+  position: relative;
 }
 .cards-card.cards-style-primary   { border-color: #58a6ff; background: #0c2740; }
 .cards-card.cards-style-secondary { border-color: #bc8cff; background: #1b1430; }
+.cards-card.cards-card-link {
+  cursor: pointer;
+  border-color: #3fb950;
+  box-shadow: inset 0 0 0 1px rgba(63, 185, 80, 0.2);
+}
+.cards-card.cards-card-link::after {
+  content: ">";
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(63, 185, 80, 0.7);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #7ee787;
+  font-size: 19px;
+  font-weight: bold;
+  line-height: 1;
+}
+.cards-card.cards-card-link:hover,
+.cards-card.cards-card-link:focus-visible {
+  border-color: #7ee787;
+  box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.24), inset 0 0 0 1px rgba(126, 231, 135, 0.32);
+  outline: none;
+}
 
 .cards-card-head { display: flex; align-items: flex-start; gap: 18px; }
 .cards-card-titles { min-width: 0; flex: 1; }

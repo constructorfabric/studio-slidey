@@ -1,0 +1,9 @@
+PASS      materialize_brief.yaml
+    ok    turn 1 → gather
+    ok    turn 2 → draft
+    ok    turn 3 → verify
+    ok    turn 4 → done
+    ok    turn 5 → gather
+
+Summary: 1/1 flows pass
+PASS

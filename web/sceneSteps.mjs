@@ -31,7 +31,11 @@ export function stepsForScene(scene) {
   const s = scene || {};
   // `instant: true` — reveal the whole scene at once (no progressive build, no
   // title-only first page). One PDF page / one nav advance for the entire scene.
-  if (s.instant && s.type !== 'title') return ['reveal_all'];
+  // `continues: true` — a seamless cut into this scene from the previous one
+  // (video renderer skips the preceding inter_scene gap); in the web viewer /
+  // PDF the same flag means the scene arrives fully assembled, so shared
+  // content (e.g. a graph both scenes render) never leaves the screen.
+  if ((s.instant || s.continues) && s.type !== 'title') return ['reveal_all'];
   switch (s.type) {
     case 'title':
       return [];
@@ -39,6 +43,9 @@ export function stepsForScene(scene) {
       // Rendered as a single poster page in PDF/PNG export (the MP4 itself is
       // only produced for video output). No progressive reveal.
       return [];
+    case 'reference':
+      return [...(s.title ? ['reference_title'] : []), 'reference_frame',
+        ...(s.caption ? ['reference_caption'] : [])];
     case 'narrative':
       return ['narrative_eyebrow', 'narrative_body', ...(s.lede ? ['narrative_lede'] : [])];
     case 'diagram':
@@ -48,11 +55,23 @@ export function stepsForScene(scene) {
       return [...(s.skipTitle ? [] : ['diagramsvg_title']),
         ...range((s.panels || []).length, 'diagramsvg_panel_'),
         ...(s.caption ? ['diagramsvg_caption'] : [])];
+    case 'graph': {
+      const path = Array.isArray(s.path) && s.path.length ? s.path : (Array.isArray(s.focus) ? s.focus : []);
+      return [
+        ...(s.title ? ['graph_title'] : []),
+        'graph_frame',
+        ...range(path.length, 'graph_focus_'),
+        ...(s.caption ? ['graph_caption'] : []),
+      ];
+    }
     case 'mermaid':
       return [...(s.title ? ['mermaid_title'] : []), 'mermaid_frame',
         ...(s.caption ? ['mermaid_caption'] : [])];
     case 'terminal-gif':
       return ['termgif_frame', ...(s.caption ? ['termgif_caption'] : [])];
+    case 'kitsoki-tui':
+      return ['kitsokitui_frame', 'kitsokitui_welcome', 'kitsokitui_menu',
+        ...(s.caption ? ['kitsokitui_caption'] : [])];
     case 'stat':
       return ['stat_value', 'stat_label', ...(s.detail ? ['stat_detail'] : [])];
     case 'cta':
@@ -177,8 +196,10 @@ export function applyShow(scene, opts) {
     case 'narrative':    slidey.showNarrative(scene); break;
     case 'diagram':      slidey.showDiagram(scene); break;
     case 'diagram-svg':  slidey.showDiagramSvg(scene); break;
+    case 'graph':        slidey.showGraph(scene, o.projectionData || null); break;
     case 'mermaid':      slidey.showMermaid(scene); break;
     case 'terminal-gif': slidey.showTerminalGif(scene, o.gifDataUri || ''); break;
+    case 'kitsoki-tui':  slidey.showKitsokiTui(scene); break;
     case 'stat':         slidey.showStat(scene); break;
     case 'cta':          slidey.showCta(scene); break;
     case 'trace':        slidey.showTrace(scene); break;
@@ -200,5 +221,6 @@ export function applyShow(scene, opts) {
     // PDF/PNG export handle video scenes natively). Guard so render adapters
     // without showVideo (export contexts) don't throw.
     case 'video':        if (slidey.showVideo) slidey.showVideo(scene, o.rrweb || null); break;
+    case 'reference':    if (slidey.showReference) slidey.showReference(scene); break;
   }
 }

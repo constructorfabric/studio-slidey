@@ -31,7 +31,6 @@
 
 'use strict';
 
-const puppeteer = require('puppeteer');
 const { closeBrowser, launchBrowser } = require('./browser');
 const { sceneShowOpts } = require('./assets');
 const path      = require('path');
@@ -393,7 +392,7 @@ async function auditSpec(spec, opts = {}) {
   const { width = 1920, height = 1080 } = (spec.meta && spec.meta.resolution) || {};
   const mode = inferMode(spec);
 
-  const browser = await launchBrowser({ puppeteer, width, height });
+  const browser = await launchBrowser({ width, height });
 
   const frames = [];
   try {

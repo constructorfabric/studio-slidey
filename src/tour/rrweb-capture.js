@@ -57,7 +57,10 @@ function rrwebBundlePath() {
  * Capture a tour spec to an rrweb event log + chapters.
  *
  * @param {object} tour  Tour spec (same shape as capture.js).
- * @param {object} opts  { pace, onProgress, mask? }
+ * @param {object} opts  { pace, onProgress, onStepSettled?, mask? }
+ *   `onStepSettled(page, step, index)` — optional; called right after a
+ *   step's `before` evals + `waitFor` settle (before the target scroll,
+ *   chapter marker, and real-time dwell), same contract as capture.js.
  * @returns {Promise<{ events, chapters, viewport }>}
  */
 async function captureTourRrweb(tour, opts = {}) {
@@ -65,6 +68,7 @@ async function captureTourRrweb(tour, opts = {}) {
   const viewport = Object.assign({ width: 1600, height: 900 }, tour.viewport || {});
   const dsf = tour.deviceScaleFactor || 1;
   const onProgress = opts.onProgress || null;
+  const onStepSettled = opts.onStepSettled || null;
   const specPath = tour.specPath || '';
   // A product demo wants verbatim text; default masking OFF here (unlike the
   // bug-report buffer). Opt back in with tour.mask or opts.mask.
@@ -118,6 +122,10 @@ async function captureTourRrweb(tour, opts = {}) {
 
       for (const act of step.before || []) await runAction(page, base, act, ctx);
       if (step.waitFor) await waitSel(page, step.waitFor);
+
+      // Settled hook (e.g. tour-set poster capture) — right after `before` +
+      // `waitFor`, before the target scroll / chapter marker / dwell.
+      if (onStepSettled) await onStepSettled(page, step, i);
 
       // Bring the target into view (recorded as a real scroll) and mark the
       // chapter boundary in the log.
